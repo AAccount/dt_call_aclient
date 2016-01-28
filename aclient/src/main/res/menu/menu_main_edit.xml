@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    >
+    <item
+        android:id="@+id/menu_edit_done"
+        android:icon="@drawable/ic_done_white_48dp"
+        android:title="ok"
+        app:showAsAction="always"
+        />
+
+    <item
+        android:id="@+id/menu_edit_edit"
+        android:icon="@drawable/ic_edit_white_48dp"
+        android:title="edit"
+        app:showAsAction="always"
+        />
+
+    <item
+        android:id="@+id/menu_edit_rm"
+        android:icon="@drawable/ic_delete_white_48dp"
+        android:title="remove"
+        app:showAsAction="always"
+        />
+
+    <item
+        android:id="@+id/menu_edit_settings"
+        android:title="Settings"
+        app:showAsAction="never"
+        />
+</menu>

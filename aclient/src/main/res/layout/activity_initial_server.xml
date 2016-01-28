@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context=".screens.InitialServer">
+
+    <ImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/server"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:id="@+id/imageView">
+    </ImageView>
+
+    <EditText
+        android:id="@+id/initial_server_addr"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/imageView"
+        android:hint="@string/initial_server_addr_hint"
+        android:maxLines="1"
+        />
+
+    <EditText
+        android:id="@+id/initial_server_command"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/initial_server_addr"
+        android:hint="@string/initial_server_addr_command"
+        android:inputType="number"
+        android:maxLength="5"
+        android:maxLines="1"
+        />
+
+    <EditText
+        android:id="@+id/initial_server_media"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/initial_server_command"
+        android:hint="@string/initial_server_addr_media"
+        android:inputType="number"
+        android:maxLength="5"
+        android:maxLines="1"
+        />
+
+    <Button
+        android:id="@+id/initial_server_certificate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/initial_server_media"
+        android:hint="@string/initial_server_certificate"
+        />
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/initial_server_next"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="60dp"
+        android:layout_below="@id/initial_server_certificate"
+        android:layout_centerHorizontal="true"
+        android:src="@drawable/ic_arrow_forward_white_48dp"
+        android:clickable="true"
+        app:rippleColor="@android:color/white"
+        >
+    </android.support.design.widget.FloatingActionButton>
+</RelativeLayout>

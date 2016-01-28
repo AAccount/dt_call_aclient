@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+
+    <RelativeLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingBottom="@dimen/activity_vertical_margin"
+        android:paddingLeft="@dimen/activity_horizontal_margin"
+        android:paddingRight="@dimen/activity_horizontal_margin"
+        android:paddingTop="@dimen/activity_vertical_margin"
+        tools:context=".screens.UserHome">
+
+        <EditText
+            android:id="@+id/user_home_actionbox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/user_home_actionbox_hint"
+            android:inputType="textNoSuggestions"
+            />
+
+        <TextView
+            android:id="@+id/user_home_contacts_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="16dp"
+            android:layout_below="@id/user_home_actionbox"
+            android:text="@string/user_home_contacts_header"
+            />
+
+        <View
+            android:id="@+id/user_home_contacts_spacer"
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:layout_below="@id/user_home_contacts_header"
+            android:background="@color/colorPrimary"
+            />
+        <ScrollView
+            android:id="@+id/user_home_contacts_scroller"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_below="@id/user_home_contacts_spacer">
+                <LinearLayout
+                    android:id="@+id/user_home_contact_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    >
+
+                </LinearLayout>
+        </ScrollView>
+
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/user_home_call"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_local_phone_white_48dp"
+            android:clickable="true"
+            app:rippleColor="@android:color/white"
+            android:layout_alignBottom="@+id/user_home_contacts_scroller"
+            android:layout_alignRight="@+id/user_home_contacts_scroller"
+            android:layout_alignEnd="@+id/user_home_contacts_scroller"/>
+
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/user_home_add"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_person_add_white_48dp"
+            android:clickable="true"
+            app:rippleColor="@android:color/white"
+            android:layout_alignBottom="@+id/user_home_contacts_scroller"
+            android:layout_toLeftOf="@+id/user_home_call"
+            android:layout_toStartOf="@+id/user_home_call"
+            android:layout_marginRight="32dp"
+            android:layout_marginEnd="32dp"/>
+
+</RelativeLayout>

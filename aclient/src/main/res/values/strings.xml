@@ -1,0 +1,45 @@
+<resources>
+    <string name="app_name">Call</string>
+
+    <!-- Initial server setup -->
+    <string name="initial_server_addr_hint">Server Address or Name</string>
+    <string name="initial_server_addr_command">Command Port Number</string>
+    <string name="initial_server_addr_media">Media Port Number</string>
+    <string name="initial_server_certificate">Choose Expected Certificate</string>
+    <string name="initial_server_title">Server Information</string>
+
+    <!-- Dialog Messages -->
+    <string name="alert_ok">OK</string>
+    <string name="alert_tehcnical_difficulties">Currently experience technical difficulties. Check logcat if possible.</string>
+
+    <string name="alert_initial_server_no_caja">No file explorers installed on your device</string>
+    <string name="alert_initial_server_incomplete_server">Incomplete server information</string>
+    <string name="alert_initial_server_invalid_port">Port # must be between 1 and 65535</string>
+    <string name="alert_initial_server_corrupted_cert">Certificate file corrupted. Can\'t use.</string>
+    <string name="alert_initial_user_missing_uinfo">Missing username or password.</string>
+    <string name="alert_initial_user_cert_not_match">Server\'s certificate DOES NOT MATCH the expected. DO NOT continue.</string>
+    <string name="alert_initial_user_cant_login">Login failed</string>
+    <string name="alert_user_home_duplicate">Contact already exists</string>
+    <string name="alert_user_home_contact_notexist">User does not exist</string>
+    <string name="alert_user_home_rename_instructions">Enter a nickname for CONTACT</string>
+    <string name="alert_user_home_rename_button_ch">Set</string>
+    <string name="alert_user_home_rename_button_nvm">Cancel</string>
+    <string name="alert_user_home_cant_dial">User is not available to call</string>
+
+    <!-- Initial user setup -->
+    <string name="initial_user_title">User Information</string>
+    <string name="initial_user_uname_hint">Name</string>
+    <string name="initial_user_passwd_hint">Password</string>
+
+    <!-- User home screen -->
+    <string name="user_home_actionbox_hint">Choose someone to call</string>
+    <string name="user_home_contacts_header">My Contacts</string>
+    <string name="user_home_title">User Home</string>
+
+    <!-- Main call screen -->
+    <string name="call_main_title">Voice Call</string>
+    <string name="call_main_status_ringing">Ringing</string>
+    <string name="call_main_status_incall">In Call</string>
+
+
+</resources>

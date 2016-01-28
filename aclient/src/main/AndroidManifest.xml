@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest package="dt.call.aclient"
+          xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <activity
+            android:name=".screens.InitialServer"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".screens.InitialUserInfo"
+            android:label="@string/initial_user_title"
+            android:parentActivityName=".screens.InitialServer">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".screens.InitialServer"/>
+        </activity>
+        <activity
+            android:name=".screens.UserHome"
+            android:label="@string/app_name">
+        </activity>
+
+        <receiver android:name=".background.BackgroundManager">
+            <intent-filter>
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
+                <action android:name="cmd_dead"/>
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name=".background.CmdListener"
+            android:exported="false"/>
+
+        <activity
+            android:name=".screens.CallMain"
+            android:label="@string/call_main_title"
+            android:parentActivityName=".screens.UserHome">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="dt.call.aclient.screens.UserHome"/>
+        </activity>
+    </application>
+
+</manifest>
