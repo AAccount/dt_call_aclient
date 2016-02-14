@@ -1,31 +1,64 @@
 package dt.call.aclient.screens;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.graphics.drawable.ColorDrawable;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.media.AudioManager;
 import android.os.Bundle;
-import android.app.Activity;
+import android.os.PowerManager;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.TextView;
 
 import java.util.Timer;
 import java.util.TimerTask;
 
 import dt.call.aclient.CallState;
+import dt.call.aclient.Const;
 import dt.call.aclient.R;
+import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
+import dt.call.aclient.background.Async.CallEndAsync;
+import dt.call.aclient.background.Async.CallTimeoutAsync;
+import dt.call.aclient.background.Media2Server;
+import dt.call.aclient.background.MediaFromServer;
 
-public class CallMain extends Activity implements View.OnClickListener
+public class CallMain extends AppCompatActivity implements View.OnClickListener, SensorEventListener
 {
+	private static final String tag = "CallMain";
+
 	private FloatingActionButton end, mic, speaker;
-	private boolean micEnabled, onSpeaker;
+	private boolean micMute = false, onSpeaker = false;
+	private boolean screenShowing;
 	private TextView status, callerid, time;
 	private int min=0, sec=0;
 	private Timer counter = new Timer();
+	private BroadcastReceiver myReceiver;
+	private Intent send2Server, getFromServer;
+	private AudioManager audioManager;
+	private SensorManager sensorManager;
+	private Sensor proximity;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_call_main);
+
+		//allow this screen to show even when there is a password/pattern lock screen
+		Window window = this.getWindow();
+		window.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);
+		window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
 
 		end = (FloatingActionButton)findViewById(R.id.call_main_end_call);
 		end.setOnClickListener(this);
@@ -35,9 +68,35 @@ public class CallMain extends Activity implements View.OnClickListener
 		speaker = (FloatingActionButton)findViewById(R.id.call_main_spk);
 		speaker.setOnClickListener(this);
 		speaker.setEnabled(false);
-		status = (TextView)findViewById(R.id.call_main_status);
+		status = (TextView)findViewById(R.id.call_main_status); //by default ringing. change it when in a call
 		callerid = (TextView)findViewById(R.id.call_main_callerid);
 		time = (TextView)findViewById(R.id.call_main_time);
+
+		//set the caller id with the nickname if the person has one
+		if(Vars.callWith.hasNickname())
+		{
+			callerid.setText(Vars.callWith.getNickname());
+		}
+		else
+		{
+			callerid.setText(Vars.callWith.getName());
+		}
+
+		//set the ui to call mode: if you got to this screen after accepting an incoming call
+		if(Vars.state == CallState.INCALL)
+		{
+			callMode();
+		}
+
+		//proximity sensor
+		sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+		proximity = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+
+		//https://stackoverflow.com/questions/12857817/how-to-play-audio-via-ear-phones-only-using-mediaplayer-android
+		//make it possible to use the earpiece and to switch back and forth
+		audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+		audioManager.setMode(AudioManager.MODE_IN_CALL);
+		audioManager.setSpeakerphoneOn(false);
 
 		//Start showing the counter for how long it's taking to answer the call or how long
 		//	the call has been going for
@@ -52,29 +111,224 @@ public class CallMain extends Activity implements View.OnClickListener
 					sec = 0;
 					if(Vars.state == CallState.INIT)
 					{
-						//if the person hasn't answered after 60 seconds
-						//	give up. it's probably not going to happen.
-						giveUp();
+						//if the person hasn't answered after 60 seconds give up. it's probably not going to happen.
+						new CallTimeoutAsync().execute();
+						Vars.state = CallState.NONE; //guarnatee state == NONE. don't leave it to chance
+						onStop();
 					}
 				}
 				else
 				{
 					sec++;
 				}
-				time.setText(min + ":" + sec);
+
+				if(screenShowing)
+				{
+					runOnUiThread(new Runnable()
+					{
+						@Override
+						public void run()
+						{
+							updateTime();
+						}
+					});
+				}
 			}
 		};
 		counter.schedule(counterTask, 0, 1000);
+
+		//listen for call accepted or rejected
+		myReceiver = new BroadcastReceiver()
+		{
+			@Override
+			public void onReceive(Context context, Intent intent)
+			{
+				Utils.logcat(Const.LOGD, tag, "received a broadcast intent");
+				String response = intent.getStringExtra(Const.BROADCAST_CALL_RESP);
+				if(response.equals(Const.BROADCAST_CALL_START))
+				{
+					min = 0;
+					sec = 0;
+					callMode();
+				}
+				else if(response.equals(Const.BROADCAST_CALL_END))
+				{
+					//whether the call was rejected or time to end, it's the same result
+					//so share the same variable to avoid 2 sendBroadcast chunks of code that are almost the same
+
+					//media read/write are stopped in command listener when it got the call end
+					//Vars.state would've already been set by the server command that's broadcasting a call end
+					onStop();
+				}
+			}
+		};
+		registerReceiver(myReceiver, new IntentFilter(Const.BROADCAST_CALL));
+	}
+
+	@Override
+	protected void onResume()
+	{
+		super.onResume();
+		screenShowing = true;
+		sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_NORMAL);
+	}
+
+	@Override
+	protected void onPause()
+	{
+		super.onPause();
+		screenShowing = false;
+		sensorManager.unregisterListener(this);
+	}
+
+	@Override
+	protected  void onStop()
+	{
+		super.onStop();
+		screenShowing = false;
+
+		/**
+		 * onStop() is called when the CallMain screen isn't visible anymore. Either from ending a call
+		 * or from going to another app during a call. To make sure the call doesn't stop, only do the
+		 * cleanup if you're leaving the screen because the call ended.
+		 *
+		 * Vars.state = NONE will be set before calling onStop() manually to guarnatee that onStop() sees
+		 * the call state as none. The 2 async calls: end, timeout will set state = NONE, BUT BECAUSE they're
+		 * async there is a chance that onStop() is called before the async is. Don't leave it to dumb luck.
+		 */
+		if(Vars.state == CallState.NONE)
+		{
+			//stop the sending audio to the server
+			Vars.mediaRecorder.stop();
+			Vars.mediaRecorder.release();
+			stopService(send2Server);
+
+			//stop getting audio from the server
+			Vars.mediaPlayer.stop();
+			Vars.mediaPlayer.release();
+			stopService(getFromServer);
+
+			//no longer in a call
+			audioManager.setMode(AudioManager.MODE_NORMAL);
+
+			try
+			{
+				unregisterReceiver(myReceiver);
+			}
+			catch (IllegalArgumentException i)
+			{
+				Utils.logcat(Const.LOGW, tag, "don't unregister you get a leak, do unregister you get an exception... " + i.getMessage());
+			}
+			counter.cancel();
+
+			//go back to the home screen and clear the back history so there is no way to come back to
+			//call main
+			Intent goHome = new Intent(this, UserHome.class);
+			goHome.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+			startActivity(goHome);
+		}
 	}
 
 	@Override
 	public void onClick(View v)
 	{
-
+		if(v == end)
+		{
+			new CallEndAsync(getApplicationContext()).execute();
+			Vars.state = CallState.NONE; //guarantee onStop sees state == NONE
+			onStop();
+		}
+		else if (v == mic)
+		{
+			micMute = !micMute;
+			if(micMute)
+			{
+				mic.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_mic_off_white_48dp));
+				Vars.mediaRecorder.stop();
+				Vars.mediaRecorder.reset();
+				stopService(send2Server);
+			}
+			else
+			{
+				mic.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_mic_white_48dp));
+				startService(send2Server);
+			}
+		}
+		else if (v == speaker)
+		{
+			onSpeaker = !onSpeaker;
+			if(onSpeaker)
+			{
+				speaker.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_volume_up_white_48dp));
+				audioManager.setSpeakerphoneOn(true);
+			}
+			else
+			{
+				speaker.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_phone_in_talk_white_48dp));
+				audioManager.setSpeakerphoneOn(false);
+			}
+		}
 	}
 
-	private void giveUp()
+	private void updateTime()
 	{
-		counter.cancel();
+		if(sec < 10)
+		{
+			time.setText(min + ":0" + sec);
+		}
+		else
+		{
+			time.setText(min + ":" + sec);
+		}
+	}
+
+	private void callMode()
+	{
+		//setup the ui to call mode
+		getSupportActionBar().setBackgroundDrawable(new ColorDrawable(ContextCompat.getColor(CallMain.this, R.color.material_green)));
+		status.setText(getString(R.string.call_main_status_incall));
+		mic.setEnabled(true);
+		speaker.setEnabled(true);
+
+		//setup the intent services
+		send2Server = new Intent(this, Media2Server.class);
+		startService(send2Server);
+		getFromServer = new Intent(this, MediaFromServer.class);
+		startService(getFromServer);
+	}
+
+	@Override
+	public void onBackPressed()
+	{
+		/*
+		 * Do nothing. If you're in a call then there's no reason to go back to the User Home
+		 */
+	}
+
+	@Override
+	public void onSensorChanged(SensorEvent event)
+	{
+		if(event.values[0] == 0)
+		{
+			//with there being no good information on turning the screen on and off
+			//go with the next best thing of disabling all the buttons
+			screenShowing = false;
+			end.setEnabled(false);
+			mic.setEnabled(false);
+			speaker.setEnabled(false);
+		}
+		else
+		{
+			screenShowing = true;
+			end.setEnabled(true);
+			mic.setEnabled(true);
+			speaker.setEnabled(true);
+		}
+	}
+
+	@Override
+	public void onAccuracyChanged(Sensor sensor, int accuracy)
+	{
+		//not relevant for proximity sensor so do nothing
 	}
 }

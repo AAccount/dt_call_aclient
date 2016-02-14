@@ -5,10 +5,8 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.provider.ContactsContract;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 /**
  * Created by Daniel on 1/21/16.
@@ -27,7 +25,7 @@ public class Db extends SQLiteOpenHelper
 	final String mkhistory = "create table " + tableHistory + " " +
 			"(" +
 			colTs + " integer primary key, " +
-			colWho + "text, " +
+			colWho + " text, " +
 			colType + " integer " +
 			")";
 
@@ -53,7 +51,6 @@ public class Db extends SQLiteOpenHelper
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion)
 	{
-		//no upgrade at this point so nothing to worry about
 		if(oldVersion == 1 && newVersion == 2)
 		{
 			db.execSQL(mkhistory);
@@ -76,30 +73,32 @@ public class Db extends SQLiteOpenHelper
 		Cursor cursor = appdb.query(tableContacts, columnToReturn, selection, selectionArgs, null, null, null);
 		if(cursor.moveToFirst())
 		{
+			cursor.close();
 			return true;
 		}
 		else
 		{
+			cursor.close();
 			return false;
 		}
 	}
 
 	public void deleteContact(Contact contact)
 	{
-		appdb.delete(tableContacts, colName + "=?", new String[]{contact.getName()});
+		appdb.delete(tableContacts, "name=?", new String[]{contact.getName()});
 	}
 
 	public void changeNickname(Contact contact)
 	{
 		ContentValues chNick = new ContentValues();
 		chNick.put(colNick, contact.getNickname());
-		appdb.update(tableContacts, chNick, colName + "=?", new String[]{contact.getName()});
+		appdb.update(tableContacts, chNick, "name=?", new String[]{contact.getName()});
 	}
 
 	public ArrayList<Contact> getContacts()
 	{
 		ArrayList<Contact> result = new ArrayList<Contact>();
-		Cursor cursor = appdb.rawQuery("select * from " + tableContacts, null);
+		Cursor cursor = appdb.rawQuery("select * from contacts", null);
 		cursor.moveToFirst();
 		while(!cursor.isAfterLast())
 		{
@@ -109,6 +108,7 @@ public class Db extends SQLiteOpenHelper
 			result.add(fromRow);
 			cursor.moveToNext();
 		}
+		cursor.close();
 		return result;
 	}
 
@@ -123,17 +123,11 @@ public class Db extends SQLiteOpenHelper
 
 	public ArrayList<History> getRecentHistory()
 	{
-		//establish a hash table of contact name to its object to be able to print out
-		//	the nickname in the history screen
-		ArrayList<Contact> contacts = getContacts();
-		HashMap<String, Contact> contactHashMap = new HashMap<String, Contact>();
-		for(Contact contact : contacts)
-		{
-			contactHashMap.put(contact.getName(), contact);
-		}
-
 		ArrayList<History> result = new ArrayList<History>();
-		final String query = "select * from " + tableHistory + " limit 20";
+		final String query = "select timestamp, who, nickname, call_type\n" +
+				"from history left join contacts\n" +
+				"on history.who = contacts.name\n" +
+				"limit 20";
 		Cursor cursor = appdb.rawQuery(query, null);
 		cursor.moveToFirst();
 		while(!cursor.isAfterLast())
@@ -141,15 +135,13 @@ public class Db extends SQLiteOpenHelper
 			long ts = cursor.getLong(cursor.getColumnIndex(colTs));
 			int type = cursor.getInt(cursor.getColumnIndex(colType));
 			String name = cursor.getString(cursor.getColumnIndex(colWho));
-			Contact corresponding = contactHashMap.get(name);
-			if(corresponding == null)
-			{
-				corresponding = new Contact(name);
-			}
-			History history = new History(ts, corresponding, type);
+			String nickname = cursor.getString(cursor.getColumnIndex(colNick));
+			Contact contact = new Contact(name, nickname);
+			History history = new History(ts, contact, type);
 			result.add(history);
 			cursor.moveToNext();
 		}
+		cursor.close();
 		return result;
 	}
 }

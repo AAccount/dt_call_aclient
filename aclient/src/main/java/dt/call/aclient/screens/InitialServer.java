@@ -1,11 +1,9 @@
 package dt.call.aclient.screens;
 
-import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -30,8 +28,7 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.BackgroundManager;
-import dt.call.aclient.background.CmdListener;
-import dt.call.aclient.background.LoginAsync;
+import dt.call.aclient.background.Async.LoginAsync;
 
 public class InitialServer extends AppCompatActivity implements View.OnClickListener
 {

@@ -26,6 +26,7 @@ import android.view.ViewGroup.LayoutParams;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
 
 import dt.call.aclient.Const;
@@ -33,10 +34,10 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.BackgroundManager;
-import dt.call.aclient.background.CallInitAsync;
+import dt.call.aclient.background.Async.CallInitAsync;
 import dt.call.aclient.background.CmdListener;
-import dt.call.aclient.background.KillSocketsAsync;
-import dt.call.aclient.background.LookupAsync;
+import dt.call.aclient.background.Async.KillSocketsAsync;
+import dt.call.aclient.background.Async.LookupAsync;
 import dt.call.aclient.sqlite.Contact;
 import dt.call.aclient.sqlite.Db;
 import dt.call.aclient.sqlite.History;
@@ -83,23 +84,48 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 
 		//build the contacts list
 		ArrayList<Contact> allContacts = db.getContacts();
+		Vars.contactTable = new HashMap<String, String>();
 		for(Contact contact : allContacts)
 		{
 			addToContactList(contact);
+			Vars.contactTable.put(contact.getName(), contact.getNickname());
+		}
+
+		//setup the pending intents that make the ongoing notification bring you to the
+		//right screen based on what you're doing
+		if(Vars.go2HomePending == null)
+		{
+			Intent go2Home = new Intent(getApplicationContext(), UserHome.class);
+			Vars.go2HomePending = PendingIntent.getActivity(this, 0, go2Home, PendingIntent.FLAG_UPDATE_CURRENT);
+		}
+		if(Vars.go2CallMainPending == null)
+		{
+			Intent go2CallMain = new Intent(getApplicationContext(), CallMain.class);
+			Vars.go2CallMainPending = PendingIntent.getActivity(this, 0, go2CallMain, PendingIntent.FLAG_UPDATE_CURRENT);
 		}
 
 		//setup the ongoing notification shared accross screens that shows
 		//	the state of the app: signed in, no internet, in call etc...
-		Intent go2Home = new Intent(this, UserHome.class);
-		PendingIntent go2HomePending = PendingIntent.getActivity(this, 0, go2Home, PendingIntent.FLAG_UPDATE_CURRENT);
-		Vars.stateNotificationBuilder = new Notification.Builder(getApplicationContext())
-				.setContentTitle(getString(R.string.app_name))
-				.setContentText("text")
-				.setSmallIcon(R.drawable.pqrs)
-				.setContentIntent(go2HomePending)
-				.setOngoing(true);
-		NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
-		notificationManager.notify(Vars.stateNotificationId, Vars.stateNotificationBuilder.build());
+		//
+		//if this is the first time the notification is being setup do it from scratch.
+		//otherwise just update it to relfect home
+		if(Vars.stateNotificationBuilder == null || Vars.notificationManager == null)
+		{
+			Vars.stateNotificationBuilder = new Notification.Builder(getApplicationContext())
+					.setContentTitle(getString(R.string.app_name))
+					.setContentText(getString(R.string.state_popup_idle))
+					.setSmallIcon(R.drawable.ic_local_phone_white_48dp)
+					.setContentIntent(Vars.go2HomePending)
+					.setOngoing(true);
+			Vars.notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+			Vars.notificationManager.notify(Vars.stateNotificationId, Vars.stateNotificationBuilder.build());
+		}
+		else
+		{
+			Vars.stateNotificationBuilder.setContentText(getString(R.string.state_popup_idle))
+					.setContentIntent(Vars.go2HomePending);
+			Vars.notificationManager.notify(Vars.stateNotificationId, Vars.stateNotificationBuilder.build());
+		}
 
 		//receives the server response from clicking the 2 FAB buttons
 		//	Click +: whether new contact to add is valid
@@ -110,33 +136,38 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			public void onReceive(Context context, Intent intent)
 			{
 				Utils.logcat(Const.LOGD, tag, "got a broadcasted intent");
-				String type = intent.getStringExtra(Const.TYPE);
+				String type = intent.getStringExtra(Const.BROADCAST_HOME_TYPE);
 
 				//Result of clicking the "+" for adding a contact
-				if(type.equals(Const.TYPELOOKUP))
+				if(type.equals(Const.BROADCAST_HOME_TYPE_LOOKUP))
 				{
-					String user = intent.getStringExtra(Const.LOOKUPNAME);
-					String result = intent.getStringExtra(Const.LOOKUPRESULT);
+					String user = intent.getStringExtra(Const.BROADCAST_HOME_LOOKUP_NAME);
+					String result = intent.getStringExtra(Const.BROADCAST_HOME_LOOKUP_RESULT);
 					if(result.equals("exists"))
 					{
 						Contact newGuy = new Contact(user);
 						db.insertContact(newGuy);
 						addToContactList(newGuy);
+						actionbox.setText("");
+						Vars.contactTable.put(user, "");
 					}
 					else
 					{
 						Utils.showOk(UserHome.this, getString(R.string.alert_user_home_contact_notexist));
+						//don't reset the actionbox text. coulda just been a typo
 					}
 				}
 
 				//Result of clicking the phone button. If the user you're trying to call doesn't exist
 				//	the server treats it as not available. It IS the server's job to verify all input given to it.
-				else if (type.equals(Const.TYPEINIT))
+				else if (type.equals(Const.BROADCAST_HOME_TYPE_INIT))
 				{
-					boolean canInit = intent.getBooleanExtra(Const.CANINIT, false);
+					boolean canInit = intent.getBooleanExtra(Const.BROADCAST_HOME_INIT_CANINIT, false);
 					if(canInit)
 					{
 						Utils.logcat(Const.LOGD, tag, "Starting call with " + Vars.callWith);
+						Intent startCall = new Intent(UserHome.this, CallMain.class);
+						startActivity(startCall);
 					}
 					else
 					{
@@ -153,13 +184,13 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		super.onResume();
 
 		//receiver must be reregistered when loading this screen from the back button
-		registerReceiver(myReceiver, new IntentFilter(Const.NOTIFYHOME));
+		registerReceiver(myReceiver, new IntentFilter(Const.BROADCAST_HOME));
 	}
 
 	@Override
-	protected void onStop()
+	protected void onPause()
 	{
-		super.onStop();
+		super.onPause();
 
 		//don't leak the receiver when leaving this screen
 		unregisterReceiver(myReceiver);
@@ -178,10 +209,17 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			String actionBoxName = actionbox.getText().toString();
 			Contact actionBoxContact = new Contact(actionBoxName);
 
+			//check to see if anything was entered in the action box to begin with
+			if(actionbox.getText().toString().equals(""))
+			{
+				return;
+			}
+
 			//check to see if the new contact to add already exists
 			if(db.contactExists(actionBoxContact))
 			{
 				Utils.showOk(this, getString(R.string.alert_user_home_duplicate));
+				actionbox.setText("");
 				return;
 			}
 			new LookupAsync().execute(actionBoxContact); //result will be processed in myReceiver BroadcastReceiver
@@ -189,10 +227,16 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		else if (v == call)
 		{
 			String who = actionbox.getText().toString();
+			if(who.equals("")) //in case you pressed call while the action box was empty
+			{
+				return;
+			}
+
+			Contact contact = new Contact(who, Vars.contactTable.get(who));
 			boolean didInit;
 			try
 			{
-				didInit = new CallInitAsync(who).execute().get(); //result will be processed in myReceiver BroadcastReceiver
+				didInit = new CallInitAsync(contact).execute().get(); //result will be processed in myReceiver BroadcastReceiver
 			}
 			catch (InterruptedException e)
 			{
@@ -211,8 +255,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				long now = Utils.getTimestamp();
 				//don't need the nickname because db only records user name
 				//	db doesn' need to record nickname because it will be figured out when drawing the history table
-				Contact calling = new Contact(Vars.callWith);
-				History history = new History(now, calling, Const.outgoing);
+				History history = new History(now, contact, Const.outgoing);
 				db.insertHistory(history);
 			}
 			else
@@ -251,12 +294,11 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	}
 
 	//its only purpose is to be called when you click the logout button
-	//for whatever reason you can't access android internals liek notification manager inside onOptionsItemSelected
+	//for whatever reason you can't access android internals like notification manager inside onOptionsItemSelected
 	private void quit()
 	{
 		//get rid of the status notification
-		NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
-		notificationManager.cancelAll();
+		Vars.notificationManager.cancelAll();
 
 		//prevent background manager from restarting command listener when sockets kill async is called
 		ComponentName backgroundManager = new ComponentName(this, BackgroundManager.class);
@@ -324,9 +366,13 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 								refreshContacts(CHRENAME, contactInEdit);
 								inEdit = false;
 								invalidateOptionsMenu();
+
+								//don't forget to update the in memory contact list
+								Vars.contactTable.remove(contactInEdit.getName());
+								Vars.contactTable.put(contactInEdit.getName(), contactInEdit.getNickname());
 							}
 						})
-						.setNeutralButton(R.string.alert_user_home_rename_button_nvm, new DialogInterface.OnClickListener()
+						.setNegativeButton(R.string.alert_user_home_rename_button_nvm, new DialogInterface.OnClickListener()
 						{
 							@Override
 							public void onClick(DialogInterface dialog, int which)
@@ -336,6 +382,8 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 								invalidateOptionsMenu();
 							}
 						});
+				AlertDialog chnick = mkdialog.create();
+				chnick.show();
 				return true;
 			case R.id.menu_edit_rm:
 				db.deleteContact(contactInEdit);
@@ -353,7 +401,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	{
 		Button contactView = new Button(this);
 		contactView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
-		if(!contact.getNickname().equals(""))
+		if(contact.hasNickname())
 		{
 			contactView.setText(contact.toString());
 		}
@@ -391,5 +439,14 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				}
 			}
 		}
+	}
+
+	@Override
+	public void onBackPressed()
+	{
+		/*
+		 * Do nothing. There's nowhere to go back to
+		 *
+		 */
 	}
 }

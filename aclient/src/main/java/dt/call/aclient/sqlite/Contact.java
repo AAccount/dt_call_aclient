@@ -16,7 +16,14 @@ public class Contact
 	public Contact(String cname, String cnick)
 	{
 		name = cname;
-		nickname = cnick;
+		if(cnick != null)
+		{
+			nickname = cnick;
+		}
+		else
+		{
+			nickname = "";
+		}
 	}
 
 	public String getName()
@@ -57,5 +64,10 @@ public class Contact
 		{
 			return false;
 		}
+	}
+
+	public boolean hasNickname()
+	{
+		return nickname.equals("");
 	}
 }

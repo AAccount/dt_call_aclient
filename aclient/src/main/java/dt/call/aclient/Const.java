@@ -1,5 +1,7 @@
 package dt.call.aclient;
 
+import dt.call.aclient.sqlite.Contact;
+
 /**
  * Created by Daniel on 1/17/16.
  *
@@ -21,16 +23,16 @@ public class Const
 	public static final String cap = "G";
 
 	//nobody: the default value for when not in a call
-	public static final String nobody = "(nobody)";
+	public static final Contact nobody = new Contact("(nobody)");
 
 	//broadcast intent for user home related strings
-	public static final String NOTIFYHOME = "notify_home";
-	public static final String TYPE = "type";
-	public static final String TYPELOOKUP = "type_lookup";
-	public static final String LOOKUPNAME = "lookup_name";
-	public static final String LOOKUPRESULT = "lookup_result";
-	public static final String TYPEINIT = "type_init";
-	public static final String CANINIT = "can_init";
+	public static final String BROADCAST_HOME = "notify_home";
+	public static final String BROADCAST_HOME_TYPE = "type";
+	public static final String BROADCAST_HOME_TYPE_LOOKUP = "type_lookup";
+	public static final String BROADCAST_HOME_LOOKUP_NAME = "lookup_name";
+	public static final String BROADCAST_HOME_LOOKUP_RESULT = "lookup_result";
+	public static final String BROADCAST_HOME_TYPE_INIT = "type_init";
+	public static final String BROADCAST_HOME_INIT_CANINIT = "can_init";
 
 	//log.e/d/i wrapper to avoid wasting cpu for logging
 	public static final boolean SHOUDLOG = true;
@@ -39,9 +41,19 @@ public class Const
 	public static final int LOGW = 3;
 
 	//when cmd listener dies
-	public static final String CMDDEAD = "cmd_dead";
+	public static final String BROADCAST_BK_CMDDEAD = "cmd_dead";
 
 	//call history types
 	public static final int outgoing = 1;
 	public static final int incoming = 2;
+
+	//boradcast intent shared by call main and incoming call screen
+	//both need the call end signal
+	// (either the person hung or changed his mind and cancelled before you answered)
+	//only call main reponds to call accept
+	public static final String BROADCAST_CALL = "notify_call_info";
+	public static final String BROADCAST_CALL_RESP = "call_response";
+	public static final String BROADCAST_CALL_START = "start";
+	public static final String BROADCAST_CALL_END = "end";
+
 }

@@ -46,8 +46,7 @@
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:text="Caller ID"
         android:layout_centerVertical="true"
-        android:layout_alignLeft="@+id/call_main_user_image"
-        android:layout_alignStart="@+id/call_main_user_image"/>
+        android:layout_centerHorizontal="true"/>
 
 
     <android.support.design.widget.FloatingActionButton
@@ -55,7 +54,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:src="@drawable/ic_close_white_48dp"
-        android:clickable="false"
         app:rippleColor="@android:color/white"
         android:layout_below="@+id/call_main_callerid"
         android:layout_alignParentLeft="true"

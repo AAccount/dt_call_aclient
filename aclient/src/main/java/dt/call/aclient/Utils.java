@@ -1,6 +1,7 @@
 package dt.call.aclient;
 
 import android.app.AlertDialog;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
@@ -45,11 +46,8 @@ public class Utils
 		long now = getTimestamp();
 		long fivemins = 60*5;
 		long diff = now-ts;
-		if(diff < 0)
-		{
-			diff = -1*diff;
-		}
-		if(diff > fivemins)
+
+		if(Math.abs(diff) > fivemins)
 		{
 			return false;
 		}
@@ -100,7 +98,9 @@ public class Utils
 			context = SSLContext.getInstance("TLSv1.2");
 			context.init(new KeyManager[0], trustOnlyServerCert, new SecureRandom());
 			SSLSocketFactory mkssl = context.getSocketFactory();
-			return mkssl.createSocket(host, port);
+			Socket socket = mkssl.createSocket(host, port);
+			socket.setKeepAlive(true);
+			return socket;
 		}
 		catch (NoSuchAlgorithmException e)
 		{
@@ -159,5 +159,14 @@ public class Utils
 				});
 		AlertDialog showOkAlert = mkdialog.create();
 		showOkAlert.show();
+	}
+
+	//changes the message in the ongoing notification
+	public static void updateNotification(String message, PendingIntent go2)
+	{
+		Vars.stateNotificationBuilder
+				.setContentText(message)
+				.setContentIntent(go2);
+		Vars.notificationManager.notify(Vars.stateNotificationId, Vars.stateNotificationBuilder.build());
 	}
 }

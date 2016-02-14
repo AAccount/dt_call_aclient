@@ -3,4 +3,9 @@
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
+
+    <!-- Recommended material design colors -->
+    <!-- https://www.google.com/design/spec/style/color.html#color-color-palette -->
+    <color name="material_red">#f44336</color>
+    <color name="material_green">#4caf50</color>
 </resources>
