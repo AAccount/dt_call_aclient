@@ -31,7 +31,7 @@ public class KillSocketsAsync extends AsyncTask<String, String, String>
 		}
 		catch (IOException e)
 		{
-			Utils.logcat(Const.LOGE, tag, "problems closing the 2 sockets " + e.getMessage());
+			Utils.logcat(Const.LOGE, tag, "problems closing the 2 sockets " + Utils.dumpException(e));
 		}
 		return null;
 	}

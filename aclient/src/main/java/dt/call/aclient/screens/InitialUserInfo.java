@@ -18,6 +18,7 @@ import dt.call.aclient.background.Async.LoginAsync;
 
 public class InitialUserInfo extends AppCompatActivity implements View.OnClickListener
 {
+	private static final String tag = "InitialUserInfo";
 	private EditText uname, passwd;
 	private FloatingActionButton next;
 
@@ -91,14 +92,12 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 			}
 			catch (InterruptedException e)
 			{
-				e.printStackTrace();
-				Utils.logcat(Const.LOGE, getString(R.string.initial_user_title), "login interrupted");
+				Utils.logcat(Const.LOGE, tag, "login interrupted: " + Utils.dumpException(e));
 				return;
 			}
 			catch (ExecutionException e)
 			{
-				e.printStackTrace();
-				Utils.logcat(Const.LOGE, getString(R.string.initial_user_title), "login execution problem");
+				Utils.logcat(Const.LOGE, tag, "login execution problem" + Utils.dumpException(e));
 				return;
 			}
 		}

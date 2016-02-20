@@ -36,7 +36,7 @@ public class CallInitAsync extends AsyncTask<String, String, Boolean>
 		}
 		catch (IOException e)
 		{
-			Utils.logcat(Const.LOGE, tag, e.getStackTrace().toString());
+			Utils.logcat(Const.LOGE, tag, Utils.dumpException(e));
 			Vars.callWith = Const.nobody;
 			Vars.state = CallState.NONE;
 			return false;

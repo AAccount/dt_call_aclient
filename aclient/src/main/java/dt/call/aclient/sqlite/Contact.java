@@ -43,7 +43,14 @@ public class Contact
 
 	public String toString()
 	{
-		return nickname + " (" + name + ")";
+		if(nickname.equals(""))
+		{
+			return name;
+		}
+		else
+		{
+			return nickname + " (" + name + ")";
+		}
 	}
 
 	public boolean equals(Object comparison)
@@ -64,10 +71,5 @@ public class Contact
 		{
 			return false;
 		}
-	}
-
-	public boolean hasNickname()
-	{
-		return nickname.equals("");
 	}
 }

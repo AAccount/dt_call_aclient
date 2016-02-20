@@ -9,9 +9,18 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.media.AudioFormat;
 import android.media.AudioManager;
+import android.media.AudioRecord;
+import android.media.AudioTrack;
+import android.media.MediaCodec;
+import android.media.MediaPlayer;
+import android.media.MediaRecorder;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.PowerManager;
+import android.os.Handler;
+import android.os.Message;
+import android.os.ParcelFileDescriptor;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -20,6 +29,17 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.TextView;
 
+import org.xiph.vorbis.decoder.DecodeFeed;
+import org.xiph.vorbis.decoder.DecodeStreamInfo;
+import org.xiph.vorbis.decoder.VorbisDecoder;
+import org.xiph.vorbis.encoder.EncodeFeed;
+import org.xiph.vorbis.encoder.VorbisEncoder;
+import org.xiph.vorbis.player.VorbisPlayer;
+import org.xiph.vorbis.recorder.VorbisRecorder;
+
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -30,12 +50,28 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.Async.CallEndAsync;
 import dt.call.aclient.background.Async.CallTimeoutAsync;
-import dt.call.aclient.background.Media2Server;
-import dt.call.aclient.background.MediaFromServer;
+import dt.call.aclient.background.Pipe2Server;
+import dt.call.aclient.background.PipeFromServer;
 
 public class CallMain extends AppCompatActivity implements View.OnClickListener, SensorEventListener
 {
+	//https://stackoverflow.com/questions/26990816/mediarecorder-issue-on-android-lollipop
+	//https://stackoverflow.com/questions/14437571/recording-audio-not-to-file-on-android
 	private static final String tag = "CallMain";
+
+	//various vorbis audio quality presets
+	private static final int STEREO = 2;
+	private static final int MONO = 1; //it's voice data... stereo is overkill
+	private static final int BR96k = 96*1000; //2010 self test couldn't tell above 96kbps for top40 music
+	private static final int BR128k = 128*1000; //typical pirated mp3 bitrate
+	private static final int BR320k = 320*1000; //considered "higher quality" mp3
+	private static final int FREQ441 = 44100; //standard sampling frequency
+
+	//wave audio presets
+	private static final int WAVSRC = MediaRecorder.AudioSource.MIC;
+	private static final int WAVSTERO = AudioFormat.CHANNEL_IN_STEREO;
+	private static final int WAVFORMAT = AudioFormat.ENCODING_PCM_16BIT;
+	private static final int STREAMCALL = AudioManager.STREAM_VOICE_CALL;
 
 	private FloatingActionButton end, mic, speaker;
 	private boolean micMute = false, onSpeaker = false;
@@ -44,10 +80,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private int min=0, sec=0;
 	private Timer counter = new Timer();
 	private BroadcastReceiver myReceiver;
-	private Intent send2Server, getFromServer;
 	private AudioManager audioManager;
 	private SensorManager sensorManager;
 	private Sensor proximity;
+	private VorbisRecorder vorbisRecorder;
+	private VorbisPlayer vorbisPlayer;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -71,16 +108,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		status = (TextView)findViewById(R.id.call_main_status); //by default ringing. change it when in a call
 		callerid = (TextView)findViewById(R.id.call_main_callerid);
 		time = (TextView)findViewById(R.id.call_main_time);
+		callerid.setText(Vars.callWith.toString());
 
-		//set the caller id with the nickname if the person has one
-		if(Vars.callWith.hasNickname())
-		{
-			callerid.setText(Vars.callWith.getNickname());
-		}
-		else
-		{
-			callerid.setText(Vars.callWith.getName());
-		}
 
 		//set the ui to call mode: if you got to this screen after accepting an incoming call
 		if(Vars.state == CallState.INCALL)
@@ -113,7 +142,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					{
 						//if the person hasn't answered after 60 seconds give up. it's probably not going to happen.
 						new CallTimeoutAsync().execute();
-						Vars.state = CallState.NONE; //guarnatee state == NONE. don't leave it to chance
+						Vars.state = CallState.NONE; //guarantee state == NONE. don't leave it to chance
 						onStop();
 					}
 				}
@@ -199,17 +228,14 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		if(Vars.state == CallState.NONE)
 		{
 			//stop the sending audio to the server
-			Vars.mediaRecorder.stop();
-			Vars.mediaRecorder.release();
-			stopService(send2Server);
+			vorbisRecorder.stop();
 
 			//stop getting audio from the server
-			Vars.mediaPlayer.stop();
-			Vars.mediaPlayer.release();
-			stopService(getFromServer);
+			vorbisPlayer.stop();
 
 			//no longer in a call
 			audioManager.setMode(AudioManager.MODE_NORMAL);
+			counter.cancel();
 
 			try
 			{
@@ -219,7 +245,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			{
 				Utils.logcat(Const.LOGW, tag, "don't unregister you get a leak, do unregister you get an exception... " + i.getMessage());
 			}
-			counter.cancel();
 
 			//go back to the home screen and clear the back history so there is no way to come back to
 			//call main
@@ -244,14 +269,12 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			if(micMute)
 			{
 				mic.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_mic_off_white_48dp));
-				Vars.mediaRecorder.stop();
-				Vars.mediaRecorder.reset();
-				stopService(send2Server);
+				vorbisRecorder.stop();
 			}
 			else
 			{
 				mic.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_mic_white_48dp));
-				startService(send2Server);
+				startRecorder();
 			}
 		}
 		else if (v == speaker)
@@ -289,12 +312,177 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		status.setText(getString(R.string.call_main_status_incall));
 		mic.setEnabled(true);
 		speaker.setEnabled(true);
+		startRecorder();
 
-		//setup the intent services
-		send2Server = new Intent(this, Media2Server.class);
-		startService(send2Server);
-		getFromServer = new Intent(this, MediaFromServer.class);
-		startService(getFromServer);
+		//same idea here: this class is only relevant here
+		class VorbisDecoderAsync extends AsyncTask<String, String, String>
+		{
+			private static final String tag = "VorbisDecoderAsync(CallMain)";
+			private AudioTrack wavPlayer;
+
+			@Override
+			protected String doInBackground(String... params)
+			{
+				wavPlayer = new AudioTrack(STREAMCALL, FREQ441, WAVSTERO, WAVFORMAT, 1024*2, AudioTrack.MODE_STREAM);
+				DecodeFeed decodeFeed = new DecodeFeed()
+				{
+					@Override
+					public int readVorbisData(byte[] buffer, int amountToWrite)
+					{
+						try
+						{
+							Vars.mediaSocket.getInputStream().read(buffer, 0, amountToWrite);
+						}
+						catch (IOException i)
+						{
+							Utils.logcat(Const.LOGE, tag, "ioexception reading media: " + Utils.dumpException(i));
+						}
+						return 0;
+					}
+
+					@Override
+					public void writePCMData(short[] pcmData, int amountToRead)
+					{
+						wavPlayer.write(pcmData, 0, amountToRead);
+					}
+
+					@Override
+					public void stop()
+					{
+						wavPlayer.stop();
+						wavPlayer.release();
+					}
+
+					@Override
+					public void startReadingHeader()
+					{
+
+					}
+
+					@Override
+					public void start(DecodeStreamInfo decodeStreamInfo)
+					{
+
+					}
+				};
+				Handler playbackHandler = new Handler()
+				{
+					@Override
+					public void handleMessage(Message msg)
+					{
+						switch (msg.what)
+						{
+							case VorbisPlayer.PLAYING_FAILED:
+								Utils.logcat(Const.LOGE, tag, "vorbis player failed");
+								break;
+							case VorbisPlayer.PLAYING_FINISHED:
+								Utils.logcat(Const.LOGD, tag, "vorbis player finished");
+								break;
+							case VorbisPlayer.PLAYING_STARTED:
+								Utils.logcat(Const.LOGD, tag, "vorbis player started");
+								break;
+						}
+					}
+				};
+				vorbisPlayer = new VorbisPlayer(decodeFeed, playbackHandler);
+				return null;
+			}
+		};
+		new VorbisDecoderAsync().execute();
+
+	}
+
+	//its own function because there are 2 places where the recorder is started: mic on/off button
+	//and the initial start of the record
+	private void startRecorder()
+	{
+		//can't do network on the main thread. create an inner class because this functionality is only
+		//relevant in CallMain and also would be nice to keep 1 less thing (VorbisRecorder) out of Vars
+		class VorbisEncoderAsync extends AsyncTask<String, String, String>
+		{
+			private static final String tag = "VorbisEncoderAsync(CallMain)";
+			private AudioRecord wavRecorder;
+
+			@Override
+			protected String doInBackground(String... params)
+			{
+				//https://stackoverflow.com/questions/8499042/android-audiorecord-example
+				wavRecorder = new AudioRecord(WAVSRC, FREQ441, WAVSTERO, WAVFORMAT, 1024*2);
+				EncodeFeed encodeFeed = new EncodeFeed()
+				{
+					@Override
+					public long readPCMData(byte[] pcmDataBuffer, int amountToWrite)
+					{
+						wavRecorder.read(pcmDataBuffer, 0, amountToWrite);
+						return 0;
+					}
+
+					@Override
+					public int writeVorbisData(byte[] vorbisData, int amountToRead)
+					{
+						try
+						{
+							Vars.mediaSocket.getOutputStream().write(vorbisData, 0, amountToRead);
+						}
+						catch (IOException i)
+						{
+							Utils.logcat(Const.LOGE, tag, "ioexception writing vorbis to server: " + Utils.dumpException(i));
+						}
+						return 0;
+					}
+
+					@Override
+					public void stop()
+					{
+						wavRecorder.stop();
+						wavRecorder.release();
+					}
+
+					@Override
+					public void stopEncoding()
+					{
+
+					}
+
+					@Override
+					public void start()
+					{
+					}
+				};
+				Handler recordHandler = new Handler()
+				{
+					@Override
+					public void handleMessage(Message msg)
+					{//copied directly from the vorbis demo
+						switch (msg.what)
+						{
+							case VorbisRecorder.START_ENCODING:
+								Utils.logcat(Const.LOGD, tag, "Starting to encode");
+								break;
+							case VorbisRecorder.STOP_ENCODING:
+								Utils.logcat(Const.LOGD, tag, "Stopping the encoder");
+								break;
+							case VorbisRecorder.UNSUPPORTED_AUDIO_TRACK_RECORD_PARAMETERS:
+								Utils.logcat(Const.LOGE, tag, "You're device does not support this configuration");
+								break;
+							case VorbisRecorder.ERROR_INITIALIZING:
+								Utils.logcat(Const.LOGE, tag, "There was an error initializing.  Try changing the recording configuration");
+								break;
+							case VorbisRecorder.FAILED_FOR_UNKNOWN_REASON:
+								Utils.logcat(Const.LOGE, tag, "The encoder failed for an unknown reason!");
+								break;
+							case VorbisRecorder.FINISHED_SUCCESSFULLY:
+								Utils.logcat(Const.LOGD, tag, "The encoder has finished successfully");
+								break;
+						}
+					}
+				};
+				vorbisRecorder = new VorbisRecorder(encodeFeed, recordHandler);
+				vorbisRecorder.start(FREQ441, STEREO, BR128k);
+				return null;
+			}
+		}
+		new VorbisEncoderAsync().execute();
 	}
 
 	@Override
@@ -308,10 +496,12 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	@Override
 	public void onSensorChanged(SensorEvent event)
 	{
-		if(event.values[0] == 0)
+		float distance = event.values[0];
+		if(distance == 0)
 		{
 			//with there being no good information on turning the screen on and off
 			//go with the next best thing of disabling all the buttons
+			Utils.logcat(Const.LOGD, tag, "proximity sensor NEAR: " + distance);
 			screenShowing = false;
 			end.setEnabled(false);
 			mic.setEnabled(false);
@@ -319,6 +509,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		}
 		else
 		{
+			Utils.logcat(Const.LOGD, tag, "proximity sensor FAR: " + distance);
 			screenShowing = true;
 			end.setEnabled(true);
 			mic.setEnabled(true);

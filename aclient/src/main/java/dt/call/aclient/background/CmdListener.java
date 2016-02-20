@@ -45,12 +45,12 @@ public class CmdListener extends IntentService
 		}
 		catch (IOException e)
 		{
-			Utils.logcat(Const.LOGE, tag, "problems getting input reader of command socket: " + e.getStackTrace());
+			Utils.logcat(Const.LOGE, tag, "problems getting input reader of command socket: " + Utils.dumpException(e));
 			notifyDead();
 		}
 		catch (NullPointerException n)
 		{
-			Utils.logcat(Const.LOGE, tag, "command socket is dead");
+			Utils.logcat(Const.LOGE, tag, "command socket is dead: " + Utils.dumpException(n));
 		}
 	}
 
@@ -287,7 +287,7 @@ public class CmdListener extends IntentService
 			}
 			catch(NumberFormatException n)
 			{
-				Utils.logcat(Const.LOGE, tag, "string --> # error: " + n.getStackTrace().toString());
+				Utils.logcat(Const.LOGE, tag, "string --> # error: " + Utils.dumpException(n));
 			}
 			catch(NullPointerException n)
 			{

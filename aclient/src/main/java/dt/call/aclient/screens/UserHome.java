@@ -118,13 +118,13 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 					.setContentIntent(Vars.go2HomePending)
 					.setOngoing(true);
 			Vars.notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-			Vars.notificationManager.notify(Vars.stateNotificationId, Vars.stateNotificationBuilder.build());
+			Vars.notificationManager.notify(Const.stateNotificationId, Vars.stateNotificationBuilder.build());
 		}
 		else
 		{
 			Vars.stateNotificationBuilder.setContentText(getString(R.string.state_popup_idle))
 					.setContentIntent(Vars.go2HomePending);
-			Vars.notificationManager.notify(Vars.stateNotificationId, Vars.stateNotificationBuilder.build());
+			Vars.notificationManager.notify(Const.stateNotificationId, Vars.stateNotificationBuilder.build());
 		}
 
 		//receives the server response from clicking the 2 FAB buttons
@@ -238,14 +238,9 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			{
 				didInit = new CallInitAsync(contact).execute().get(); //result will be processed in myReceiver BroadcastReceiver
 			}
-			catch (InterruptedException e)
+			catch (Exception e)
 			{
-				Utils.logcat(Const.LOGE, tag, e.getStackTrace().toString());
-				didInit = false;
-			}
-			catch (ExecutionException e)
-			{
-				Utils.logcat(Const.LOGE, tag, e.getStackTrace().toString());
+				Utils.logcat(Const.LOGE, tag, Utils.dumpException(e));
 				didInit = false;
 			}
 
@@ -401,14 +396,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	{
 		Button contactView = new Button(this);
 		contactView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
-		if(contact.hasNickname())
-		{
-			contactView.setText(contact.toString());
-		}
-		else
-		{
-			contactView.setText(contact.getName());
-		}
+		contactView.setText(contact.toString());
 		contactView.setAllCaps(false);
 		contactView.setOnClickListener(UserHome.this);
 		contactView.setOnLongClickListener(UserHome.this);

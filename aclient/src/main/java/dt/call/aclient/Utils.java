@@ -12,6 +12,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.Socket;
 
 import java.net.URI;
@@ -36,6 +38,8 @@ import javax.net.ssl.X509TrustManager;
  */
 public class Utils
 {
+	private static final String tag = "Utils";
+
 	public static long getTimestamp()
 	{
 		return System.currentTimeMillis()/1000L;
@@ -104,22 +108,22 @@ public class Utils
 		}
 		catch (NoSuchAlgorithmException e)
 		{
-			e.printStackTrace();
+			logcat(Const.LOGE, tag, "No such algorithm exception: " + dumpException(e));
 			return null;
 		}
 		catch (KeyManagementException e)
 		{
-			e.printStackTrace();
+			logcat(Const.LOGE, tag, "Key management exception: " + dumpException(e));
 			return null;
 		}
 		catch (UnknownHostException e)
 		{
-			e.printStackTrace();
+			logcat(Const.LOGE, tag, "Unknown host exception: " + dumpException(e));
 			return null;
 		}
 		catch (IOException e)
 		{
-			e.printStackTrace();
+			logcat(Const.LOGE, tag, "IO exception: " + dumpException(e));
 			return null;
 		}
 	}
@@ -167,6 +171,16 @@ public class Utils
 		Vars.stateNotificationBuilder
 				.setContentText(message)
 				.setContentIntent(go2);
-		Vars.notificationManager.notify(Vars.stateNotificationId, Vars.stateNotificationBuilder.build());
+		Vars.notificationManager.notify(Const.stateNotificationId, Vars.stateNotificationBuilder.build());
 	}
+
+	//https://stackoverflow.com/questions/1149703/how-can-i-convert-a-stack-trace-to-a-string
+	public static String dumpException(Exception e)
+	{
+		StringWriter sw = new StringWriter();
+		PrintWriter pw = new PrintWriter(sw);
+		e.printStackTrace(pw);
+		return sw.toString();
+	}
+
 }

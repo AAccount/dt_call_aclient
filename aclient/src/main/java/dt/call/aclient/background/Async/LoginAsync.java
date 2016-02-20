@@ -84,13 +84,12 @@ public class LoginAsync extends AsyncTask<String, String, Boolean>
 		}
 		catch (IOException i)
 		{
-			Utils.logcat(Const.LOGD, tag, "io problem");
-			i.printStackTrace();
+			Utils.logcat(Const.LOGD, tag, "io problem: " + Utils.dumpException(i));
 			return false;
 		}
 		catch (NullPointerException n)
 		{
-			Utils.logcat(Const.LOGD, tag, "java socket stupidities");
+			Utils.logcat(Const.LOGD, tag, "java socket stupidities: " + Utils.dumpException(n));
 			return false;
 		}
 	}

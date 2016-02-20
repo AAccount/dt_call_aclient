@@ -28,7 +28,7 @@ public class LookupAsync extends AsyncTask<Contact, String, Object>
 		}
 		catch (IOException e)
 		{
-			Utils.logcat(Const.LOGE, tag, "IO problem sending lookup user request: " + e.getStackTrace());
+			Utils.logcat(Const.LOGE, tag, "IO problem sending lookup user request: " + Utils.dumpException(e));
 		}
 		return null;
 	}

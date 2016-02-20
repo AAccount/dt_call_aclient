@@ -82,11 +82,11 @@ public class BackgroundManager extends BroadcastReceiver
 				}
 				catch (InterruptedException e)
 				{
-					Utils.logcat(Const.LOGE, tag, "async signin InterruptedException: " + e.getMessage());
+					Utils.logcat(Const.LOGE, tag, "async signin InterruptedException: " + Utils.dumpException(e));
 				}
 				catch (ExecutionException e)
 				{
-					Utils.logcat(Const.LOGE, tag, "async signin ExecutionException: " + e.getMessage());
+					Utils.logcat(Const.LOGE, tag, "async signin ExecutionException: " + Utils.dumpException(e));
 				}
 			}
 		};
@@ -116,7 +116,7 @@ public class BackgroundManager extends BroadcastReceiver
 				//initial delay 0 because you want to try right away. if that doesn't work
 				//	then you can wait a minute before trying again
 				retries = 5;
-				retry.schedule(login, 0, 60 * 1000);
+				retry.schedule(login, 0, 60*1000);
 			}
 		}
 		else if (intent.getAction().equals(Const.BROADCAST_BK_CMDDEAD))
@@ -128,7 +128,7 @@ public class BackgroundManager extends BroadcastReceiver
 				return;
 			}
 			retries = 5;
-			retry.schedule(login, 0, 60 * 1000);
+			retry.schedule(login, 0, 60*1000);
 		}
 	}
 }

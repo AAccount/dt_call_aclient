@@ -29,7 +29,7 @@ public class CallRejectAsync extends AsyncTask<String, String, Boolean>
 		}
 		catch (IOException e)
 		{
-			Utils.logcat(Const.LOGE, tag, "ioexception: " + e.getCause());
+			Utils.logcat(Const.LOGE, tag, "ioexception: " + Utils.dumpException(e));
 			result = false;
 		}
 

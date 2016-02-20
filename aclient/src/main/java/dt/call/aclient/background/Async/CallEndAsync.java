@@ -51,7 +51,7 @@ public class CallEndAsync extends AsyncTask<String, String, Boolean>
 		}
 		catch (IOException i)
 		{
-			Utils.logcat(Const.LOGE, tag, "IO exception restarting media socket");
+			Utils.logcat(Const.LOGE, tag, "IO exception restarting media socket: " + Utils.dumpException(i));
 			result = false;
 		}
 

@@ -5,6 +5,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
+import android.os.ParcelFileDescriptor;
 import android.telecom.Call;
 
 import java.net.Socket;
@@ -28,10 +29,6 @@ public class Vars
 	public static Socket commandSocket;
 	public static Socket mediaSocket;
 
-	//call media playback and recorders
-	public static MediaRecorder mediaRecorder = null;
-	public static MediaPlayer mediaPlayer = null;
-
 	//call related information
 	public static CallState state = CallState.NONE;
 	public static Contact callWith;
@@ -51,14 +48,17 @@ public class Vars
 
 	//make sure there is only 1 command listener and only start it if there's internet
 	public static boolean cmdListenerRunning = false; //@ first start it's not running
-	public static Object cmdListenerLock = new Object();
+	public static final Object cmdListenerLock = new Object();
 	public static boolean hasInternet = true; //@ first start you have internet, otherwise how did you make the first log in
 
 	//Ongoing notification with state information
 	public static Notification.Builder stateNotificationBuilder = null;
 	public static NotificationManager notificationManager = null;
-	public static final int stateNotificationId = 1;
 	public static PendingIntent go2HomePending = null;
 	public static PendingIntent go2CallMainPending = null;
 
+	//pipes for the workaround because you can't send parcel file descriptors through an intent
+	//... a workaround for the workaround ... :(
+	public static ParcelFileDescriptor[] pipeFromServer;
+	public static ParcelFileDescriptor[] pipe2Server;
 }
