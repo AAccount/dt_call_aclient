@@ -21,7 +21,7 @@ public class CallAcceptAsync extends AsyncTask<String, String, Boolean>
 		try
 		{
 			String involved = Vars.callWith.getName();
-			String acceptResp = Const.cap + Utils.getTimestamp() + "|accept|" + involved + "|" + Vars.sessionid;
+			String acceptResp = Const.cap + Utils.generateServerTimestamp() + "|accept|" + involved + "|" + Vars.sessionid;
 			Vars.commandSocket.getOutputStream().write(acceptResp.getBytes());
 
 			//no need to set Vars.callwith or Vars.callState because this is just accepting

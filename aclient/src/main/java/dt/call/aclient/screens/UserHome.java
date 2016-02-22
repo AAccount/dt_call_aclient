@@ -27,6 +27,7 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.TimeZone;
 import java.util.concurrent.ExecutionException;
 
 import dt.call.aclient.Const;
@@ -247,7 +248,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			//if the resulting dial out attempt didn't fail for technical reasons. save it in the user's history table
 			if(didInit)
 			{
-				long now = Utils.getTimestamp();
+				long now = Utils.getLocalTimestamp();
 				//don't need the nickname because db only records user name
 				//	db doesn' need to record nickname because it will be figured out when drawing the history table
 				History history = new History(now, contact, Const.outgoing);
@@ -278,12 +279,26 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		if(inEdit)
 		{
 			getMenuInflater().inflate(R.menu.menu_main_edit, menu);
-			getSupportActionBar().setBackgroundDrawable(new ColorDrawable(ContextCompat.getColor(this, R.color.colorAccent)));
+			try
+			{
+				getSupportActionBar().setBackgroundDrawable(new ColorDrawable(ContextCompat.getColor(this, R.color.colorAccent)));
+			}
+			catch (NullPointerException n)
+			{
+				Utils.logcat(Const.LOGE, tag, "null pointer changing action bar to highlight color: " + Utils.dumpException(n));
+			}
 		}
 		else
 		{
 			getMenuInflater().inflate(R.menu.menu_main_set, menu);
-			getSupportActionBar().setBackgroundDrawable(new ColorDrawable(ContextCompat.getColor(this, R.color.colorPrimary)));
+			try
+			{
+				getSupportActionBar().setBackgroundDrawable(new ColorDrawable(ContextCompat.getColor(this, R.color.colorPrimary)));
+			}
+			catch (NullPointerException n)
+			{
+				Utils.logcat(Const.LOGE, tag, "null pointer changing action bar to normal color: " + Utils.dumpException(n));
+			}
 		}
 		return super.onCreateOptionsMenu(menu);
 	}

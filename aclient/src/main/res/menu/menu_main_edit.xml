@@ -3,6 +3,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     >
+    <!--Hard code titles for always show as they'll never be seen-->
     <item
         android:id="@+id/menu_edit_done"
         android:icon="@drawable/ic_done_white_48dp"

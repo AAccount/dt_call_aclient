@@ -1,9 +1,7 @@
 package dt.call.aclient.background.Async;
 
 import android.os.AsyncTask;
-import android.util.Log;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,7 +37,7 @@ public class LoginAsync extends AsyncTask<String, String, Boolean>
 
 			//send login command
 			Vars.commandSocket = Utils.mkSocket(Vars.serverAddress, Vars.commandPort, Vars.expectedCertDump);
-			String login = Const.cap + Utils.getTimestamp() + "|login|" + uname + "|" + passwd;
+			String login = Const.cap + Utils.generateServerTimestamp() + "|login|" + uname + "|" + passwd;
 			Vars.commandSocket.getOutputStream().write(login.getBytes());
 
 			//read response
@@ -72,7 +70,7 @@ public class LoginAsync extends AsyncTask<String, String, Boolean>
 			//establish media socket
 			publishProgress("Establishing media port");
 			Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);
-			String associateMedia = Const.cap + Utils.getTimestamp() + "|" + Vars.sessionid;
+			String associateMedia = Const.cap + Utils.generateServerTimestamp() + "|" + Vars.sessionid;
 			Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
 			Vars.mediaSocket.getOutputStream().write("testing testing 1 2 3".getBytes()); //sometimes java socket craps out
 			return true;

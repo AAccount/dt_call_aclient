@@ -56,9 +56,4 @@ public class Vars
 	public static NotificationManager notificationManager = null;
 	public static PendingIntent go2HomePending = null;
 	public static PendingIntent go2CallMainPending = null;
-
-	//pipes for the workaround because you can't send parcel file descriptors through an intent
-	//... a workaround for the workaround ... :(
-	public static ParcelFileDescriptor[] pipeFromServer;
-	public static ParcelFileDescriptor[] pipe2Server;
 }

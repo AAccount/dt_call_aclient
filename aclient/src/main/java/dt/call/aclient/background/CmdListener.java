@@ -1,7 +1,6 @@
 package dt.call.aclient.background;
 
 import android.app.IntentService;
-import android.app.PendingIntent;
 import android.content.Intent;
 
 import java.io.BufferedReader;
@@ -15,8 +14,6 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.screens.CallIncoming;
-import dt.call.aclient.screens.CallMain;
-import dt.call.aclient.screens.UserHome;
 import dt.call.aclient.sqlite.Contact;
 import dt.call.aclient.sqlite.Db;
 import dt.call.aclient.sqlite.History;
@@ -141,7 +138,7 @@ public class CmdListener extends IntentService
 						Utils.logcat(Const.LOGD, tag, "Incoming call from: " + involved);
 						Vars.state = CallState.INIT;
 						Contact contact = new Contact(involved, Vars.contactTable.get(involved));
-						History history = new History(Utils.getTimestamp(), contact, Const.incoming);
+						History history = new History(Utils.getLocalTimestamp(), contact, Const.incoming);
 						db.insertHistory(history);
 						Vars.callWith = contact;
 
@@ -215,7 +212,7 @@ public class CmdListener extends IntentService
 								try
 								{
 									Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);
-									String associateMedia = Utils.getTimestamp() + "|" + Vars.sessionid;
+									String associateMedia = Utils.generateServerTimestamp() + "|" + Vars.sessionid;
 									Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
 								}
 								catch (CertificateException c)
@@ -247,7 +244,7 @@ public class CmdListener extends IntentService
 							try
 							{
 								Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);
-								String associateMedia = Utils.getTimestamp() + "|" + Vars.sessionid;
+								String associateMedia = Utils.generateServerTimestamp() + "|" + Vars.sessionid;
 								Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
 							}
 							catch (CertificateException c)

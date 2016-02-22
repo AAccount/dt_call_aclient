@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
     <application
         android:allowBackup="true"
@@ -55,18 +55,6 @@
             android:name=".background.CmdListener"
             android:exported="false"/>
 
-        <!-- Call audio playback service-->
-        <service
-            android:name=".background.PipeFromServer"
-            android:exported="false"
-            />
-
-        <!-- Call voice recorder service -->
-        <service
-            android:name=".background.Pipe2Server"
-            android:exported="false"
-            />
-        
         <!-- Voice call screen -->
         <activity
             android:name=".screens.CallMain"

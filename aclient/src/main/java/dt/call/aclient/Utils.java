@@ -4,26 +4,22 @@ import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.SharedPreferences;
 import android.util.Base64;
 import android.util.Log;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.Socket;
 
-import java.net.URI;
 import java.net.UnknownHostException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Calendar;
+import java.util.TimeZone;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
@@ -40,14 +36,25 @@ public class Utils
 {
 	private static final String tag = "Utils";
 
-	public static long getTimestamp()
+	//Make sure the timestamp sent to the server is relative to the server's timezone
+	//otherwise the server's +-5min window will fail
+	public static long generateServerTimestamp()
+	{
+		TimeZone localTZ = TimeZone.getDefault();
+		TimeZone eastern = TimeZone.getTimeZone("America/Toronto"); //change this to match your server's local time
+		long now = Utils.getLocalTimestamp();
+		int offset =  localTZ.getOffset(now) - eastern.getOffset(now);
+		return now - offset;
+	}
+
+	public static long getLocalTimestamp()
 	{
 		return System.currentTimeMillis()/1000L;
 	}
 
 	public static boolean validTS(long ts)
 	{
-		long now = getTimestamp();
+		long now = generateServerTimestamp();
 		long fivemins = 60*5;
 		long diff = now-ts;
 
@@ -55,7 +62,10 @@ public class Utils
 		{
 			return false;
 		}
-		return true;
+		else
+		{
+			return true;
+		}
 	}
 
 	public static Socket mkSocket(String host, int port, final String expected64) throws CertificateException
@@ -90,7 +100,6 @@ public class Utils
 					@Override
 					public X509Certificate[] getAcceptedIssuers()
 					{
-						// TODO Auto-generated method stub
 						return null;
 					}
 
