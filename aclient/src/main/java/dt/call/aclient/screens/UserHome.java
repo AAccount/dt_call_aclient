@@ -27,8 +27,6 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.TimeZone;
-import java.util.concurrent.ExecutionException;
 
 import dt.call.aclient.Const;
 import dt.call.aclient.R;

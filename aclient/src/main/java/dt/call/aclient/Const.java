@@ -56,8 +56,6 @@ public class Const
 	public static final String BROADCAST_CALL_START = "start";
 	public static final String BROADCAST_CALL_END = "end";
 
-	//related to the pipe workaround
-	public static final String PIPE_OBJ = "pipe";
 	public static final int BUFFER_SIZE = 1024;
 
 	//persistent notificaton id

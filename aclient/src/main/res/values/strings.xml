@@ -40,7 +40,7 @@
     <!-- User home screen -->
     <string name="user_home_actionbox_hint">Choose someone to call</string>
     <string name="user_home_contacts_header">My Contacts</string>
-    <string name="user_home_title">User Home</string>
+    <string name="user_home_title">Main</string>
 
     <!-- Main call screen -->
     <string name="call_main_title">Voice Call</string>

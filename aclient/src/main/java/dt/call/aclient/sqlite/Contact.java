@@ -63,13 +63,6 @@ public class Contact
 		//only the user name in the server db matters for if it's the same person or not
 		//	nick name is arbitrary
 		Contact casted = (Contact)comparison;
-		if(name.equals(casted.getName()))
-		{
-			return true;
-		}
-		else
-		{
-			return false;
-		}
+		return name.equals(casted.getName());
 	}
 }

@@ -3,15 +3,10 @@ package dt.call.aclient;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.media.MediaPlayer;
-import android.media.MediaRecorder;
-import android.os.ParcelFileDescriptor;
-import android.telecom.Call;
 
 import java.net.Socket;
 import java.util.HashMap;
 
-import dt.call.aclient.background.CmdListener;
 import dt.call.aclient.sqlite.Contact;
 
 /**

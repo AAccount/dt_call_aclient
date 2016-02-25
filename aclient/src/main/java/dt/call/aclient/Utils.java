@@ -18,7 +18,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.Calendar;
 import java.util.TimeZone;
 
 import javax.net.ssl.KeyManager;
@@ -58,14 +57,7 @@ public class Utils
 		long fivemins = 60*5;
 		long diff = now-ts;
 
-		if(Math.abs(diff) > fivemins)
-		{
-			return false;
-		}
-		else
-		{
-			return true;
-		}
+		return Math.abs(diff) <= fivemins;
 	}
 
 	public static Socket mkSocket(String host, int port, final String expected64) throws CertificateException

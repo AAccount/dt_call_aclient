@@ -75,7 +75,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 					SharedPreferences.Editor editor = sharedPreferences.edit();
 					editor.putString(Const.UNAME, enteredUname);
 					editor.putString(Const.PASSWD, enteredPasswd);
-					editor.commit();
+					editor.apply();
 
 					//save it to the session variables too, to avoid always doing a disk lookup with shared prefs
 					Vars.uname = enteredUname;

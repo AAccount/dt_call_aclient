@@ -22,7 +22,7 @@ public class Db extends SQLiteOpenHelper
 	private static final String colTs = "timestamp";
 	private static final String colWho = "who";
 	private static final String colType = "call_type";
-	final String mkhistory = "create table " + tableHistory + " " +
+	private final String mkhistory = "create table " + tableHistory + " " +
 			"(" +
 			colTs + " integer primary key, " +
 			colWho + " text, " +

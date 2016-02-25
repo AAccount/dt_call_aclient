@@ -1,6 +1,5 @@
 package dt.call.aclient.sqlite;
 
-import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 

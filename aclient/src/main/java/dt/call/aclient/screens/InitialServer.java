@@ -187,7 +187,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			editor.putInt(Const.MEDIAPORT, mediaInt);
 			editor.putString(Const.CERT64, cert64);
 			editor.putString(Const.CERTFNAME, certFile);
-			editor.commit();
+			editor.apply();
 
 			//setup all the Vars
 			Vars.serverAddress = addrString;
@@ -228,15 +228,10 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 				cert.setText(certFile);
 
 			}
-			catch (FileNotFoundException e)
+			catch (FileNotFoundException | CertificateException e)
 			{
 				//file somehow disappeared between picking and trying to use in the app
 				//	there's nothing you can do about it
-				Utils.showOk(this, getString(R.string.alert_initial_server_corrupted_cert));
-			}
-			catch (CertificateException e)
-			{
-				//the certificate is corrupted. nothing you can do about it again.
 				Utils.showOk(this, getString(R.string.alert_initial_server_corrupted_cert));
 			}
 		}

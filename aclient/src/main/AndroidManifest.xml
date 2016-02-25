@@ -8,8 +8,14 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
+    <!-- allowBackup=false to prevent automatic cloud backup which will unknowingly leak your information. -->
+    <!-- the goal is to prevent unknowingly/unintentionally sending your information to someone else's servers-->
+    <!---->
+    <!-- if you want to backup your settings, you have to root your phone and do it locally. if you choose to upload -->
+    <!-- the backup you made by rooting to a cloud service that you're not hosting (or know the hoster) -->
+    <!-- then it's knowingly leaking, not unknowingly anymore. the choice is yours -->
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
@@ -38,7 +44,7 @@
         <!-- User main/home screen -->
         <activity
             android:name=".screens.UserHome"
-            android:label="@string/app_name"
+            android:label="@string/user_home_title"
             android:launchMode="singleTop">
         </activity>
 
