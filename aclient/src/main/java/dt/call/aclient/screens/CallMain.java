@@ -30,8 +30,6 @@ import org.xiph.vorbis.encoder.EncodeFeed;
 import org.xiph.vorbis.player.VorbisPlayer;
 import org.xiph.vorbis.recorder.VorbisRecorder;
 
-import java.io.BufferedOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -70,7 +68,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final int WAVSRC = MediaRecorder.AudioSource.MIC;
 	private static final int WAVSTERO = AudioFormat.CHANNEL_IN_STEREO;
 	private static final int WAVFORMAT = AudioFormat.ENCODING_PCM_16BIT;
-	private static final int STREAMCALL = AudioManager.STREAM_MUSIC;
+	private static final int STREAMCALL = AudioManager.STREAM_VOICE_CALL;
 
 	private FloatingActionButton end, mic, speaker;
 	private boolean micMute = false, onSpeaker = false;
@@ -355,7 +353,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							{
 								dataRead = Vars.mediaSocket.getInputStream().read(buffer, totalRead, amountToWrite-totalRead);
 								totalRead = totalRead + dataRead;
-								vorbisLogcat(Const.LOGD, tag, "got " + dataRead + "bytes this round, total: " + totalRead);
+								vorbisLogcat(Const.LOGD, tag, "got " + dataRead + "bytes from the MEDIA SOCKET, total: " + totalRead);
 							}
 							vorbisLogcat(Const.LOGD, tag, "buffer: " + new String(buffer));
 						}
@@ -432,14 +430,18 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					@Override
 					//amountToWrite is the amount of wav data that ??must?? be read to satisfy the native library
-					//since you're reading from the microphone, there shouldn't be any delays or other weirdness so assume
-					//	that you get the amount of wav data you expect
 					public long readPCMData(byte[] pcmDataBuffer, int amountToWrite)
 					{
-						int amountRead;
-						amountRead = wavRecorder.read(pcmDataBuffer, 0, amountToWrite);
-						vorbisLogcat(Const.LOGD, tag, amountRead + " bytes of raw wav read");
-						return amountRead;
+						//although unlikely to be necessary, buffer the mic input
+						int totalRead = 0, dataRead;
+						while(totalRead < amountToWrite)
+						{
+							dataRead = wavRecorder.read(pcmDataBuffer, totalRead, amountToWrite - totalRead);
+							totalRead = totalRead + dataRead;
+							vorbisLogcat(Const.LOGD, tag, "got " + dataRead + "bytes from the mic, total: " + totalRead);
+						}
+						vorbisLogcat(Const.LOGD, tag, "buffer: " + new String(pcmDataBuffer));
+						return totalRead;
 					}
 
 					@Override
