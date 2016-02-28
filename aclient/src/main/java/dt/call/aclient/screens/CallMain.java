@@ -47,7 +47,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	//https://stackoverflow.com/questions/26990816/mediarecorder-issue-on-android-lollipop
 	//https://stackoverflow.com/questions/14437571/recording-audio-not-to-file-on-android
 	private static final String tag = "CallMain";
-	private static final boolean ENABLE_VORBISLOG = true; //this level of logcat shouldn't normally be needed when logcat is enabled
+	private static final boolean ENABLE_VORBISLOG = false; //this level of logcat shouldn't normally be needed when logcat is enabled
 
 	//various vorbis audio quality presets
 	/**
@@ -57,8 +57,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	 * 		... the worst, stupidest, most artificial, most despicable, least respectable, moronic type of BS
 	 * 	-Sounds as good as aac, mp3 according to my ears
 	 */
-	private static final int STEREO = 2;
-	private static final int MONO = 1; //it's voice data... stereo is overkill
+	private static final int STEREO = 2; //mono makes little difference in file size for ogg
 	private static final int BR96k = 96*1000; //2010 self test couldn't tell above 96kbps for top40 music
 	private static final int BR128k = 128*1000; //typical pirated mp3 bitrate
 	private static final int BR320k = 320*1000; //considered "high quality" mp3
@@ -69,6 +68,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final int WAVSTERO = AudioFormat.CHANNEL_IN_STEREO;
 	private static final int WAVFORMAT = AudioFormat.ENCODING_PCM_16BIT;
 	private static final int STREAMCALL = AudioManager.STREAM_VOICE_CALL;
+	private static final int WAVBUFFER = 4096;
 
 	private FloatingActionButton end, mic, speaker;
 	private boolean micMute = false, onSpeaker = false;
@@ -316,7 +316,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		status.setText(getString(R.string.call_main_status_incall));
 		mic.setEnabled(true);
 		speaker.setEnabled(true);
-		startRecorder();
+		//startRecorder();
 
 
 		//same idea here: this class is only relevant here
@@ -327,8 +327,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 			public VorbisDecoderAsync()
 			{
-				wavPlayer = new AudioTrack(STREAMCALL, FREQ441, WAVSTERO, WAVFORMAT, 1024*2, AudioTrack.MODE_STREAM);
+				wavPlayer = new AudioTrack(STREAMCALL, FREQ441, WAVSTERO, WAVFORMAT, WAVBUFFER, AudioTrack.MODE_STREAM);
 			}
+
 			@Override
 			protected String doInBackground(String... params)
 			{
@@ -376,28 +377,44 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					@Override
 					public void writePCMData(short[] pcmData, int amountToRead)
 					{
-						wavPlayer.write(pcmData, 0, amountToRead);
-						wavPlayer.play();
-						vorbisLogcat(Const.LOGD, tag, "converted vorbis to wav");
+						try
+						{
+							wavPlayer.write(pcmData, 0, amountToRead);
+							vorbisLogcat(Const.LOGD, tag, "converted vorbis to wav");
+						}
+						catch (IllegalStateException i)
+						{//in the case where you hang up but there was still a bit of stuff left in the buffer
+							Utils.logcat(Const.LOGD, tag, "still had stuff to play, oh well");
+						}
 					}
 
 					@Override
 					public void stop()
 					{
-						wavPlayer.stop();
-						wavPlayer.release();
+						Utils.logcat(Const.LOGD, tag, "Vorbis player stop called");
+						if(wavPlayer != null)
+						{
+							try
+							{
+								wavPlayer.stop();
+								wavPlayer.release();
+							}
+							catch (IllegalStateException i)
+							{
+								Utils.logcat(Const.LOGD, tag, "tried to re-stop: " + Utils.dumpException(i));
+							}
+						}
 					}
 
 					@Override
 					public void startReadingHeader()
 					{
-
 					}
 
 					@Override
 					public void start(DecodeStreamInfo decodeStreamInfo)
 					{
-						wavPlayer.play(); //won't actually start playing because no audio has been written but just get it ready
+						wavPlayer.play();
 					}
 				};
 				//vorbis encoder/decoder already spit out error messages when necessary.
@@ -408,7 +425,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				return null;
 			}
 		}
-		new VorbisDecoderAsync().execute();
+		new VorbisDecoderAsync().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
 
 	}
 
@@ -482,16 +499,16 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					public void start()
 					{
 						//https://stackoverflow.com/questions/8499042/android-audiorecord-example
-						wavRecorder = new AudioRecord(WAVSRC, FREQ441, WAVSTERO, WAVFORMAT, 1024*2);
+						wavRecorder = new AudioRecord(WAVSRC, FREQ441, WAVSTERO, WAVFORMAT, WAVBUFFER);
 						wavRecorder.startRecording();
 					}
 				};
 				vorbisRecorder = new VorbisRecorder(encodeFeed);
-				vorbisRecorder.start(FREQ441, STEREO, BR128k);
+				vorbisRecorder.start(FREQ441, STEREO, BR96k);
 				return null;
 			}
 		}
-		new VorbisEncoderAsync().execute();
+		new VorbisEncoderAsync().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
 	}
 
 	@Override
