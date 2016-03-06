@@ -33,11 +33,17 @@ public class CallEndAsync extends AsyncTask<String, String, Boolean>
 		{
 			//tell the server to end the call
 			String endit = Const.cap + Utils.generateServerTimestamp() + "|end|" + Vars.callWith.getName() + "|" + Vars.sessionid;
+			Utils.logcat(Const.LOGD, tag, endit);
 			Vars.commandSocket.getOutputStream().write(endit.getBytes());
 
 			//reset the media socket to kill the media read/write threads
+			Utils.logcat(Const.LOGD, tag, "Killing old media port");
+			Vars.mediaSocket.close();
+
+			Utils.logcat(Const.LOGD, tag, "Making new media port");
 			Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);
 			String associateMedia = Const.cap + Utils.generateServerTimestamp() + "|" + Vars.sessionid;
+			Utils.logcat(Const.LOGD, tag, associateMedia);
 			Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
 			result = true;
 		}
