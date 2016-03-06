@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
@@ -27,11 +28,13 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.ExecutionException;
 
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
+import dt.call.aclient.background.Async.LoginAsync;
 import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.background.Async.CallInitAsync;
 import dt.call.aclient.background.CmdListener;
@@ -64,6 +67,35 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		//	it will already be there if you're coming back to the UserHome screen from doing something else
 		synchronized (Vars.cmdListenerLock)
 		{
+			//for some types of crashes it goes back to the UserHome screen but with no save data (and missing connections)
+			if(Vars.commandSocket == null || Vars.mediaSocket == null)
+			{
+				SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
+				String uname = sharedPreferences.getString(Const.UNAME, "");
+				String passwd = sharedPreferences.getString(Const.PASSWD, "");
+				try
+				{
+					boolean loginOk = new LoginAsync(uname, passwd).execute().get();
+					if(loginOk)
+					{
+						Intent cmdListenerIntent = new Intent(this, CmdListener.class);
+						startService(cmdListenerIntent);
+						Vars.cmdListenerRunning = true;
+					}
+				}
+				catch (InterruptedException e)
+				{
+					Utils.logcat(Const.LOGE, tag, "login interrupted: " + Utils.dumpException(e));
+					Utils.showOk(this, getString(R.string.alert_initial_user_cant_login));
+				}
+				catch (ExecutionException e)
+				{
+					Utils.logcat(Const.LOGE, tag, "login execution problem" + Utils.dumpException(e));
+					Utils.showOk(this, getString(R.string.alert_initial_user_cant_login));
+				}
+			}
+
+			//for cases when you skip the initial info because it's already there and go straight to home
 			if(!Vars.cmdListenerRunning)
 			{
 				Intent cmdListenerIntent = new Intent(this, CmdListener.class);

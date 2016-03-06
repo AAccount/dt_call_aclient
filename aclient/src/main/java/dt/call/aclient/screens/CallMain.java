@@ -69,7 +69,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
-	private boolean micMute = false, onSpeaker = false, didntInitEnd = false;
+	private boolean micMute = false, onSpeaker = false;
 	private boolean screenShowing;
 	private TextView status, callerid, time;
 	private int min=0, sec=0;
@@ -81,7 +81,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private Sensor proximity;
 
 	//related to audio playback and recording
-	private Thread recordThread = null, playbackThread = null;
 	private AudioManager audioManager;
 	private VorbisRecorder vorbisRecorder;
 	private EncodeFeed encodeFeed;
@@ -205,7 +204,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		/**
 		 * Audio setup from here
 		 */
-		//TODO: handle loss of internet properly
 
 		//https://stackoverflow.com/questions/12857817/how-to-play-audio-via-ear-phones-only-using-mediaplayer-android
 		//make it possible to use the earpiece and to switch back and forth
@@ -248,7 +246,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				catch (IOException i)
 				{
 					Utils.logcat(Const.LOGE, tag, "ioexception reading media: " + Utils.dumpException(i));
-					totalRead = 0;
 				}
 
 				//as stated in the javadoc, you MUST fill the buffer with amountToWrite bytes of vorbis data.
@@ -258,6 +255,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					int missing = amountToWrite - totalRead;
 					Utils.logcat(Const.LOGE, tag, "vorbis data missing " + missing + "bytes. VORBIS LIBRARY WILL FAIL IN 3 2 1...");
+
+					new CallEndAsync(getApplicationContext()).execute();
+					onStop();
 				}
 				return totalRead;
 			}
@@ -316,9 +316,14 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			//amountToWrite is the amount of wav data that ??must?? be read to satisfy the native library
 			public long readPCMData(byte[] pcmDataBuffer, int amountToWrite)
 			{
-				if(didStop)
+				if (didStop)
 				{
 					return 0;
+				}
+
+				if (micMute)
+				{//can't stop the thread without causing a crash. just return all zeros without going to the mic
+					return amountToWrite;
 				}
 
 				//although unlikely to be necessary, buffer the mic input
@@ -348,8 +353,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				catch (IOException i)
 				{
 					Utils.logcat(Const.LOGE, tag, "ioexception writing vorbis to server: " + Utils.dumpException(i));
-					stop();
-					return 0; //network problem... aka dropped call
+
+					new CallEndAsync(getApplicationContext()).execute();
+					onStop();
 				}
 				return amountToRead;
 			}
@@ -428,21 +434,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		 */
 		if(Vars.state == CallState.NONE)
 		{
-			//stop the sending audio to the server
+			//stop vorbis threads
 			vorbisRecorder.stop();
-
-			//stop getting audio from the server
 			vorbisPlayer.stop();
 
-			try
-			{
-				recordThread.join();
-				playbackThread.join();
-			}
-			catch (InterruptedException i)
-			{
-				Utils.logcat(Const.LOGE, tag, Utils.dumpException(i));
-			}
 			//no longer in a call
 			audioManager.setMode(AudioManager.MODE_NORMAL);
 			counter.cancel();
@@ -479,13 +474,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			if(micMute)
 			{
 				mic.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_mic_off_white_48dp));
-				vorbisRecorder.stop();
-				recordThread = null;
 			}
 			else
 			{
 				mic.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_mic_white_48dp));
-				startRecorder();
 			}
 		}
 		else if (v == speaker)
@@ -530,40 +522,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		status.setText(getString(R.string.call_main_status_incall));
 		mic.setEnabled(true);
 		speaker.setEnabled(true);
-		startRecorder();
 
-		if(playbackThread != null)
-		{
-			Utils.logcat(Const.LOGE, tag, "callMode() called more than once --> tried to create another audio playback thread");
-			return;
-		}
-
-		playbackThread = new Thread(new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				vorbisPlayer.start();
-			}
-		});
-		playbackThread.start();
-
-		//avoid using async tasks:
-		//http://www.mergeconflict.net/2012/05/java-threads-vs-android-asynctask-which.html
-		//https://stackoverflow.com/questions/12797550/android-asynctask-for-long-running-operations?rq=1
-	}
-
-	//its own function because there are 2 places where the recorder is started: mic on/off button
-	//and the initial start of the record
-	private void startRecorder()
-	{
-		if(recordThread != null)
-		{
-			Utils.logcat(Const.LOGE, tag, "tried to call startRecord() when already recording");
-			return;
-		}
-
-		recordThread = new Thread(new Runnable()
+		Thread recordThread = new Thread(new Runnable()
 		{
 			@Override
 			public void run()
@@ -571,7 +531,20 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				vorbisRecorder.start(FREQ441, CHANNELS, BR96k);
 			}
 		});
+		recordThread.setName("Vorbis Recorder");
 		recordThread.start();
+
+
+		Thread playbackThread = new Thread(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				vorbisPlayer.start();
+			}
+		});
+		playbackThread.setName("Vorbis Playback");
+		playbackThread.start();
 	}
 
 	@Override

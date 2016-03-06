@@ -93,11 +93,13 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 			catch (InterruptedException e)
 			{
 				Utils.logcat(Const.LOGE, tag, "login interrupted: " + Utils.dumpException(e));
+				Utils.showOk(this, getString(R.string.alert_initial_user_cant_login));
 				return;
 			}
 			catch (ExecutionException e)
 			{
 				Utils.logcat(Const.LOGE, tag, "login execution problem" + Utils.dumpException(e));
+				Utils.showOk(this, getString(R.string.alert_initial_user_cant_login));
 				return;
 			}
 		}

@@ -271,6 +271,10 @@ public class CmdListener extends IntentService
 					lookupStatus.putExtra(Const.BROADCAST_HOME_LOOKUP_RESULT, status);
 					sendBroadcast(lookupStatus);
 				}
+				else if(serverCommand.equals("resp"))
+				{//currently only being used for invalid command
+					Utils.logcat(Const.LOGW, tag, "command was invalid");
+				}
 				else
 				{
 					Utils.logcat(Const.LOGW, tag, "Unknown command/response: " + fromServer);
