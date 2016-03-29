@@ -18,7 +18,7 @@ import dt.call.aclient.sqlite.Contact;
  */
 public class Vars
 {
-	public static long sessionid;
+	public static long sessionid = -1;
 
 	//2 sockets
 	public static Socket commandSocket;

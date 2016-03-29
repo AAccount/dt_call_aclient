@@ -20,15 +20,15 @@ public class LookupAsync extends AsyncTask<Contact, String, Object>
 	protected Object doInBackground(Contact... params)
 	{
 		Contact lookupUser = params[0];
-		String request = Const.cap + Utils.generateServerTimestamp() + "|lookup|" + lookupUser.getName() + "|" + Vars.sessionid;
+		String request = Const.JBYTE + Utils.generateServerTimestamp() + "|lookup|" + lookupUser.getName() + "|" + Vars.sessionid;
 		Utils.logcat(Const.LOGD, tag, "Lookup request: " + request);
 		try
 		{
 			Vars.commandSocket.getOutputStream().write(request.getBytes());
 		}
-		catch (IOException e)
+		catch (Exception e)
 		{
-			Utils.logcat(Const.LOGE, tag, "IO problem sending lookup user request: " + Utils.dumpException(e));
+			Utils.dumpException(tag, e);
 		}
 		return null;
 	}

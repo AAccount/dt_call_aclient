@@ -110,7 +110,8 @@ public class VorbisPlayer implements Runnable
 			catch (IOException e)
 			{
 				//There was a problem reading from the file
-				Utils.logcat(Const.LOGE, TAG, "Failed to read vorbis data from file.  Aborting: " + Utils.dumpException(e));
+				Utils.logcat(Const.LOGE, TAG, "Failed to read vorbis data from file.  Aborting: ");
+				Utils.dumpException(TAG, e);
 				stop();
 				return 0;
 			}
@@ -140,7 +141,8 @@ public class VorbisPlayer implements Runnable
 					}
 					catch (IOException e)
 					{
-						Utils.logcat(Const.LOGE, TAG, "Failed to close file input stream: " + Utils.dumpException(e));
+						Utils.logcat(Const.LOGE, TAG, "Failed to close file input stream: ");
+						Utils.dumpException(TAG, e);
 					}
 					inputStream = null;
 				}
@@ -197,7 +199,8 @@ public class VorbisPlayer implements Runnable
 				}
 				catch (FileNotFoundException e)
 				{
-					Utils.logcat(Const.LOGE, TAG, "Failed to find file to decode: " + Utils.dumpException(e));
+					Utils.logcat(Const.LOGE, TAG, "Failed to find file to decode: ");
+					Utils.dumpException(TAG, e);
 					stop();
 				}
 			}
@@ -265,7 +268,8 @@ public class VorbisPlayer implements Runnable
 			catch (IOException e)
 			{
 				//There was a problem reading from the file
-				Utils.logcat(Const.LOGE, TAG, "Failed to read vorbis data from file.  Aborting: " + Utils.dumpException(e));
+				Utils.logcat(Const.LOGE, TAG, "Failed to read vorbis data from file.  Aborting: ");
+				Utils.dumpException(TAG, e);
 				return 0;
 			}
 		}
@@ -308,7 +312,8 @@ public class VorbisPlayer implements Runnable
 					}
 					catch (IOException e)
 					{
-						Utils.logcat(Const.LOGE, TAG, "Failed to close file input stream: " + Utils.dumpException(e));
+						Utils.logcat(Const.LOGE, TAG, "Failed to close file input stream: ");
+						Utils.dumpException(TAG, e);
 					}
 					inputStream = null;
 				}

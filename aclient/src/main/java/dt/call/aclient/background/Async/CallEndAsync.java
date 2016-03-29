@@ -32,7 +32,7 @@ public class CallEndAsync extends AsyncTask<String, String, Boolean>
 		try
 		{
 			//tell the server to end the call
-			String endit = Const.cap + Utils.generateServerTimestamp() + "|end|" + Vars.callWith.getName() + "|" + Vars.sessionid;
+			String endit = Const.JBYTE + Utils.generateServerTimestamp() + "|end|" + Vars.callWith.getName() + "|" + Vars.sessionid;
 			Utils.logcat(Const.LOGD, tag, endit);
 			Vars.commandSocket.getOutputStream().write(endit.getBytes());
 
@@ -42,7 +42,7 @@ public class CallEndAsync extends AsyncTask<String, String, Boolean>
 
 			Utils.logcat(Const.LOGD, tag, "Making new media port");
 			Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);
-			String associateMedia = Const.cap + Utils.generateServerTimestamp() + "|" + Vars.sessionid;
+			String associateMedia = Const.JBYTE + Utils.generateServerTimestamp() + "|" + Vars.sessionid;
 			Utils.logcat(Const.LOGD, tag, associateMedia);
 			Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
 			result = true;
@@ -52,9 +52,9 @@ public class CallEndAsync extends AsyncTask<String, String, Boolean>
 			Utils.logcat(Const.LOGE, tag, "Tring to reestablish media port but somehow the certificate is wrong");
 			result = false;
 		}
-		catch (IOException i)
+		catch (Exception i)
 		{
-			Utils.logcat(Const.LOGE, tag, "IO exception restarting media socket: " + Utils.dumpException(i));
+			Utils.dumpException(tag, i);
 			result = false;
 		}
 

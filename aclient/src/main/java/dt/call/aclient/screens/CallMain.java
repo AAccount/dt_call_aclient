@@ -245,7 +245,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				}
 				catch (IOException i)
 				{
-					Utils.logcat(Const.LOGE, tag, "ioexception reading media: " + Utils.dumpException(i));
+					Utils.logcat(Const.LOGE, tag, "ioexception reading media: ");
+					Utils.dumpException(tag, i);
 				}
 
 				//as stated in the javadoc, you MUST fill the buffer with amountToWrite bytes of vorbis data.
@@ -289,7 +290,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					}
 					catch (IllegalStateException i)
 					{
-						Utils.logcat(Const.LOGD, tag, "tried to re-stop: " + Utils.dumpException(i));
+						Utils.logcat(Const.LOGD, tag, "tried to re-stop: ");
+						Utils.dumpException(tag, i);
 					}
 				}
 				didStop = true;
@@ -322,7 +324,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				}
 
 				if (micMute)
-				{//can't stop the thread without causing a crash. just return all zeros without going to the mic
+				{//can't stop the thread without causing a crash. just return all zeros buffer for mic mute
 					return amountToWrite;
 				}
 
@@ -352,7 +354,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				}
 				catch (IOException i)
 				{
-					Utils.logcat(Const.LOGE, tag, "ioexception writing vorbis to server: " + Utils.dumpException(i));
+					Utils.logcat(Const.LOGE, tag, "ioexception writing vorbis to server: ");
+					Utils.dumpException(tag, i);
 
 					new CallEndAsync(getApplicationContext()).execute();
 					onStop();
@@ -378,7 +381,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				}
 				catch (IllegalStateException | NullPointerException ex)
 				{
-					Utils.logcat(Const.LOGE, tag, "probably tried called stop on an already stopped encoder " + Utils.dumpException(ex));
+					Utils.logcat(Const.LOGE, tag, "probably tried called stop on an already stopped encoder ");
+					Utils.dumpException(tag, ex);
 				}
 				didStop = true;
 			}
@@ -517,7 +521,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		}
 		catch (NullPointerException n)
 		{
-			Utils.logcat(Const.LOGE, tag, "null pointer changing action bar to green: " + Utils.dumpException(n));
+			Utils.logcat(Const.LOGE, tag, "null pointer changing action bar to green: ");
+			Utils.dumpException(tag, n);
 		}
 		status.setText(getString(R.string.call_main_status_incall));
 		mic.setEnabled(true);

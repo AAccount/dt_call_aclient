@@ -107,24 +107,9 @@ public class Utils
 			socket.setKeepAlive(true);
 			return socket;
 		}
-		catch (NoSuchAlgorithmException e)
+		catch (Exception e)
 		{
-			logcat(Const.LOGE, tag, "No such algorithm exception: " + dumpException(e));
-			return null;
-		}
-		catch (KeyManagementException e)
-		{
-			logcat(Const.LOGE, tag, "Key management exception: " + dumpException(e));
-			return null;
-		}
-		catch (UnknownHostException e)
-		{
-			logcat(Const.LOGE, tag, "Unknown host exception: " + dumpException(e));
-			return null;
-		}
-		catch (IOException e)
-		{
-			logcat(Const.LOGE, tag, "IO exception: " + dumpException(e));
+			dumpException(tag, e);
 			return null;
 		}
 	}
@@ -176,12 +161,17 @@ public class Utils
 	}
 
 	//https://stackoverflow.com/questions/1149703/how-can-i-convert-a-stack-trace-to-a-string
-	public static String dumpException(Exception e)
+	public static void dumpException(String tag, Exception e)
 	{
+		Class exception = e.getClass();
+		String exName = exception.getName();
+
 		StringWriter sw = new StringWriter();
 		PrintWriter pw = new PrintWriter(sw);
 		e.printStackTrace(pw);
-		return sw.toString();
+		String dump = sw.toString();
+
+		logcat(Const.LOGE, tag, exName + " " + dump);
 	}
 
 }

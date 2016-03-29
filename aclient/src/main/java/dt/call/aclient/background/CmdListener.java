@@ -40,14 +40,10 @@ public class CmdListener extends IntentService
 			txtin = new BufferedReader(new InputStreamReader(Vars.commandSocket.getInputStream()));
 			inputValid = true;
 		}
-		catch (IOException e)
+		catch (Exception e)
 		{
-			Utils.logcat(Const.LOGE, tag, "problems getting input reader of command socket: " + Utils.dumpException(e));
+			Utils.dumpException(tag, e);
 			notifyDead();
-		}
-		catch (NullPointerException n)
-		{
-			Utils.logcat(Const.LOGE, tag, "command socket is dead: " + Utils.dumpException(n));
 		}
 	}
 
@@ -288,7 +284,7 @@ public class CmdListener extends IntentService
 			}
 			catch(NumberFormatException n)
 			{
-				Utils.logcat(Const.LOGE, tag, "string --> # error: " + Utils.dumpException(n));
+				Utils.logcat(Const.LOGE, tag, "string --> # error: ");
 			}
 			catch(NullPointerException n)
 			{

@@ -87,20 +87,14 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 				}
 				else
 				{
-					Utils.showOk(this, getString(R.string.alert_initial_user_cant_login));
+					Utils.showOk(this, getString(R.string.alert_login_failed));
 				}
 			}
-			catch (InterruptedException e)
+			catch (Exception e)
 			{
-				Utils.logcat(Const.LOGE, tag, "login interrupted: " + Utils.dumpException(e));
-				Utils.showOk(this, getString(R.string.alert_initial_user_cant_login));
-				return;
-			}
-			catch (ExecutionException e)
-			{
-				Utils.logcat(Const.LOGE, tag, "login execution problem" + Utils.dumpException(e));
-				Utils.showOk(this, getString(R.string.alert_initial_user_cant_login));
-				return;
+				Class exception = e.getClass();
+				Utils.dumpException(tag, e);
+				Utils.showOk(this, getString(R.string.alert_login_failed));
 			}
 		}
 	}

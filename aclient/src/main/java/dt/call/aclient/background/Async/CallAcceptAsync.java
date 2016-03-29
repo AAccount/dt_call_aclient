@@ -21,16 +21,16 @@ public class CallAcceptAsync extends AsyncTask<String, String, Boolean>
 		try
 		{
 			String involved = Vars.callWith.getName();
-			String acceptResp = Const.cap + Utils.generateServerTimestamp() + "|accept|" + involved + "|" + Vars.sessionid;
+			String acceptResp = Const.JBYTE + Utils.generateServerTimestamp() + "|accept|" + involved + "|" + Vars.sessionid;
 			Vars.commandSocket.getOutputStream().write(acceptResp.getBytes());
 
 			//no need to set Vars.callwith or Vars.callState because this is just accepting
 			//you still need to wait for call start to switch to state = CallState.INCALL
 			return true;
 		}
-		catch (IOException e)
+		catch (Exception e)
 		{
-			Utils.logcat(Const.LOGE, tag, "ioexception: " + Utils.dumpException(e));
+			Utils.dumpException(tag, e);
 			return false;
 		}
 	}

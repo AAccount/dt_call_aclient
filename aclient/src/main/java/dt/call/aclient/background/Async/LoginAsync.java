@@ -37,7 +37,7 @@ public class LoginAsync extends AsyncTask<String, String, Boolean>
 
 			//send login command
 			Vars.commandSocket = Utils.mkSocket(Vars.serverAddress, Vars.commandPort, Vars.expectedCertDump);
-			String login = Const.cap + Utils.generateServerTimestamp() + "|login|" + uname + "|" + passwd;
+			String login = Const.JBYTE + Utils.generateServerTimestamp() + "|login|" + uname + "|" + passwd;
 			Vars.commandSocket.getOutputStream().write(login.getBytes());
 
 			//read response
@@ -70,7 +70,7 @@ public class LoginAsync extends AsyncTask<String, String, Boolean>
 			//establish media socket
 			publishProgress("Establishing media port");
 			Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);
-			String associateMedia = Const.cap + Utils.generateServerTimestamp() + "|" + Vars.sessionid;
+			String associateMedia = Const.JBYTE + Utils.generateServerTimestamp() + "|" + Vars.sessionid;
 			Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
 			Vars.mediaSocket.getOutputStream().write("testing testing 1 2 3".getBytes()); //sometimes java socket craps out
 			return true;
@@ -80,14 +80,9 @@ public class LoginAsync extends AsyncTask<String, String, Boolean>
 			Utils.logcat(Const.LOGD, tag, "server certificate didn't match the expected");
 			return false;
 		}
-		catch (IOException i)
+		catch (Exception i)
 		{
-			Utils.logcat(Const.LOGD, tag, "io problem: " + Utils.dumpException(i));
-			return false;
-		}
-		catch (NullPointerException n)
-		{
-			Utils.logcat(Const.LOGD, tag, "java socket stupidities: " + Utils.dumpException(n));
+			Utils.dumpException(tag, i);
 			return false;
 		}
 	}

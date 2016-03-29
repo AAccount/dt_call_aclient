@@ -23,13 +23,13 @@ public class CallRejectAsync extends AsyncTask<String, String, Boolean>
 		try
 		{
 			String involved = Vars.callWith.getName();
-			String rejectResp = Const.cap + Utils.generateServerTimestamp() + "|reject|" + involved + "|" + Vars.sessionid;
+			String rejectResp = Const.JBYTE + Utils.generateServerTimestamp() + "|reject|" + involved + "|" + Vars.sessionid;
 			Vars.commandSocket.getOutputStream().write(rejectResp.getBytes());
 			result = true;
 		}
-		catch (IOException e)
+		catch (Exception e)
 		{
-			Utils.logcat(Const.LOGE, tag, "ioexception: " + Utils.dumpException(e));
+			Utils.dumpException(tag, e);
 			result = false;
 		}
 

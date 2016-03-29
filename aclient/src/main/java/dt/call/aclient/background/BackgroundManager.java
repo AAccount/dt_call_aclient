@@ -3,8 +3,10 @@ package dt.call.aclient.background;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 
+import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutionException;
@@ -17,16 +19,20 @@ import dt.call.aclient.background.Async.LoginAsync;
 
 /**
  * Created by Daniel on 1/22/16.
+ * -heartbeat service added March 26 2016
  *
  * Once logged in. Manages setting up the CmdListener whenever wifi/lte drops, switches, reconnects
+ * Manages the heartbeat service which preiodically checks to see if the connections are really good or not.
  */
 public class BackgroundManager extends BroadcastReceiver
 {
-	private static final String tag = "BackgroundLoginManager";
+	private static final String tag = "BackgroundManager";
+	private static final int frequency = 1*60; //in seconds
 
-	//for retrying the login
 	private int retries; //always reset retries before launching the timer
-	private Timer retry = new Timer();
+	//https://stackoverflow.com/questions/11502693/timer-not-stopping-in-android
+	private static Timer retry = new Timer();
+	private static Timer heartbeat = new Timer();
 
 	@Override
 	public void onReceive(final Context context, Intent intent)
@@ -42,7 +48,7 @@ public class BackgroundManager extends BroadcastReceiver
 
 		/**
 		 * Tries 5 times to login, waiting a minute between each attempt in case you need to do something
-		 * like signin to a public wifi, or wait for a better connection because the bad connection casued
+		 * like signin to a public wifi, or wait for a better connection because the bad connection caused
 		 * the failure
 		 *
 		 * On the exceptions, don't cancel the timer. Wait for the retires to run out
@@ -68,25 +74,25 @@ public class BackgroundManager extends BroadcastReceiver
 							}
 						}
 						retries = 0;
+						startHeartbeat();
 					}
 					else
 					{//sign in failed. decrease retries by 1
 						retries--;
-						Utils.logcat(Const.LOGW, tag, "Sign in failed. Retries: "+retries);
+						Utils.logcat(Const.LOGW, tag, "Sign in failed. Retries: " + retries);
 					}
+				}
+				catch (Exception e)
+				{
+					Utils.dumpException(tag, e);
+					retries--;
+				}
 
-					if(retries == 0)
-					{//out of retires or retry succeeded
-						retry.cancel();
-					}
-				}
-				catch (InterruptedException e)
-				{
-					Utils.logcat(Const.LOGE, tag, "async signin InterruptedException: " + Utils.dumpException(e));
-				}
-				catch (ExecutionException e)
-				{
-					Utils.logcat(Const.LOGE, tag, "async signin ExecutionException: " + Utils.dumpException(e));
+				if(retries == 0)
+				{//out of retires or retry succeeded
+					Utils.logcat(Const.LOGW, tag, "out of retries to sing in again. will have to be done by hand");
+					retry.cancel();
+					retry.purge();
 				}
 			}
 		};
@@ -95,14 +101,18 @@ public class BackgroundManager extends BroadcastReceiver
 		{
 			Utils.logcat(Const.LOGD, tag, "Got a connectivity event from android");
 			retry.cancel(); //just in case it's already running from a previous intent
+			retry.purge();
 
-			if(intent.getExtras() != null
-					&& intent.getExtras().getBoolean(ConnectivityManager.EXTRA_NO_CONNECTIVITY, Boolean.FALSE))
+			if(intent.getExtras() != null && intent.getExtras().getBoolean(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false))
 			{//internet lost case
 				Utils.logcat(Const.LOGD, tag, "Internet was lost");
 
 				//Apparently you can't close a socket from here because it's on the UI thread???
 				new KillSocketsAsync().execute();
+				retry.cancel(); //what's the point of retrying a failed sign in if there's no internet
+				retry.purge();
+				heartbeat.cancel();
+				heartbeat.purge();
 				Vars.hasInternet = false;
 			}
 			else
@@ -115,7 +125,11 @@ public class BackgroundManager extends BroadcastReceiver
 
 				//initial delay 0 because you want to try right away. if that doesn't work
 				//	then you can wait a minute before trying again
+				//	Retry will restart the heartbeat service when sign in succeeds
 				retries = 5;
+				retry.cancel();
+				retry.purge();
+				retry = new Timer();
 				retry.schedule(login, 0, 60*1000);
 			}
 		}
@@ -124,11 +138,67 @@ public class BackgroundManager extends BroadcastReceiver
 			Utils.logcat(Const.LOGD, tag, "command listener dead received");
 			if(!Vars.hasInternet)
 			{
-				Utils.logcat(Const.LOGE, tag, "no internet connection to restart command listener");
+				Utils.logcat(Const.LOGW, tag, "no internet connection to restart command listener");
 				return;
 			}
 			retries = 5;
+			retry.cancel();
+			retry.purge();
+			retry = new Timer();
 			retry.schedule(login, 0, 60*1000);
 		}
+		else if(intent.getAction().equals(Const.BROADCAST_BK_HEARTBEAT))
+		{
+			/**
+			 * Because this class will only be instantiated once (by android os) it's pretty much a singleton
+			 *
+			 * By calling cancel first before doing anything, no matter how many heartbeat_doit = true intents are sent
+			 * in a row, the heartbeat service will only ever have 1 copy of itself running. Therefore, no Vars.heartbeatRunning
+			 * or similar variable is needed like command listener
+			 */
+			if(intent.getExtras().getBoolean(Const.BROADCAST_BK_HEARTBEAT_DOIT, false))
+			{
+				Utils.logcat(Const.LOGD, tag, "starting heartbeat connection diagnostics");
+				startHeartbeat();
+			}
+			else
+			{
+				heartbeat.cancel();
+				heartbeat.purge();
+			}
+		}
+	}
+
+	private void startHeartbeat()
+	{
+		TimerTask heartbeatTask = new TimerTask()
+		{
+			@Override
+			public void run()
+			{
+				if(Vars.mediaSocket == null || Vars.commandSocket == null)
+				{
+					Utils.logcat(Const.LOGD, tag, "no connection to send hearbeat on");
+					return;
+				}
+
+				try
+				{
+					Utils.logcat(Const.LOGD, tag, "sending heartbeat");
+					Vars.commandSocket.getOutputStream().write(Const.JBYTE.getBytes());
+					Vars.mediaSocket.getOutputStream().write(Const.JBYTE.getBytes());
+				}
+				catch (Exception e)
+				{
+					Utils.dumpException(tag, e);
+					new KillSocketsAsync().execute();
+					//command listener would've died and sent out its dead broadcast to login again
+				}
+			}
+		};
+		heartbeat.cancel();
+		heartbeat.purge();
+		heartbeat = new Timer();
+		heartbeat.schedule(heartbeatTask, 0, frequency * 1000);
 	}
 }

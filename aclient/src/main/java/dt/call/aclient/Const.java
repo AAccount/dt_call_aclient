@@ -20,7 +20,7 @@ public class Const
 	public static final String PASSWD = "password";
 
 	//Java 1byte workaround
-	public static final String cap = "G";
+	public static final String JBYTE = "D";
 
 	//nobody: the default value for when not in a call
 	public static final Contact nobody = new Contact("(nobody)");
@@ -42,6 +42,8 @@ public class Const
 
 	//when cmd listener dies
 	public static final String BROADCAST_BK_CMDDEAD = "cmd_dead";
+	public static final String BROADCAST_BK_HEARTBEAT = "heartbeat";
+	public static final String BROADCAST_BK_HEARTBEAT_DOIT = "do_heartbeat";
 
 	//call history types
 	public static final int outgoing = 1;
@@ -60,6 +62,5 @@ public class Const
 
 	//persistent notificaton id
 	public static final int stateNotificationId = 1;
-
 
 }

@@ -29,9 +29,9 @@ public class KillSocketsAsync extends AsyncTask<String, String, String>
 				Vars.mediaSocket.close();
 			}
 		}
-		catch (IOException e)
+		catch (Exception e)
 		{
-			Utils.logcat(Const.LOGE, tag, "problems closing the 2 sockets " + Utils.dumpException(e));
+			Utils.dumpException(tag, e);
 		}
 		return null;
 	}

@@ -26,7 +26,7 @@ public class CallInitAsync extends AsyncTask<String, String, Boolean>
 	@Override
 	protected Boolean doInBackground(String... params)
 	{
-		String request = Const.cap + Utils.generateServerTimestamp() + "|call|" + who.getName() + "|" + Vars.sessionid;
+		String request = Const.JBYTE + Utils.generateServerTimestamp() + "|call|" + who.getName() + "|" + Vars.sessionid;
 		Utils.logcat(Const.LOGD, tag, "Call request: " + request);
 		try
 		{
@@ -34,9 +34,9 @@ public class CallInitAsync extends AsyncTask<String, String, Boolean>
 			Vars.callWith = who;
 			return true;
 		}
-		catch (IOException e)
+		catch (Exception e)
 		{
-			Utils.logcat(Const.LOGE, tag, Utils.dumpException(e));
+			Utils.dumpException(tag, e);
 			Vars.callWith = Const.nobody;
 			Vars.state = CallState.NONE;
 			return false;

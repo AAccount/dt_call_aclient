@@ -28,12 +28,12 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.concurrent.ExecutionException;
 
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
+import dt.call.aclient.background.Async.CheckInternetAsync;
 import dt.call.aclient.background.Async.LoginAsync;
 import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.background.Async.CallInitAsync;
@@ -65,42 +65,55 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 
 		//setup the command listener if it isn't already there
 		//	it will already be there if you're coming back to the UserHome screen from doing something else
+		boolean loginOk = false;
 		synchronized (Vars.cmdListenerLock)
 		{
 			//for some types of crashes it goes back to the UserHome screen but with no save data (and missing connections)
 			if(Vars.commandSocket == null || Vars.mediaSocket == null)
 			{
 				SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
-				String uname = sharedPreferences.getString(Const.UNAME, "");
-				String passwd = sharedPreferences.getString(Const.PASSWD, "");
+				Vars.uname = sharedPreferences.getString(Const.UNAME, "");
+				Vars.passwd = sharedPreferences.getString(Const.PASSWD, "");
+				Vars.serverAddress = sharedPreferences.getString(Const.ADDR, "");
+				Vars.commandPort = sharedPreferences.getInt(Const.COMMANDPORT, 0);
+				Vars.mediaPort = sharedPreferences.getInt(Const.MEDIAPORT, 0);
+				Vars.expectedCertDump = sharedPreferences.getString(Const.CERT64, "");
 				try
 				{
-					boolean loginOk = new LoginAsync(uname, passwd).execute().get();
-					if(loginOk)
+					//handle cases where the app is started but there is no internet
+					Vars.hasInternet = new CheckInternetAsync().execute(getApplicationContext()).get();
+					if(Vars.hasInternet)
 					{
-						Intent cmdListenerIntent = new Intent(this, CmdListener.class);
-						startService(cmdListenerIntent);
-						Vars.cmdListenerRunning = true;
+						loginOk = new LoginAsync(Vars.uname, Vars.passwd).execute().get();
+						if (loginOk)
+						{
+							Intent cmdListenerIntent = new Intent(this, CmdListener.class);
+							startService(cmdListenerIntent);
+							Vars.cmdListenerRunning = true;
+						}
 					}
 				}
-				catch (InterruptedException e)
+				catch (Exception e)
 				{
-					Utils.logcat(Const.LOGE, tag, "login interrupted: " + Utils.dumpException(e));
-					Utils.showOk(this, getString(R.string.alert_initial_user_cant_login));
-				}
-				catch (ExecutionException e)
-				{
-					Utils.logcat(Const.LOGE, tag, "login execution problem" + Utils.dumpException(e));
-					Utils.showOk(this, getString(R.string.alert_initial_user_cant_login));
+					Class exception = e.getClass();
+					Utils.dumpException(tag, e);
 				}
 			}
 
-			//for cases when you skip the initial info because it's already there and go straight to home
-			if(!Vars.cmdListenerRunning)
+			if(Vars.hasInternet && loginOk)
 			{
-				Intent cmdListenerIntent = new Intent(this, CmdListener.class);
-				startService(cmdListenerIntent);
-				Vars.cmdListenerRunning = true;
+				//for cases when you skip the initial info because it's already there and go straight to home
+				if (!Vars.cmdListenerRunning)
+				{
+					Intent cmdListenerIntent = new Intent(this, CmdListener.class);
+					startService(cmdListenerIntent);
+					Vars.cmdListenerRunning = true;
+				}
+
+				//ping the connection periodically to make sure it's still good
+				Intent startHeartbeat = new Intent(Const.BROADCAST_BK_HEARTBEAT);
+				startHeartbeat.putExtra(Const.BROADCAST_BK_HEARTBEAT_DOIT, true);
+				sendBroadcast(startHeartbeat);
 			}
 		}
 
@@ -208,6 +221,16 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				}
 			}
 		};
+
+		//if the login after crash didn't work or there is no internet (therefore no login attempted) notify the user
+		if(!Vars.hasInternet)
+		{
+			Utils.showOk(this, getString(R.string.alert_user_home_no_internet));
+		}
+		else if (Vars.hasInternet && !loginOk)
+		{
+			Utils.showOk(this, getString(R.string.alert_login_failed));
+		}
 	}
 
 	protected void onResume()
@@ -271,7 +294,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			}
 			catch (Exception e)
 			{
-				Utils.logcat(Const.LOGE, tag, Utils.dumpException(e));
+				Utils.dumpException(tag, e);
 				didInit = false;
 			}
 
@@ -315,7 +338,8 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			}
 			catch (NullPointerException n)
 			{
-				Utils.logcat(Const.LOGE, tag, "null pointer changing action bar to highlight color: " + Utils.dumpException(n));
+				Utils.logcat(Const.LOGE, tag, "null pointer changing action bar to highlight color: ");
+				Utils.dumpException(tag, n);
 			}
 		}
 		else
@@ -327,7 +351,8 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			}
 			catch (NullPointerException n)
 			{
-				Utils.logcat(Const.LOGE, tag, "null pointer changing action bar to normal color: " + Utils.dumpException(n));
+				Utils.logcat(Const.LOGE, tag, "null pointer changing action bar to normal color: ");
+				Utils.dumpException(tag, n);
 			}
 		}
 		return super.onCreateOptionsMenu(menu);
@@ -337,6 +362,11 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	//for whatever reason you can't access android internals like notification manager inside onOptionsItemSelected
 	private void quit()
 	{
+		//stop connection monitoring
+		Intent startHeartbeat = new Intent(Const.BROADCAST_BK_HEARTBEAT);
+		startHeartbeat.putExtra(Const.BROADCAST_BK_HEARTBEAT_DOIT, false);
+		sendBroadcast(startHeartbeat);
+
 		//get rid of the status notification
 		Vars.notificationManager.cancelAll();
 
@@ -349,7 +379,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 
 		//https://stackoverflow.com/questions/3226495/android-exit-application-code
 		//basically a way to get out of aclient
-
 		Intent intent = new Intent(Intent.ACTION_MAIN);
 		intent.addCategory(Intent.CATEGORY_HOME);
 		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

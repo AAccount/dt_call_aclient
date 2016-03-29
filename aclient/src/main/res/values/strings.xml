@@ -8,8 +8,11 @@
     <string name="initial_server_certificate">Choose Expected Certificate</string>
     <string name="initial_server_title">Server Information</string>
 
-    <!-- Dialog Messages -->
+    <!-- Dialog Messages (not screen specific) -->
     <string name="alert_ok">OK</string>
+    <string name="alert_login_failed">Login failed</string>
+
+    <!-- Dialog Messages (screen specific) -->
     <string name="alert_tehcnical_difficulties">Currently experience technical difficulties. Check logcat if possible.</string>
     <string name="alert_initial_server_no_caja">No file explorers installed on your device</string>
     <string name="alert_initial_server_incomplete_server">Incomplete server information</string>
@@ -17,13 +20,13 @@
     <string name="alert_initial_server_corrupted_cert">Certificate file corrupted. Can\'t use.</string>
     <string name="alert_initial_user_missing_uinfo">Missing username or password.</string>
     <string name="alert_initial_user_cert_not_match">Server\'s certificate DOES NOT MATCH the expected. DO NOT continue.</string>
-    <string name="alert_initial_user_cant_login">Login failed</string>
     <string name="alert_user_home_duplicate">Contact already exists</string>
     <string name="alert_user_home_contact_notexist">User does not exist</string>
     <string name="alert_user_home_rename_instructions">Enter a nickname for CONTACT</string>
     <string name="alert_user_home_rename_button_ch">Set</string>
     <string name="alert_user_home_rename_button_nvm">Cancel</string>
     <string name="alert_user_home_cant_dial">User is not available to call</string>
+    <string name="alert_user_home_no_internet">No internet connection. Can\'t login.</string>
 
     <!-- Persistent popup statuses -->
     <string name="state_popup_idle">Signed In</string>

@@ -181,7 +181,8 @@ public class VorbisRecorder
 				catch (IOException e)
 				{
 					//Failed to write to the file
-					Utils.logcat(Const.LOGE, TAG, "Failed to write data to file, stopping recording: " + Utils.dumpException(e));
+					Utils.logcat(Const.LOGE, TAG, "Failed to write data to file, stopping recording: ");
+					Utils.dumpException(TAG, e);
 					stop();
 				}
 			}
@@ -209,7 +210,8 @@ public class VorbisRecorder
 					}
 					catch (IOException e)
 					{
-						Utils.logcat(Const.LOGE, TAG, "Failed to close output stream" + Utils.dumpException(e));
+						Utils.logcat(Const.LOGE, TAG, "Failed to close output stream");
+						Utils.dumpException(TAG, e);
 					}
 					outputStream = null;
 				}
@@ -264,7 +266,8 @@ public class VorbisRecorder
 					}
 					catch (FileNotFoundException e)
 					{
-						Utils.logcat(Const.LOGE, TAG, "Failed to write to file: " + Utils.dumpException(e));
+						Utils.logcat(Const.LOGE, TAG, "Failed to write to file: ");
+						Utils.dumpException(TAG, e);
 					}
 				}
 			}
@@ -343,7 +346,8 @@ public class VorbisRecorder
 				catch (IOException e)
 				{
 					//Failed to write to the file
-					Utils.logcat(Const.LOGE, TAG, "Failed to write data to file, stopping recording: " + Utils.dumpException(e));
+					Utils.logcat(Const.LOGE, TAG, "Failed to write data to file, stopping recording: ");
+					Utils.dumpException(TAG, e);
 					stop();
 				}
 			}
@@ -371,7 +375,8 @@ public class VorbisRecorder
 					}
 					catch (IOException e)
 					{
-						Utils.logcat(Const.LOGE, TAG, "Failed to close output stream: " + Utils.dumpException(e));
+						Utils.logcat(Const.LOGE, TAG, "Failed to close output stream: ");
+						Utils.dumpException(TAG, e);
 					}
 					outputStream = null;
 				}
