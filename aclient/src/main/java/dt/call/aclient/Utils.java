@@ -10,6 +10,8 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
 import java.net.UnknownHostException;
@@ -99,6 +101,12 @@ public class Utils
 		};
 		try
 		{
+			//http://stackoverflow.com/a/34228756
+			//check if server is available first before committing to anything
+			//	otherwise this proccess will stall. host not available trips timeout exception
+			Socket diag = new Socket();
+			diag.connect(new InetSocketAddress(host, port), 1500);
+
 			SSLContext context;
 			context = SSLContext.getInstance("TLSv1.2");
 			context.init(new KeyManager[0], trustOnlyServerCert, new SecureRandom());
