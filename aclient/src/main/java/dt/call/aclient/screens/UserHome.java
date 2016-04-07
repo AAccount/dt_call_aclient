@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -13,6 +14,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.ColorDrawable;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
@@ -62,61 +64,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	protected void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
-
-		//setup the command listener if it isn't already there
-		//	it will already be there if you're coming back to the UserHome screen from doing something else
-		boolean loginOk = false;
-		synchronized (Vars.cmdListenerLock)
-		{
-			//for some types of crashes it goes back to the UserHome screen but with no save data (and missing connections)
-			if(Vars.commandSocket == null || Vars.mediaSocket == null)
-			{
-				SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
-				Vars.uname = sharedPreferences.getString(Const.UNAME, "");
-				Vars.passwd = sharedPreferences.getString(Const.PASSWD, "");
-				Vars.serverAddress = sharedPreferences.getString(Const.ADDR, "");
-				Vars.commandPort = sharedPreferences.getInt(Const.COMMANDPORT, 0);
-				Vars.mediaPort = sharedPreferences.getInt(Const.MEDIAPORT, 0);
-				Vars.expectedCertDump = sharedPreferences.getString(Const.CERT64, "");
-				try
-				{
-					//handle cases where the app is started but there is no internet
-					Vars.hasInternet = new CheckInternetAsync().execute(getApplicationContext()).get();
-					if(Vars.hasInternet)
-					{
-						loginOk = new LoginAsync(Vars.uname, Vars.passwd).execute().get();
-						if (loginOk)
-						{
-							Intent cmdListenerIntent = new Intent(this, CmdListener.class);
-							startService(cmdListenerIntent);
-							Vars.cmdListenerRunning = true;
-						}
-					}
-				}
-				catch (Exception e)
-				{
-					Class exception = e.getClass();
-					Utils.dumpException(tag, e);
-				}
-			}
-
-			if(Vars.hasInternet && loginOk)
-			{
-				//for cases when you skip the initial info because it's already there and go straight to home
-				if (!Vars.cmdListenerRunning)
-				{
-					Intent cmdListenerIntent = new Intent(this, CmdListener.class);
-					startService(cmdListenerIntent);
-					Vars.cmdListenerRunning = true;
-				}
-
-				//ping the connection periodically to make sure it's still good
-				Intent startHeartbeat = new Intent(Const.BROADCAST_BK_HEARTBEAT);
-				startHeartbeat.putExtra(Const.BROADCAST_BK_HEARTBEAT_DOIT, true);
-				sendBroadcast(startHeartbeat);
-			}
-		}
-
 		setContentView(R.layout.activity_user_home);
 		actionbox = (EditText)findViewById(R.id.user_home_actionbox);
 		call = (FloatingActionButton)findViewById(R.id.user_home_call);
@@ -221,6 +168,57 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				}
 			}
 		};
+
+		//setup the command listener if it isn't already there
+		//	it will already be there if you're coming back to the UserHome screen from doing something else
+		boolean loginOk = (Vars.sessionid > 0);
+		synchronized (Vars.cmdListenerLock)
+		{
+			//for some types of crashes it goes back to the UserHome screen but with no save data (and missing connections)
+			if(Vars.commandSocket == null || Vars.mediaSocket == null)
+			{
+				SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
+				Vars.uname = sharedPreferences.getString(Const.UNAME, "");
+				Vars.passwd = sharedPreferences.getString(Const.PASSWD, "");
+				Vars.serverAddress = sharedPreferences.getString(Const.ADDR, "");
+				Vars.commandPort = sharedPreferences.getInt(Const.COMMANDPORT, 0);
+				Vars.mediaPort = sharedPreferences.getInt(Const.MEDIAPORT, 0);
+				Vars.expectedCertDump = sharedPreferences.getString(Const.CERT64, "");
+				loginOk = false;
+
+				try
+				{
+					if(Vars.cmdListenerRunning)
+					{
+						Utils.logcat(Const.LOGW, tag, "sockets are null but command listener is running???");
+						Vars.dontRestart = true;
+						new KillSocketsAsync().execute().get();
+						Vars.cmdListenerRunning = false;
+					}
+
+					//handle cases where the app is started but there is no internet
+					Vars.hasInternet = new CheckInternetAsync().execute(getApplicationContext()).get();
+					if(Vars.hasInternet)
+					{
+						loginOk = new LoginAsync(Vars.uname, Vars.passwd).execute().get();
+						if (loginOk) //the one who does the login is responsible for starting the command listener
+						{
+							Intent cmdListenerIntent = new Intent(this, CmdListener.class);
+							startService(cmdListenerIntent);
+							Vars.cmdListenerRunning = true;
+
+							Intent startHeartbeat = new Intent(Const.BROADCAST_BK_HEARTBEAT);
+							startHeartbeat.putExtra(Const.BROADCAST_BK_HEARTBEAT_DOIT, true);
+							sendBroadcast(startHeartbeat);
+						}
+					}
+				}
+				catch (Exception e)
+				{
+					Utils.dumpException(tag, e);
+				}
+			}
+		}
 
 		//if the login after crash didn't work or there is no internet (therefore no login attempted) notify the user
 		if(!Vars.hasInternet)

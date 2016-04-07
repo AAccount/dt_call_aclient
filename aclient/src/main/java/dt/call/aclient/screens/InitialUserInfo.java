@@ -14,7 +14,9 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
+import dt.call.aclient.background.Async.KillSocketsAsync;
 import dt.call.aclient.background.Async.LoginAsync;
+import dt.call.aclient.background.CmdListener;
 
 public class InitialUserInfo extends AppCompatActivity implements View.OnClickListener
 {
@@ -64,7 +66,6 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 				return;
 			}
 
-			//retrieve the server information you got in the previous screen from shared preferences
 			try
 			{
 				boolean loginOk = new LoginAsync(enteredUname, enteredPasswd).execute().get();
@@ -81,6 +82,26 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 					Vars.uname = enteredUname;
 					Vars.passwd = enteredPasswd;
 
+					//start the command listener --> the one who does the login is responsible for starting the command listener
+					synchronized (Vars.cmdListenerLock)
+					{
+						if (Vars.cmdListenerRunning)
+						{//for whatever freak reason
+							Utils.logcat(Const.LOGW, tag, "command listener was already running. before logging in ??");
+							Vars.dontRestart = true;
+							new KillSocketsAsync().execute().get(); //the result is meaningless but can't continue with this currently running
+							Vars.cmdListenerRunning = false;
+						}
+
+						Intent cmdListenerIntent = new Intent(this, CmdListener.class);
+						startService(cmdListenerIntent);
+						Vars.cmdListenerRunning = true;
+
+						Intent startHeartbeat = new Intent(Const.BROADCAST_BK_HEARTBEAT);
+						startHeartbeat.putExtra(Const.BROADCAST_BK_HEARTBEAT_DOIT, true);
+						sendBroadcast(startHeartbeat);
+					}
+
 					//go to the user information screen
 					Intent go2Home = new Intent(InitialUserInfo.this, UserHome.class);
 					startActivity(go2Home);
@@ -92,7 +113,6 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 			}
 			catch (Exception e)
 			{
-				Class exception = e.getClass();
 				Utils.dumpException(tag, e);
 				Utils.showOk(this, getString(R.string.alert_login_failed));
 			}

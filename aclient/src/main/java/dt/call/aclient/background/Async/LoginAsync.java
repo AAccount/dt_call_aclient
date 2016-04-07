@@ -6,6 +6,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.security.cert.CertificateException;
 
 import dt.call.aclient.Const;
@@ -33,7 +35,12 @@ public class LoginAsync extends AsyncTask<String, String, Boolean>
 	{
 		try
 		{
-			//TODO: find a way to stop if the server is notavailable
+			//TODONE: find a way to stop if the server is notavailable
+			//http://stackoverflow.com/a/34228756
+			//check if server is available first before committing to anything
+			//	otherwise this proccess will stall. host not available trips timeout exception
+			Socket diag = new Socket();
+			diag.connect(new InetSocketAddress(Vars.serverAddress, Vars.commandPort), 2000);
 
 			//send login command
 			Vars.commandSocket = Utils.mkSocket(Vars.serverAddress, Vars.commandPort, Vars.expectedCertDump);

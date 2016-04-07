@@ -20,6 +20,7 @@ import dt.call.aclient.sqlite.History;
 
 /**
  * Created by Daniel on 1/19/16.
+ * Mostly copied and pasted from jclient
  */
 public class CmdListener extends IntentService
 {
@@ -50,7 +51,6 @@ public class CmdListener extends IntentService
 	@Override
 	protected void onHandleIntent(Intent workIntent)
 	{
-		//TODO: make sure this doesn't start until you've logged in.
 		//TODO: look into why media socket dies after making a call, ending it, then turning off the screen
 		//	don't want this to catch the login resposne
 		Utils.logcat(Const.LOGD, tag, "command listener INTENT SERVICE started");
@@ -292,8 +292,6 @@ public class CmdListener extends IntentService
 				inputValid = false;
 			}
 		}
-		//TODO: notify someone that the command listener has stopped
-		//TODO: figure out if there is internet first before you tell BackgroundManager that command listener died
 		notifyDead();
 	}
 
@@ -316,28 +314,34 @@ public class CmdListener extends IntentService
 	 */
 	private void notifyStateChange(String change)
 	{
-		Intent endCall = new Intent(Const.BROADCAST_CALL);
+		Intent stateChange = new Intent(Const.BROADCAST_CALL);
 		if(change.equals(Const.BROADCAST_CALL_END))
 		{
 			Utils.logcat(Const.LOGD, tag, "broadcasting call end");
-			endCall.putExtra(Const.BROADCAST_CALL_RESP, Const.BROADCAST_CALL_END);
+			stateChange.putExtra(Const.BROADCAST_CALL_RESP, Const.BROADCAST_CALL_END);
 		}
 		else if (change.equals(Const.BROADCAST_CALL_START))
 		{
 			Utils.logcat(Const.LOGD, tag, "broadcasting call start");
-			endCall.putExtra(Const.BROADCAST_CALL_RESP, Const.BROADCAST_CALL_START);
+			stateChange.putExtra(Const.BROADCAST_CALL_RESP, Const.BROADCAST_CALL_START);
 		}
 		else
 		{
 			//an invalid call response to broadcast was given
 			return;
 		}
-		sendBroadcast(endCall);
+		sendBroadcast(stateChange);
 	}
 
 	private void notifyDead()
 	{
 		Utils.logcat(Const.LOGE, tag, "broadcasting dead command listner");
+		if(Vars.dontRestart)
+		{
+			Utils.logcat(Const.LOGD, tag, "not restart command listener because dontRestart == true");
+			Vars.dontRestart = false;
+			return;
+		}
 		synchronized (Vars.cmdListenerLock)
 		{
 			Vars.cmdListenerRunning = false;

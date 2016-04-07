@@ -73,10 +73,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			Vars.uname = savedUname;
 			Vars.passwd = savedPasswd;
 
-			//start the connections
-			new LoginAsync(savedUname, savedPasswd).execute();
-
-			//don't need to start the command listener. that will be started on the home screen
+			//don't need to start the command listener or do the login async. that will be started on the home screen
 
 			//jump to the home screen
 			Intent skip2Home = new Intent(this, UserHome.class);

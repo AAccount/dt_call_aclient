@@ -48,7 +48,7 @@ public class BackgroundManager extends BroadcastReceiver
 
 		/**
 		 * Tries 5 times to login, waiting a minute between each attempt in case you need to do something
-		 * like signin to a public wifi, or wait for a better connection because the bad connection caused
+		 * like signin to a public wifi, or wait for a better connection because a bad connection caused
 		 * the failure
 		 *
 		 * On the exceptions, don't cancel the timer. Wait for the retires to run out
@@ -66,12 +66,16 @@ public class BackgroundManager extends BroadcastReceiver
 						Utils.logcat(Const.LOGD, tag, "Sign in succeeded");
 						synchronized (Vars.cmdListenerLock)
 						{
-							if(!Vars.cmdListenerRunning)
+							if(Vars.cmdListenerRunning)
 							{
-								Intent cmdListenerIntent = new Intent(context, CmdListener.class);
-								context.startService(cmdListenerIntent);
-								Vars.cmdListenerRunning = true;
+								Utils.logcat(Const.LOGW, tag, "command listener is running when a request to restart it is in progress??");
+								Vars.dontRestart = true;
+								new KillSocketsAsync().execute().get();
+								Vars.cmdListenerRunning = false;
 							}
+							Intent cmdListenerIntent = new Intent(context, CmdListener.class);
+							context.startService(cmdListenerIntent);
+							Vars.cmdListenerRunning = true;
 						}
 						retries = 0;
 						startHeartbeat();
@@ -108,8 +112,9 @@ public class BackgroundManager extends BroadcastReceiver
 				Utils.logcat(Const.LOGD, tag, "Internet was lost");
 
 				//Apparently you can't close a socket from here because it's on the UI thread???
+				Vars.dontRestart = true; //why bother when there's no internet
 				new KillSocketsAsync().execute();
-				retry.cancel(); //what's the point of retrying a failed sign in if there's no internet
+				retry.cancel();
 				retry.purge();
 				heartbeat.cancel();
 				heartbeat.purge();
@@ -118,7 +123,7 @@ public class BackgroundManager extends BroadcastReceiver
 			else
 			{
 				//internet reconnected case
-				// don't immediately try to reconnect on fail incase the person has to do a wifi sign in
+				// don't immediately try to reconnect on fail in case the person has to do a wifi sign in
 				//	or other things
 				Utils.logcat(Const.LOGD, tag, "Internet was reconnected");
 				Vars.hasInternet = true;

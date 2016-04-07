@@ -45,6 +45,7 @@ public class Vars
 	public static boolean cmdListenerRunning = false; //@ first start it's not running
 	public static final Object cmdListenerLock = new Object();
 	public static boolean hasInternet = true; //@ first start you have internet, otherwise how did you make the first log in
+	public static boolean dontRestart = false;
 
 	//Ongoing notification with state information
 	public static Notification.Builder stateNotificationBuilder = null;

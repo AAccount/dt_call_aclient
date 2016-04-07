@@ -28,6 +28,8 @@ public class KillSocketsAsync extends AsyncTask<String, String, String>
 			{
 				Vars.mediaSocket.close();
 			}
+			Vars.commandSocket = null;
+			Vars.mediaSocket = null;
 		}
 		catch (Exception e)
 		{

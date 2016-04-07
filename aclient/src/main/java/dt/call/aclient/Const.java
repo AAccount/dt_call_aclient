@@ -58,9 +58,15 @@ public class Const
 	public static final String BROADCAST_CALL_START = "start";
 	public static final String BROADCAST_CALL_END = "end";
 
-	public static final int BUFFER_SIZE = 1024;
-
 	//persistent notificaton id
 	public static final int stateNotificationId = 1;
+
+	/**
+	 * Conventions:
+	 * 	-if you start the login proccess, it is your job to make sure that the heartbeat and command listener start.
+	 * 		don't start the login proccess in 1 place and assume the heartbeat/command listener will be started somewhere else
+	 * 	-when you start command listener, set Vars.command listener running.
+	 * 	-when starting command listener check to make sure (for some freak reason), it isn't already running
+	 */
 
 }

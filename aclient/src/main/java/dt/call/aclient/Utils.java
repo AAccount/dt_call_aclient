@@ -101,12 +101,6 @@ public class Utils
 		};
 		try
 		{
-			//http://stackoverflow.com/a/34228756
-			//check if server is available first before committing to anything
-			//	otherwise this proccess will stall. host not available trips timeout exception
-			Socket diag = new Socket();
-			diag.connect(new InetSocketAddress(host, port), 1500);
-
 			SSLContext context;
 			context = SSLContext.getInstance("TLSv1.2");
 			context.init(new KeyManager[0], trustOnlyServerCert, new SecureRandom());
@@ -171,15 +165,12 @@ public class Utils
 	//https://stackoverflow.com/questions/1149703/how-can-i-convert-a-stack-trace-to-a-string
 	public static void dumpException(String tag, Exception e)
 	{
-		Class exception = e.getClass();
-		String exName = exception.getName();
-
 		StringWriter sw = new StringWriter();
 		PrintWriter pw = new PrintWriter(sw);
 		e.printStackTrace(pw);
 		String dump = sw.toString();
 
-		logcat(Const.LOGE, tag, exName + " " + dump);
+		logcat(Const.LOGE, tag, dump);
 	}
 
 }
