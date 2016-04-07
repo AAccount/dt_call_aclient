@@ -28,7 +28,6 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.BackgroundManager;
-import dt.call.aclient.background.Async.LoginAsync;
 
 public class InitialServer extends AppCompatActivity implements View.OnClickListener
 {

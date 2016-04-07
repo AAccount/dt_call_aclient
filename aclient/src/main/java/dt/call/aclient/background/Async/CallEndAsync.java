@@ -3,7 +3,6 @@ package dt.call.aclient.background.Async;
 import android.content.Context;
 import android.os.AsyncTask;
 
-import java.io.IOException;
 import java.security.cert.CertificateException;
 
 import dt.call.aclient.CallState;

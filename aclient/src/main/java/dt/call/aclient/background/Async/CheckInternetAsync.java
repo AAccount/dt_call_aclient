@@ -5,7 +5,6 @@ import android.net.ConnectivityManager;
 import android.os.AsyncTask;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 
 import dt.call.aclient.Const;
 import dt.call.aclient.Utils;

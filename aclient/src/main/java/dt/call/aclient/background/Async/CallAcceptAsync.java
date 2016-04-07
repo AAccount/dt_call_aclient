@@ -2,8 +2,6 @@ package dt.call.aclient.background.Async;
 
 import android.os.AsyncTask;
 
-import java.io.IOException;
-
 import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
