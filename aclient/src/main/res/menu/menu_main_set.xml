@@ -8,20 +8,26 @@
     <item
         android:id="@+id/menu_main_history"
         android:icon="@drawable/ic_history_white_48dp"
-        android:title="history"
+        android:title="History"
         app:showAsAction="always"
         />
 
     <item
         android:id="@+id/menu_main_logout"
         android:icon="@drawable/ic_exit_to_app_white_48dp"
-        android:title="sign out"
+        android:title="Sign Out"
         app:showAsAction="always"
         />
 
     <item
+        android:id="@+id/menu_main_dblogs"
+        android:title="@string/menu_main_dblogs"
+        app:showAsAction="never"
+        />
+
+    <item
         android:id="@+id/menu_main_settings"
-        android:title="Settings"
+        android:title="@string/menu_main_settings"
         app:showAsAction="never"
         />
 </menu>

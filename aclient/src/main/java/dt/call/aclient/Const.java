@@ -49,24 +49,19 @@ public class Const
 	public static final int outgoing = 1;
 	public static final int incoming = 2;
 
-	//boradcast intent shared by call main and incoming call screen
+	//broadcast intent shared by call main and incoming call screen
 	//both need the call end signal
 	// (either the person hung or changed his mind and cancelled before you answered)
-	//only call main reponds to call accept
+	//only call main responds to call accept
 	public static final String BROADCAST_CALL = "notify_call_info";
 	public static final String BROADCAST_CALL_RESP = "call_response";
 	public static final String BROADCAST_CALL_START = "start";
 	public static final String BROADCAST_CALL_END = "end";
 
-	//persistent notificaton id
+	//broadcasting login result
+	public static final String BROADCAST_LOGIN = "broadcast_login";
+	public static final String BROADCAST_LOGIN_RESULT = "login_result";
+
+	//persistent notification id
 	public static final int stateNotificationId = 1;
-
-	/**
-	 * Conventions:
-	 * 	-if you start the login proccess, it is your job to make sure that the heartbeat and command listener start.
-	 * 		don't start the login proccess in 1 place and assume the heartbeat/command listener will be started somewhere else
-	 * 	-when you start command listener, set Vars.command listener running.
-	 * 	-when starting command listener check to make sure (for some freak reason), it isn't already running
-	 */
-
 }

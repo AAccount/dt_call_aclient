@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -33,11 +34,9 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.background.Async.CheckInternetAsync;
 import dt.call.aclient.background.Async.LoginAsync;
 import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.background.Async.CallInitAsync;
-import dt.call.aclient.background.CmdListener;
 import dt.call.aclient.background.Async.KillSocketsAsync;
 import dt.call.aclient.background.Async.LookupAsync;
 import dt.call.aclient.sqlite.Contact;
@@ -57,6 +56,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	private Contact contactInEdit; //whenever renaming a contact just change its nickname here and pass around this object
 	private Db db;
 	private BroadcastReceiver myReceiver;
+	private ProgressDialog loginProgress;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -125,43 +125,56 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			public void onReceive(Context context, Intent intent)
 			{
 				Utils.logcat(Const.LOGD, tag, "got a broadcasted intent");
-				String type = intent.getStringExtra(Const.BROADCAST_HOME_TYPE);
 
-				//Result of clicking the "+" for adding a contact
-				if(type.equals(Const.BROADCAST_HOME_TYPE_LOOKUP))
+				if(intent.getAction().equals(Const.BROADCAST_HOME))
 				{
-					String user = intent.getStringExtra(Const.BROADCAST_HOME_LOOKUP_NAME);
-					String result = intent.getStringExtra(Const.BROADCAST_HOME_LOOKUP_RESULT);
-					if(result.equals("exists"))
+					String type = intent.getStringExtra(Const.BROADCAST_HOME_TYPE);
+
+					//Result of clicking the "+" for adding a contact
+					if (type.equals(Const.BROADCAST_HOME_TYPE_LOOKUP))
 					{
-						Contact newGuy = new Contact(user);
-						db.insertContact(newGuy);
-						addToContactList(newGuy);
-						actionbox.setText("");
-						Vars.contactTable.put(user, "");
+						String user = intent.getStringExtra(Const.BROADCAST_HOME_LOOKUP_NAME);
+						String result = intent.getStringExtra(Const.BROADCAST_HOME_LOOKUP_RESULT);
+						if (result.equals("exists"))
+						{
+							Contact newGuy = new Contact(user);
+							db.insertContact(newGuy);
+							addToContactList(newGuy);
+							actionbox.setText("");
+							Vars.contactTable.put(user, "");
+						}
+						else
+						{
+							Utils.showOk(UserHome.this, getString(R.string.alert_user_home_contact_notexist));
+							//don't reset the actionbox text. coulda just been a typo
+						}
 					}
-					else
+
+					//Result of clicking the phone button. If the user you're trying to call doesn't exist
+					//	the server treats it as not available. It IS the server's job to verify all input given to it.
+					else if (type.equals(Const.BROADCAST_HOME_TYPE_INIT))
 					{
-						Utils.showOk(UserHome.this, getString(R.string.alert_user_home_contact_notexist));
-						//don't reset the actionbox text. coulda just been a typo
+						boolean canInit = intent.getBooleanExtra(Const.BROADCAST_HOME_INIT_CANINIT, false);
+						if (canInit)
+						{
+							Utils.logcat(Const.LOGD, tag, "Starting call with " + Vars.callWith);
+							Intent startCall = new Intent(UserHome.this, CallMain.class);
+							startActivity(startCall);
+						}
+						else
+						{
+							Utils.logcat(Const.LOGD, tag, "Can't start call");
+							Utils.showOk(UserHome.this, getString(R.string.alert_user_home_cant_dial));
+						}
 					}
 				}
-
-				//Result of clicking the phone button. If the user you're trying to call doesn't exist
-				//	the server treats it as not available. It IS the server's job to verify all input given to it.
-				else if (type.equals(Const.BROADCAST_HOME_TYPE_INIT))
+				else if(intent.getAction().equals(Const.BROADCAST_LOGIN))
 				{
-					boolean canInit = intent.getBooleanExtra(Const.BROADCAST_HOME_INIT_CANINIT, false);
-					if(canInit)
+					boolean ok = intent.getBooleanExtra(Const.BROADCAST_LOGIN_RESULT, false);
+					loginProgress.dismiss();
+					if(!ok)
 					{
-						Utils.logcat(Const.LOGD, tag, "Starting call with " + Vars.callWith);
-						Intent startCall = new Intent(UserHome.this, CallMain.class);
-						startActivity(startCall);
-					}
-					else
-					{
-						Utils.logcat(Const.LOGD, tag, "Can't start call");
-						Utils.showOk(UserHome.this, getString(R.string.alert_user_home_cant_dial));
+						Utils.showOk(UserHome.this, getString(R.string.alert_login_failed));
 					}
 				}
 			}
@@ -169,63 +182,20 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 
 		//setup the command listener if it isn't already there
 		//	it will already be there if you're coming back to the UserHome screen from doing something else
-		boolean loginOk = (Vars.sessionid > 0);
-		synchronized (Vars.cmdListenerLock)
+
+		//for some types of crashes it goes back to the UserHome screen but with no save data (and missing connections)
+		if(Vars.commandSocket == null || Vars.mediaSocket == null)
 		{
-			//for some types of crashes it goes back to the UserHome screen but with no save data (and missing connections)
-			if(Vars.commandSocket == null || Vars.mediaSocket == null)
-			{
-				SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
-				Vars.uname = sharedPreferences.getString(Const.UNAME, "");
-				Vars.passwd = sharedPreferences.getString(Const.PASSWD, "");
-				Vars.serverAddress = sharedPreferences.getString(Const.ADDR, "");
-				Vars.commandPort = sharedPreferences.getInt(Const.COMMANDPORT, 0);
-				Vars.mediaPort = sharedPreferences.getInt(Const.MEDIAPORT, 0);
-				Vars.expectedCertDump = sharedPreferences.getString(Const.CERT64, "");
-				loginOk = false;
+			loginProgress = ProgressDialog.show(UserHome.this, null, getString(R.string.progress_login));
 
-				try
-				{
-					if(Vars.cmdListenerRunning)
-					{
-						Utils.logcat(Const.LOGW, tag, "sockets are null but command listener is running???");
-						Vars.dontRestart = true;
-						new KillSocketsAsync().execute().get();
-						Vars.cmdListenerRunning = false;
-					}
-
-					//handle cases where the app is started but there is no internet
-					Vars.hasInternet = new CheckInternetAsync().execute(getApplicationContext()).get();
-					if(Vars.hasInternet)
-					{
-						loginOk = new LoginAsync(Vars.uname, Vars.passwd).execute().get();
-						if (loginOk) //the one who does the login is responsible for starting the command listener
-						{
-							Intent cmdListenerIntent = new Intent(this, CmdListener.class);
-							startService(cmdListenerIntent);
-							Vars.cmdListenerRunning = true;
-
-							Intent startHeartbeat = new Intent(Const.BROADCAST_BK_HEARTBEAT);
-							startHeartbeat.putExtra(Const.BROADCAST_BK_HEARTBEAT_DOIT, true);
-							sendBroadcast(startHeartbeat);
-						}
-					}
-				}
-				catch (Exception e)
-				{
-					Utils.dumpException(tag, e);
-				}
-			}
-		}
-
-		//if the login after crash didn't work or there is no internet (therefore no login attempted) notify the user
-		if(!Vars.hasInternet)
-		{
-			Utils.showOk(this, getString(R.string.alert_user_home_no_internet));
-		}
-		else if (Vars.hasInternet && !loginOk)
-		{
-			Utils.showOk(this, getString(R.string.alert_login_failed));
+			SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
+			Vars.uname = sharedPreferences.getString(Const.UNAME, "");
+			Vars.passwd = sharedPreferences.getString(Const.PASSWD, "");
+			Vars.serverAddress = sharedPreferences.getString(Const.ADDR, "");
+			Vars.commandPort = sharedPreferences.getInt(Const.COMMANDPORT, 0);
+			Vars.mediaPort = sharedPreferences.getInt(Const.MEDIAPORT, 0);
+			Vars.expectedCertDump = sharedPreferences.getString(Const.CERT64, "");
+			new LoginAsync(Vars.uname, Vars.passwd, getApplicationContext(), true).execute();
 		}
 	}
 
@@ -234,7 +204,10 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		super.onResume();
 
 		//receiver must be reregistered when loading this screen from the back button
-		registerReceiver(myReceiver, new IntentFilter(Const.BROADCAST_HOME));
+		IntentFilter homeFilters = new IntentFilter();
+		homeFilters.addAction(Const.BROADCAST_HOME);
+		homeFilters.addAction(Const.BROADCAST_LOGIN);
+		registerReceiver(myReceiver, homeFilters);
 	}
 
 	@Override
@@ -305,7 +278,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			}
 			else
 			{
-				Utils.showOk(this, getString(R.string.alert_tehcnical_difficulties));
+				Utils.showOk(this, getString(R.string.alert_technical_difficulties));
 			}
 		}
 	}
@@ -387,6 +360,9 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	{
 		switch(item.getItemId())
 		{
+			case R.id.menu_main_dblogs:
+				//TODO: once db log viewer is made
+				return true;
 			case R.id.menu_main_history:
 				//TODO: once the history screen is made
 				return true;
@@ -395,7 +371,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				return true;
 			//use the same actions whether settings is form the main menu or edit menu
 			case R.id.menu_main_settings:
-			case R.id.menu_edit_settings:
 				//TODO: once the settings screen is made
 				return true;
 			case R.id.menu_edit_done:

@@ -342,10 +342,8 @@ public class CmdListener extends IntentService
 			Vars.dontRestart = false;
 			return;
 		}
-		synchronized (Vars.cmdListenerLock)
-		{
-			Vars.cmdListenerRunning = false;
-		}
+		Vars.cmdListenerRunning = false;
+
 		Intent deadBroadcast = new Intent(Const.BROADCAST_BK_CMDDEAD);
 		sendBroadcast(deadBroadcast);
 	}

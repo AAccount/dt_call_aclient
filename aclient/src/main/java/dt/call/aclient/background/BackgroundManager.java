@@ -57,25 +57,11 @@ public class BackgroundManager extends BroadcastReceiver
 			{
 				try
 				{
-					boolean didSignIn = new LoginAsync(Vars.uname, Vars.passwd).execute().get();
+					boolean didSignIn = new LoginAsync(Vars.uname, Vars.passwd, context, false).execute().get();
 					if(didSignIn)
 					{//the sign in succeeded. setup the cmd listener thread and stop the retries
 						Utils.logcat(Const.LOGD, tag, "Sign in succeeded");
-						synchronized (Vars.cmdListenerLock)
-						{
-							if(Vars.cmdListenerRunning)
-							{
-								Utils.logcat(Const.LOGW, tag, "command listener is running when a request to restart it is in progress??");
-								Vars.dontRestart = true;
-								new KillSocketsAsync().execute().get();
-								Vars.cmdListenerRunning = false;
-							}
-							Intent cmdListenerIntent = new Intent(context, CmdListener.class);
-							context.startService(cmdListenerIntent);
-							Vars.cmdListenerRunning = true;
-						}
 						retries = 0;
-						startHeartbeat();
 					}
 					else
 					{//sign in failed. decrease retries by 1

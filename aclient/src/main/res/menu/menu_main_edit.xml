@@ -24,10 +24,4 @@
         android:title="remove"
         app:showAsAction="always"
         />
-
-    <item
-        android:id="@+id/menu_edit_settings"
-        android:title="Settings"
-        app:showAsAction="never"
-        />
 </menu>

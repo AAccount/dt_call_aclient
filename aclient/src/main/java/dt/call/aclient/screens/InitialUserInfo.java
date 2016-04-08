@@ -66,7 +66,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 
 			try
 			{
-				boolean loginOk = new LoginAsync(enteredUname, enteredPasswd).execute().get();
+				boolean loginOk = new LoginAsync(enteredUname, enteredPasswd, getApplicationContext(), false).execute().get();
 				if(loginOk)
 				{
 					//because the login was successful, save the info
@@ -79,26 +79,6 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 					//save it to the session variables too, to avoid always doing a disk lookup with shared prefs
 					Vars.uname = enteredUname;
 					Vars.passwd = enteredPasswd;
-
-					//start the command listener --> the one who does the login is responsible for starting the command listener
-					synchronized (Vars.cmdListenerLock)
-					{
-						if (Vars.cmdListenerRunning)
-						{//for whatever freak reason
-							Utils.logcat(Const.LOGW, tag, "command listener was already running. before logging in ??");
-							Vars.dontRestart = true;
-							new KillSocketsAsync().execute().get(); //the result is meaningless but can't continue with this currently running
-							Vars.cmdListenerRunning = false;
-						}
-
-						Intent cmdListenerIntent = new Intent(this, CmdListener.class);
-						startService(cmdListenerIntent);
-						Vars.cmdListenerRunning = true;
-
-						Intent startHeartbeat = new Intent(Const.BROADCAST_BK_HEARTBEAT);
-						startHeartbeat.putExtra(Const.BROADCAST_BK_HEARTBEAT_DOIT, true);
-						sendBroadcast(startHeartbeat);
-					}
 
 					//go to the user information screen
 					Intent go2Home = new Intent(InitialUserInfo.this, UserHome.class);

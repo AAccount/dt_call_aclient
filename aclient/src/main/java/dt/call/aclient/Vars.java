@@ -43,7 +43,6 @@ public class Vars
 
 	//make sure there is only 1 command listener and only start it if there's internet
 	public static boolean cmdListenerRunning = false; //@ first start it's not running
-	public static final Object cmdListenerLock = new Object();
 	public static boolean hasInternet = true; //@ first start you have internet, otherwise how did you make the first log in
 	public static boolean dontRestart = false;
 
