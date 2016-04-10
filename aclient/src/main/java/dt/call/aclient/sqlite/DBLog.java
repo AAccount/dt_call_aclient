@@ -7,14 +7,23 @@ import java.util.Locale;
 /**
  * Created by Daniel on 4/6/16.
  */
-public class Log
+public class DBLog
 {
 	private long timestamp;
 	private String message;
+	private String tag;
 
-	public Log(long cts, String cmsg)
+	public DBLog(String ctag, String cmsg)
+	{
+		timestamp = System.currentTimeMillis();
+		tag = ctag;
+		message = cmsg;
+	}
+
+	public DBLog(long cts, String ctag, String cmsg)
 	{
 		timestamp = cts;
+		tag = ctag;
 		message = cmsg;
 	}
 
@@ -29,9 +38,20 @@ public class Log
 		return formatter.format(new Date(timestamp));
 	}
 
+	public String getHumanReadableTimestampShort()
+	{
+		SimpleDateFormat formatter = new SimpleDateFormat("HH:mm", Locale.US);
+		return formatter.format(new Date(timestamp));
+	}
+
 	public String getMessage()
 	{
 		return message;
+	}
+
+	public String getTag()
+	{
+		return tag;
 	}
 
 	@Override
@@ -43,12 +63,12 @@ public class Log
 	@Override
 	public boolean equals(Object other)
 	{
-		if(!(other instanceof  Log))
+		if(!(other instanceof DBLog))
 		{
 			return false;
 		}
 
-		Log cast = (Log)other;
+		DBLog cast = (DBLog)other;
 		return ((timestamp == cast.timestamp) && (message.equals(cast.message)));
 	}
 }

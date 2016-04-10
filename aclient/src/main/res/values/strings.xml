@@ -56,6 +56,10 @@
     <!-- Incoming call screen -->
     <string name="call_incoming_title">Incoming Call</string>
 
+    <!-- Logs screen -->
+    <string name="log_viewer_title">Log Viewer</string>
+    <string name="log_viewer_reset">Clear Logs</string>
+
     <!-- Menu items that don't have an icon -->
     <string name="menu_main_settings">Settings</string>
     <string name="menu_main_dblogs">DB Logs</string>

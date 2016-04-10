@@ -2,6 +2,7 @@ package dt.call.aclient.sqlite;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 import dt.call.aclient.Const;
 
@@ -39,7 +40,7 @@ public class History
 	public String toString()
 	{
 		Date date = new Date(timestamp);
-		SimpleDateFormat dateFormat = new SimpleDateFormat("MMMM dd yyyy HH:mm:ss.zzzz");
+		SimpleDateFormat dateFormat = new SimpleDateFormat("MMMM dd yyyy HH:mm:ss.zzzz", Locale.US);
 		String dateString = dateFormat.format(date);
 
 		if(type == Const.outgoing)

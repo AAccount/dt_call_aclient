@@ -13,6 +13,8 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.Async.KillSocketsAsync;
 import dt.call.aclient.background.Async.LoginAsync;
+import dt.call.aclient.sqlite.DB;
+import dt.call.aclient.sqlite.DBLog;
 
 /**
  * Created by Daniel on 1/22/16.
@@ -30,6 +32,13 @@ public class BackgroundManager extends BroadcastReceiver
 	//https://stackoverflow.com/questions/11502693/timer-not-stopping-in-android
 	private static Timer retry = new Timer();
 	private static Timer heartbeat = new Timer();
+
+	private DB db;
+
+	public BackgroundManager()
+	{
+		db = new DB(Vars.applicationContext);
+	}
 
 	@Override
 	public void onReceive(final Context context, Intent intent)
@@ -60,13 +69,19 @@ public class BackgroundManager extends BroadcastReceiver
 					boolean didSignIn = new LoginAsync(Vars.uname, Vars.passwd, context, false).execute().get();
 					if(didSignIn)
 					{//the sign in succeeded. setup the cmd listener thread and stop the retries
+						DBLog signinOk = new DBLog(tag, "sign in from timer task successful");
+						db.insertLog(signinOk);
 						Utils.logcat(Const.LOGD, tag, "Sign in succeeded");
+
 						retries = 0;
 					}
 					else
 					{//sign in failed. decrease retries by 1
-						retries--;
+						DBLog signinBad = new DBLog(tag, "sign in from timer task failed. " + retries + " left");
+						db.insertLog(signinBad);
 						Utils.logcat(Const.LOGW, tag, "Sign in failed. Retries: " + retries);
+
+						retries--;
 					}
 				}
 				catch (Exception e)
@@ -77,6 +92,9 @@ public class BackgroundManager extends BroadcastReceiver
 
 				if(retries == 0)
 				{//out of retires or retry succeeded
+					DBLog sol = new DBLog(tag, "ran out of tries to sign in from timer task");
+					db.insertLog(sol);
+
 					Utils.logcat(Const.LOGW, tag, "out of retries to sing in again. will have to be done by hand");
 					retry.cancel();
 					retry.purge();
@@ -92,6 +110,8 @@ public class BackgroundManager extends BroadcastReceiver
 
 			if(intent.getExtras() != null && intent.getExtras().getBoolean(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false))
 			{//internet lost case
+				DBLog nointernet = new DBLog(tag, "no internet");
+				db.insertLog(nointernet);
 				Utils.logcat(Const.LOGD, tag, "Internet was lost");
 
 				//Apparently you can't close a socket from here because it's on the UI thread???
@@ -108,6 +128,8 @@ public class BackgroundManager extends BroadcastReceiver
 				//internet reconnected case
 				// don't immediately try to reconnect on fail in case the person has to do a wifi sign in
 				//	or other things
+				DBLog yesinternet = new DBLog(tag, "YES internet");
+				db.insertLog(yesinternet);
 				Utils.logcat(Const.LOGD, tag, "Internet was reconnected");
 				Vars.hasInternet = true;
 
@@ -123,9 +145,13 @@ public class BackgroundManager extends BroadcastReceiver
 		}
 		else if (intent.getAction().equals(Const.BROADCAST_BK_CMDDEAD))
 		{
+			DBLog deadcmdrcv = new DBLog(tag, "dead command listener intent received");
+			db.insertLog(deadcmdrcv);
 			Utils.logcat(Const.LOGD, tag, "command listener dead received");
 			if(!Vars.hasInternet)
 			{
+				DBLog deadcmd = new DBLog(tag, "dead command listener intent received but no internet to restart");
+				db.insertLog(deadcmd);
 				Utils.logcat(Const.LOGW, tag, "no internet connection to restart command listener");
 				return;
 			}
@@ -146,11 +172,15 @@ public class BackgroundManager extends BroadcastReceiver
 			 */
 			if(intent.getExtras().getBoolean(Const.BROADCAST_BK_HEARTBEAT_DOIT, false))
 			{
+				DBLog ping = new DBLog(tag, "heartbeat start intent received");
+				db.insertLog(ping);
 				Utils.logcat(Const.LOGD, tag, "starting heartbeat connection diagnostics");
 				startHeartbeat();
 			}
 			else
 			{
+				DBLog ping = new DBLog(tag, "heartbeat STOP intent received");
+				db.insertLog(ping);
 				heartbeat.cancel();
 				heartbeat.purge();
 			}
@@ -178,6 +208,8 @@ public class BackgroundManager extends BroadcastReceiver
 				}
 				catch (Exception e)
 				{
+					DBLog badconn = new DBLog(tag, "heartbeat service detected a bad connection, reinitializing...");
+					db.insertLog(badconn);
 					Utils.dumpException(tag, e);
 					new KillSocketsAsync().execute();
 					//command listener would've died and sent out its dead broadcast to login again

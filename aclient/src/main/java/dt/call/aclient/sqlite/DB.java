@@ -8,10 +8,12 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import java.util.ArrayList;
 
+import dt.call.aclient.Const;
+
 /**
  * Created by Daniel on 1/21/16.
  */
-public class Db extends SQLiteOpenHelper
+public class DB extends SQLiteOpenHelper
 {
 	private static final String dbname = "calldb";
 	private static final String tableContacts = "contacts";
@@ -19,42 +21,55 @@ public class Db extends SQLiteOpenHelper
 	private static final String colNick = "nickname";
 
 	private static final String tableHistory = "history";
-	private static final String colTs = "timestamp";
+	private static final String colHistoryTs = "timestamp";
 	private static final String colWho = "who";
 	private static final String colType = "call_type";
+
+	private static final String tableLogs = "logs";
+	private static final String colId = "id";
+	private static final String colLogTs = "timestamp";
+	private static final String colTag = "tag";
+	private static final String colMessage = "message";
+
 	private final String mkhistory = "create table " + tableHistory + " " +
 			"(" +
-			colTs + " integer primary key, " +
+			colHistoryTs + " integer primary key, " +
 			colWho + " text, " +
 			colType + " integer " +
 			")";
-
+	private final String mkcontacts = "create table " + tableContacts + " " +
+			"(" +
+			colName +" text primary key," +
+			colNick +" text" +
+			")";
+	//https://stackoverflow.com/questions/25562508/autoincrement-is-only-allowed-on-an-integer-primary-key-android
+	private final String mklogs = "create table " + tableLogs + " " +
+			"(" +
+			colId + " integer primary key autoincrement," +
+			colLogTs + " integer," +
+			colTag + " text," +
+			colMessage +" text" +
+			")";
 	private SQLiteDatabase appdb;
 
-	public Db(Context c)
+	public DB(Context c)
 	{
-		super(c, dbname, null, 2);
+		super(c, dbname, null, 1);
 		appdb = getWritableDatabase();
 	}
+
 	@Override
 	public void onCreate(SQLiteDatabase db)
 	{
-		final String mkcontacts = "create table " + tableContacts + " " +
-				"(" +
-				colName +" text primary key," +
-				colNick +" text" +
-				")";
 		db.execSQL(mkcontacts);
 		db.execSQL(mkhistory);
+		db.execSQL(mklogs);
 	}
 
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion)
 	{
-		if(oldVersion == 1 && newVersion == 2)
-		{
-			db.execSQL(mkhistory);
-		}
+
 	}
 
 	public void insertContact(Contact contact)
@@ -115,7 +130,7 @@ public class Db extends SQLiteOpenHelper
 	public void insertHistory(History history)
 	{
 		ContentValues newHistory = new ContentValues();
-		newHistory.put(colTs, history.getTimestamp());
+		newHistory.put(colHistoryTs, history.getTimestamp());
 		newHistory.put(colWho, history.getWho().getName());
 		newHistory.put(colType, history.getType());
 		appdb.insert(tableHistory, null, newHistory);
@@ -132,7 +147,7 @@ public class Db extends SQLiteOpenHelper
 		cursor.moveToFirst();
 		while(!cursor.isAfterLast())
 		{
-			long ts = cursor.getLong(cursor.getColumnIndex(colTs));
+			long ts = cursor.getLong(cursor.getColumnIndex(colHistoryTs));
 			int type = cursor.getInt(cursor.getColumnIndex(colType));
 			String name = cursor.getString(cursor.getColumnIndex(colWho));
 			String nickname = cursor.getString(cursor.getColumnIndex(colNick));
@@ -143,5 +158,42 @@ public class Db extends SQLiteOpenHelper
 		}
 		cursor.close();
 		return result;
+	}
+
+	public void insertLog(DBLog log)
+	{
+		if(Const.SHOUDLOG) //only if there is a need for this, bother to do it
+		{
+			ContentValues newLog = new ContentValues();
+			newLog.put(colLogTs, log.getTimestamp());
+			newLog.put(colTag, log.getTag());
+			newLog.put(colMessage, log.getMessage());
+			appdb.insert(tableLogs, null, newLog);
+		}
+	}
+
+	public ArrayList<DBLog> getLogs()
+	{
+		ArrayList<DBLog> result = new ArrayList<DBLog>();
+		final String query = "select * from logs order by " + colLogTs + " desc";
+		Cursor cursor = appdb.rawQuery(query, null);
+		cursor.moveToFirst();
+		while(!cursor.isAfterLast())
+		{
+			long ts = cursor.getLong(cursor.getColumnIndex(colLogTs));
+			String tag = cursor.getString(cursor.getColumnIndex(colTag));
+			String message = cursor.getString(cursor.getColumnIndex(colMessage));
+			DBLog entry = new DBLog(ts, tag, message);
+			result.add(entry);
+			cursor.moveToNext();
+		}
+		return result;
+	}
+
+	public void clearLogs()
+	{
+		final String drop = "drop table logs";
+		appdb.execSQL(drop);
+		appdb.execSQL(mklogs);
 	}
 }

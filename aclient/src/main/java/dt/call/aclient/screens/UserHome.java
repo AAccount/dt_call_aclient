@@ -40,7 +40,8 @@ import dt.call.aclient.background.Async.CallInitAsync;
 import dt.call.aclient.background.Async.KillSocketsAsync;
 import dt.call.aclient.background.Async.LookupAsync;
 import dt.call.aclient.sqlite.Contact;
-import dt.call.aclient.sqlite.Db;
+import dt.call.aclient.sqlite.DB;
+import dt.call.aclient.sqlite.DBLog;
 import dt.call.aclient.sqlite.History;
 
 public class UserHome extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener
@@ -54,7 +55,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	private LinearLayout contactList;
 	private boolean inEdit = false;
 	private Contact contactInEdit; //whenever renaming a contact just change its nickname here and pass around this object
-	private Db db;
+	private DB db;
 	private BroadcastReceiver myReceiver;
 	private ProgressDialog loginProgress;
 
@@ -69,7 +70,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		add = (FloatingActionButton)findViewById(R.id.user_home_add);
 		add.setOnClickListener(this);
 		contactList = (LinearLayout)findViewById(R.id.user_home_contact_list);
-		db = new Db(this);
+		db = new DB(this);
 
 		//build the contacts list
 		ArrayList<Contact> allContacts = db.getContacts();
@@ -174,6 +175,8 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 					loginProgress.dismiss();
 					if(!ok)
 					{
+						DBLog sol = new DBLog(tag, "received login failed intent");
+						db.insertLog(sol);
 						Utils.showOk(UserHome.this, getString(R.string.alert_login_failed));
 					}
 				}
@@ -361,7 +364,8 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		switch(item.getItemId())
 		{
 			case R.id.menu_main_dblogs:
-				//TODO: once db log viewer is made
+				Intent seeLogs = new Intent(UserHome.this, LogViewer.class);
+				startActivity(seeLogs);
 				return true;
 			case R.id.menu_main_history:
 				//TODO: once the history screen is made

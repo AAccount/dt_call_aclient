@@ -15,8 +15,9 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.screens.CallIncoming;
 import dt.call.aclient.sqlite.Contact;
-import dt.call.aclient.sqlite.Db;
+import dt.call.aclient.sqlite.DB;
 import dt.call.aclient.sqlite.History;
+import dt.call.aclient.sqlite.DBLog;
 
 /**
  * Created by Daniel on 1/19/16.
@@ -31,7 +32,7 @@ public class CmdListener extends IntentService
 	private BufferedReader txtin;
 
 	//new to aclient!!!
-	private Db db;
+	private DB db;
 
 	public CmdListener()
 	{
@@ -54,7 +55,7 @@ public class CmdListener extends IntentService
 		//TODO: look into why media socket dies after making a call, ending it, then turning off the screen
 		//	don't want this to catch the login resposne
 		Utils.logcat(Const.LOGD, tag, "command listener INTENT SERVICE started");
-		db = new Db(getApplicationContext());
+		db = new DB(getApplicationContext());
 
 		while(inputValid)
 		{
@@ -335,7 +336,10 @@ public class CmdListener extends IntentService
 
 	private void notifyDead()
 	{
+		DBLog dead = new DBLog(tag, "command listener died");
+		db.insertLog(dead);
 		Utils.logcat(Const.LOGE, tag, "broadcasting dead command listner");
+
 		if(Vars.dontRestart)
 		{
 			Utils.logcat(Const.LOGD, tag, "not restart command listener because dontRestart == true");
