@@ -1,5 +1,6 @@
 package dt.call.aclient.screens;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -16,6 +17,7 @@ import android.content.pm.PackageManager;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
@@ -49,6 +51,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	private static final String tag = "UserHome";
 	private static final int CHRENAME = 1;
 	private static final int CHRM = 2;
+	private static final int MIC_PERM = 1;
 
 	private EditText actionbox;
 	private FloatingActionButton call, add;
@@ -202,6 +205,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		}
 	}
 
+	@Override
 	protected void onResume()
 	{
 		super.onResume();
@@ -211,6 +215,25 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		homeFilters.addAction(Const.BROADCAST_HOME);
 		homeFilters.addAction(Const.BROADCAST_LOGIN);
 		registerReceiver(myReceiver, homeFilters);
+
+		//check to make sure mic permission is set... can't call without a mic
+		if(ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
+		{
+			AlertDialog.Builder mkdialog = new AlertDialog.Builder(this);
+			mkdialog.setMessage(getString(R.string.aler_user_home_mic_perm))
+					.setPositiveButton(R.string.alert_ok, new DialogInterface.OnClickListener()
+					{
+						@Override
+						public void onClick(DialogInterface dialog, int which)
+						{
+							String[] perms = new String[]{Manifest.permission.RECORD_AUDIO};
+							ActivityCompat.requestPermissions(UserHome.this, perms, MIC_PERM);
+							dialog.cancel();
+						}
+					});
+			AlertDialog showOkAlert = mkdialog.create();
+			showOkAlert.show();
+		}
 	}
 
 	@Override
@@ -259,30 +282,13 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			}
 
 			Contact contact = new Contact(who, Vars.contactTable.get(who));
-			boolean didInit;
-			try
-			{
-				didInit = new CallInitAsync(contact).execute().get(); //result will be processed in myReceiver BroadcastReceiver
-			}
-			catch (Exception e)
-			{
-				Utils.dumpException(tag, e);
-				didInit = false;
-			}
+			new CallInitAsync(contact).execute();
+			long now = Utils.getLocalTimestamp();
+			//don't need the nickname because db only records user name
+			//	db doesn' need to record nickname because it will be figured out when drawing the history table
+			History history = new History(now, contact, Const.outgoing);
+			db.insertHistory(history);
 
-			//if the resulting dial out attempt didn't fail for technical reasons. save it in the user's history table
-			if(didInit)
-			{
-				long now = Utils.getLocalTimestamp();
-				//don't need the nickname because db only records user name
-				//	db doesn' need to record nickname because it will be figured out when drawing the history table
-				History history = new History(now, contact, Const.outgoing);
-				db.insertHistory(history);
-			}
-			else
-			{
-				Utils.showOk(this, getString(R.string.alert_technical_difficulties));
-			}
 		}
 	}
 
@@ -466,6 +472,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				if (mode == CHRENAME)
 				{
 					childView.setText(changed.toString());
+					childView.setTag(changed);
 					return;
 				}
 				else if (mode == CHRM)
@@ -485,5 +492,22 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		 * Do nothing. There's nowhere to go back to
 		 *
 		 */
+	}
+
+	@Override
+	public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults)
+	{
+		switch(requestCode)
+		{
+			case MIC_PERM:
+			{
+				if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_DENIED)
+				{
+					//with mic denied, this app can't do anything useful
+					quit();
+				}
+			}
+		}
+
 	}
 }

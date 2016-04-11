@@ -1,14 +1,19 @@
 package dt.call.aclient.screens;
 
+import android.Manifest;
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -33,6 +38,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 {
 	private static final String tag = "Initial Server";
 	private static final int FILE_SELECT_CODE = 1;
+	private static final int STORAGE_PERM = 1;
 
 	private EditText addr, commandPort, mediaPort;
 	private Button cert;
@@ -118,6 +124,30 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			cert.setText(savedCertFName);
 			certFile = savedCertFName; //save here so that when clickng next "" isn't written to saved prefs
 			Vars.expectedCertDump = cert64;
+		}
+	}
+
+	@Override
+	protected void onResume()
+	{
+		super.onResume();
+		//check for storage access permission. no point of a tls1.2 connection if the server is someone else
+		if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+		{
+			AlertDialog.Builder mkdialog = new AlertDialog.Builder(this);
+			mkdialog.setMessage(getString(R.string.alert_initial_server_storage_perm))
+					.setPositiveButton(R.string.alert_ok, new DialogInterface.OnClickListener()
+					{
+						@Override
+						public void onClick(DialogInterface dialog, int which)
+						{
+							String[] perms = new String[]{Manifest.permission.READ_EXTERNAL_STORAGE};
+							ActivityCompat.requestPermissions(InitialServer.this, perms, STORAGE_PERM);
+							dialog.cancel();
+						}
+					});
+			AlertDialog showOkAlert = mkdialog.create();
+			showOkAlert.show();
 		}
 	}
 
@@ -235,4 +265,35 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		}
 	}
 
+	@Override
+	public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults)
+	{
+		switch(requestCode)
+		{
+			case STORAGE_PERM:
+			{
+				if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_DENIED)
+				{
+					/**
+					 * Not verifying the server you're connecting to defeats the purpose of call encryption.
+					 * If another server is impersonating the expected one, you've just lost your password,
+					 * and possibly opened yourself to call tapping. Just quit the app.
+					 */
+
+					//prevent background manager from restarting command listener when sockets kill async is called
+					ComponentName backgroundManager = new ComponentName(this, BackgroundManager.class);
+					getPackageManager().setComponentEnabledSetting(backgroundManager, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+
+					//https://stackoverflow.com/questions/3226495/android-exit-application-code
+					//basically a way to get out of aclient
+					Intent intent = new Intent(Intent.ACTION_MAIN);
+					intent.addCategory(Intent.CATEGORY_HOME);
+					intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+					startActivity(intent);
+					System.exit(0); //actually close the app so it will start fresh from login
+				}
+			}
+		}
+
+	}
 }

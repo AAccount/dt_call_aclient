@@ -30,6 +30,8 @@
     <string name="alert_user_home_rename_button_nvm">Cancel</string>
     <string name="alert_user_home_cant_dial">User is not available to call</string>
     <string name="alert_user_home_no_internet">No internet connection. Can\'t login.</string>
+    <string name="aler_user_home_mic_perm">Call does not have permission to use the microphone. It won\'t be much of a call if the other person can\'t hear you.</string>
+    <string name="alert_initial_server_storage_perm">Call does not have permission to access storage. There is no point of an encrypted connection if the server you\'re connecting isn\'t the one you\'re expecting.</string>
 
     <!-- Persistent popup statuses -->
     <string name="state_popup_idle">Signed In</string>

@@ -26,7 +26,7 @@ import dt.call.aclient.sqlite.DBLog;
 public class BackgroundManager extends BroadcastReceiver
 {
 	private static final String tag = "BackgroundManager";
-	private static final int frequency = 1*60; //in seconds
+	private static final int frequency = 5*60; //in seconds
 
 	private int retries; //always reset retries before launching the timer
 	//https://stackoverflow.com/questions/11502693/timer-not-stopping-in-android
@@ -110,7 +110,7 @@ public class BackgroundManager extends BroadcastReceiver
 
 			if(intent.getExtras() != null && intent.getExtras().getBoolean(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false))
 			{//internet lost case
-				DBLog nointernet = new DBLog(tag, "no internet");
+				DBLog nointernet = new DBLog(tag, "android OS says there is no internet");
 				db.insertLog(nointernet);
 				Utils.logcat(Const.LOGD, tag, "Internet was lost");
 
@@ -128,7 +128,7 @@ public class BackgroundManager extends BroadcastReceiver
 				//internet reconnected case
 				// don't immediately try to reconnect on fail in case the person has to do a wifi sign in
 				//	or other things
-				DBLog yesinternet = new DBLog(tag, "YES internet");
+				DBLog yesinternet = new DBLog(tag, "android OS says there is internet");
 				db.insertLog(yesinternet);
 				Utils.logcat(Const.LOGD, tag, "Internet was reconnected");
 				Vars.hasInternet = true;
@@ -196,13 +196,18 @@ public class BackgroundManager extends BroadcastReceiver
 			{
 				if(Vars.mediaSocket == null || Vars.commandSocket == null)
 				{
+					DBLog cantHeartBeat = new DBLog(tag, "no internet to try heart beat service on");
+					db.insertLog(cantHeartBeat);
 					Utils.logcat(Const.LOGD, tag, "no connection to send hearbeat on");
 					return;
 				}
 
 				try
 				{
+					DBLog heartBeat = new DBLog(tag, "checking heartbeat on both sockets");
+					db.insertLog(heartBeat);
 					Utils.logcat(Const.LOGD, tag, "sending heartbeat");
+
 					Vars.commandSocket.getOutputStream().write(Const.JBYTE.getBytes());
 					Vars.mediaSocket.getOutputStream().write(Const.JBYTE.getBytes());
 				}
