@@ -62,6 +62,9 @@ public class Const
 	public static final String BROADCAST_LOGIN = "broadcast_login";
 	public static final String BROADCAST_LOGIN_RESULT = "login_result";
 
+	//log related strings
+	public static final String EXTRA_LOG = "log_obj";
+
 	//persistent notification id
 	public static final int stateNotificationId = 1;
 }

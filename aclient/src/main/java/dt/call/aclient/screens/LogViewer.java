@@ -1,6 +1,7 @@
 package dt.call.aclient.screens;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -12,6 +13,7 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 
+import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.sqlite.DB;
 import dt.call.aclient.sqlite.DBLog;
@@ -31,6 +33,7 @@ public class LogViewer extends AppCompatActivity implements View.OnClickListener
 
 		clear = (Button)findViewById(R.id.log_viewer_clear);
 		clear.setOnClickListener(this);
+		clear.setTag(null);
 		logTable = (LinearLayout)findViewById(R.id.log_viewer_scroller_table);
 		db = new DB(this);
 
@@ -42,13 +45,14 @@ public class LogViewer extends AppCompatActivity implements View.OnClickListener
 		{
 			//create a new table row for each log
 			LinearLayout logRow = (LinearLayout) View.inflate(this, R.layout.row_log_viewer, null);
-			logRow.setTag(log);
 			TextView ts = (TextView)logRow.findViewById(R.id.row_log_viewer_timestamp);
 			ts.setText(log.getHumanReadableTimestampShort());
 			TextView tag = (TextView)logRow.findViewById(R.id.row_log_viewer_tag);
 			tag.setText(log.getTag());
-			TextView message = (TextView)logRow.findViewById(R.id.row_log_viewer_message);
+			Button message = (Button)logRow.findViewById(R.id.row_log_viewer_message);
+			message.setOnClickListener(this);
 			message.setText(log.getMessage());
+			message.setTag(log);
 
 			logTable.addView(logRow);
 		}
@@ -61,6 +65,14 @@ public class LogViewer extends AppCompatActivity implements View.OnClickListener
 		{
 			db.clearLogs();
 			logTable.removeAllViews();
+		}
+
+		//each log entry's message is clickable
+		if(v.getTag() != null)
+		{
+			Intent seeDetails = new Intent(LogViewer.this, LogDetails.class);
+			seeDetails.putExtra(Const.EXTRA_LOG, (DBLog)v.getTag());
+			startActivity(seeDetails);
 		}
 	}
 }

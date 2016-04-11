@@ -87,6 +87,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			//	otherwise this proccess will stall. host not available trips timeout exception
 			Socket diag = new Socket();
 			diag.connect(new InetSocketAddress(Vars.serverAddress, Vars.commandPort), 2000);
+			diag.close();
 
 			//send login command
 			Vars.commandSocket = Utils.mkSocket(Vars.serverAddress, Vars.commandPort, Vars.expectedCertDump);

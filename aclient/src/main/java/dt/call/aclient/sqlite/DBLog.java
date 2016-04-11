@@ -1,5 +1,6 @@
 package dt.call.aclient.sqlite;
 
+import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -7,7 +8,7 @@ import java.util.Locale;
 /**
  * Created by Daniel on 4/6/16.
  */
-public class DBLog
+public class DBLog implements Serializable
 {
 	private long timestamp;
 	private String message;

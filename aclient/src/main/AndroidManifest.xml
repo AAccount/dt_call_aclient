@@ -79,6 +79,7 @@
             android:launchMode="singleTop">
         </activity>
 
+        <!-- Database debug logs listing -->
         <activity
             android:name=".screens.LogViewer"
             android:label="@string/log_viewer_title"
@@ -86,6 +87,16 @@
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".screens.UserHome"/>
+        </activity>
+
+        <!-- Database debug log details -->
+        <activity
+            android:name=".screens.LogDetails"
+            android:label="@string/log_details_title"
+            android:launchMode="singleTop">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".screens.LogViewer"/>
         </activity>
     </application>
 

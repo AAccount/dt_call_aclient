@@ -60,6 +60,11 @@
     <string name="log_viewer_title">Log Viewer</string>
     <string name="log_viewer_reset">Clear Logs</string>
 
+    <!-- Log details screen -->
+    <string name="log_details_title">Log Details</string>
+    <string name="log_details_date_label"><b>Date:</b></string>
+    <string name="log_details_tag_label"><b>Tag:</b></string>
+
     <!-- Menu items that don't have an icon -->
     <string name="menu_main_settings">Settings</string>
     <string name="menu_main_dblogs">DB Logs</string>
