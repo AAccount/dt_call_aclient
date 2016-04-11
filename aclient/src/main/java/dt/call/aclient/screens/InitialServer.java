@@ -294,6 +294,5 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 				}
 			}
 		}
-
 	}
 }

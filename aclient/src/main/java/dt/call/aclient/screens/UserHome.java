@@ -107,7 +107,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			Vars.stateNotificationBuilder = new Notification.Builder(getApplicationContext())
 					.setContentTitle(getString(R.string.app_name))
 					.setContentText(getString(R.string.state_popup_idle))
-					.setSmallIcon(R.drawable.ic_local_phone_white_48dp)
+					.setSmallIcon(R.drawable.ic_vpn_lock_white_48dp)
 					.setContentIntent(Vars.go2HomePending)
 					.setOngoing(true);
 			Vars.notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
