@@ -1,6 +1,7 @@
 package dt.call.aclient.screens;
 
 import android.Manifest;
+import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -344,6 +345,11 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	{
 		//get rid of the status notification
 		Vars.notificationManager.cancelAll();
+
+		//Kill alarms
+		AlarmManager manager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+		manager.cancel(Vars.pendingHeartbeat);
+		manager.cancel(Vars.pendingRetries);
 
 		//prevent background manager from restarting command listener when sockets kill async is called
 		ComponentName backgroundManager = new ComponentName(this, BackgroundManager.class);

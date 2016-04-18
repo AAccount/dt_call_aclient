@@ -198,4 +198,9 @@ public class DB extends SQLiteOpenHelper
 		appdb.execSQL(drop);
 		appdb.execSQL(mklogs);
 	}
+
+	public void close()
+	{
+		appdb.close();
+	}
 }

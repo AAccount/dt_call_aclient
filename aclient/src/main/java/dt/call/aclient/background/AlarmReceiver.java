@@ -104,5 +104,6 @@ public class AlarmReceiver extends BroadcastReceiver
 		{
 			db.insertLog(new DBLog(tag, "received ??unknown?? alarm"));
 		}
+		db.close();
 	}
 }

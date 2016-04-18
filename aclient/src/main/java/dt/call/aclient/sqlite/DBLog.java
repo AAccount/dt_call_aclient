@@ -47,9 +47,9 @@ public class DBLog implements Serializable
 
 	public String getShortMessage()
 	{
-		if(message.length() > 15)
+		if(message.length() > 25)
 		{
-			return message.substring(0, 14);
+			return message.substring(0, 24);
 		}
 		return message;
 	}
