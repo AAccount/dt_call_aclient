@@ -297,7 +297,7 @@ public class CmdListener extends IntentService
 	}
 
 	/**
-	 * Boradcasts to UserHome whether or not you can start the call
+	 * Broadcasts to UserHome whether or not you can start the call
 	 * @param canInit whether to star the call or not
 	 */
 	private void notifyCanInit(boolean canInit)
@@ -339,6 +339,7 @@ public class CmdListener extends IntentService
 		DBLog dead = new DBLog(tag, "command listener died");
 		db.insertLog(dead);
 		Utils.logcat(Const.LOGE, tag, "broadcasting dead command listner");
+		Vars.cmdListenerRunning = false;
 
 		if(Vars.dontRestart)
 		{
@@ -346,7 +347,6 @@ public class CmdListener extends IntentService
 			Vars.dontRestart = false;
 			return;
 		}
-		Vars.cmdListenerRunning = false;
 
 		Intent deadBroadcast = new Intent(Const.BROADCAST_BK_CMDDEAD);
 		sendBroadcast(deadBroadcast);

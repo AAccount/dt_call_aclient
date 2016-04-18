@@ -61,6 +61,7 @@
     <!-- Logs screen -->
     <string name="log_viewer_title">Log Viewer</string>
     <string name="log_viewer_reset">Clear Logs</string>
+    <string name="log_viewer_enable">Enable DB logs</string>
 
     <!-- Log details screen -->
     <string name="log_details_title">Log Details</string>

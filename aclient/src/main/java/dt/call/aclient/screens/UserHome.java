@@ -36,11 +36,11 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.background.Async.LoginAsync;
+import dt.call.aclient.background.async.LoginAsync;
 import dt.call.aclient.background.BackgroundManager;
-import dt.call.aclient.background.Async.CallInitAsync;
-import dt.call.aclient.background.Async.KillSocketsAsync;
-import dt.call.aclient.background.Async.LookupAsync;
+import dt.call.aclient.background.async.CallInitAsync;
+import dt.call.aclient.background.async.KillSocketsAsync;
+import dt.call.aclient.background.async.LookupAsync;
 import dt.call.aclient.sqlite.Contact;
 import dt.call.aclient.sqlite.DB;
 import dt.call.aclient.sqlite.DBLog;
@@ -97,6 +97,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			Vars.go2CallMainPending = PendingIntent.getActivity(this, 0, go2CallMain, PendingIntent.FLAG_UPDATE_CURRENT);
 		}
 
+		//TODO: manage this properly for meaningful results
 		//setup the ongoing notification shared accross screens that shows
 		//	the state of the app: signed in, no internet, in call etc...
 		//
@@ -178,8 +179,8 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 					loginProgress.dismiss();
 					if(!ok)
 					{
-						DBLog sol = new DBLog(tag, "received login failed intent");
-						db.insertLog(sol);
+						Utils.logcat(Const.LOGW, tag, "received login failed");
+						db.insertLog(new DBLog(tag, "received login failed intent"));
 						Utils.showOk(UserHome.this, getString(R.string.alert_login_failed));
 					}
 				}
@@ -195,13 +196,14 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			loginProgress = ProgressDialog.show(UserHome.this, null, getString(R.string.progress_login));
 
 			SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
-			Vars.uname = sharedPreferences.getString(Const.UNAME, "");
-			Vars.passwd = sharedPreferences.getString(Const.PASSWD, "");
-			Vars.serverAddress = sharedPreferences.getString(Const.ADDR, "");
-			Vars.commandPort = sharedPreferences.getInt(Const.COMMANDPORT, 0);
-			Vars.mediaPort = sharedPreferences.getInt(Const.MEDIAPORT, 0);
-			Vars.expectedCertDump = sharedPreferences.getString(Const.CERT64, "");
-			new LoginAsync(Vars.uname, Vars.passwd, getApplicationContext(), true).execute();
+			Vars.uname = sharedPreferences.getString(Const.PREF_UNAME, "");
+			Vars.passwd = sharedPreferences.getString(Const.PREF_PASSWD, "");
+			Vars.serverAddress = sharedPreferences.getString(Const.PREF_ADDR, "");
+			Vars.commandPort = sharedPreferences.getInt(Const.PREF_COMMANDPORT, 0);
+			Vars.mediaPort = sharedPreferences.getInt(Const.PREF_MEDIAPORT, 0);
+			Vars.expectedCertDump = sharedPreferences.getString(Const.PREF_CERT64, "");
+			Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, false);
+			new LoginAsync(Vars.uname, Vars.passwd, true).execute();
 		}
 	}
 
@@ -340,11 +342,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	//for whatever reason you can't access android internals like notification manager inside onOptionsItemSelected
 	private void quit()
 	{
-		//stop connection monitoring
-		Intent startHeartbeat = new Intent(Const.BROADCAST_BK_HEARTBEAT);
-		startHeartbeat.putExtra(Const.BROADCAST_BK_HEARTBEAT_DOIT, false);
-		sendBroadcast(startHeartbeat);
-
 		//get rid of the status notification
 		Vars.notificationManager.cancelAll();
 

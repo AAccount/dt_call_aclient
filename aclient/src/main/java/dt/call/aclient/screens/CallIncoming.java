@@ -19,8 +19,8 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.background.Async.CallAcceptAsync;
-import dt.call.aclient.background.Async.CallRejectAsync;
+import dt.call.aclient.background.async.CallAcceptAsync;
+import dt.call.aclient.background.async.CallRejectAsync;
 
 public class CallIncoming extends AppCompatActivity implements View.OnClickListener
 {

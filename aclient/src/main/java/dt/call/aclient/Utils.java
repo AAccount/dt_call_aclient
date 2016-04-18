@@ -4,9 +4,11 @@ import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.util.Base64;
 import android.util.Log;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.Socket;
@@ -21,6 +23,8 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+
+import dt.call.aclient.background.AlarmReceiver;
 
 /**
  * Created by Daniel on 1/18/16.
@@ -112,7 +116,7 @@ public class Utils
 
 	public static void logcat(int type, String tag, String message)
 	{
-		if(Const.SHOUDLOG)
+		if(Vars.SHOUDLOG)
 		{
 			if(type == Const.LOGD)
 			{
@@ -167,4 +171,17 @@ public class Utils
 		logcat(Const.LOGE, tag, dump);
 	}
 
+	public static void initAlarmVars()
+	{
+		//setup the alarm intents and pending intents
+		if(Vars.retries == null || Vars.pendingRetries == null || Vars.heartbeat == null || Vars.pendingHeartbeat == null)
+		{
+			Vars.retries = new Intent(Vars.applicationContext, AlarmReceiver.class);
+			Vars.retries.putExtra(Const.ALARM_ACTION, Const.ALARM_ACTION_RETRY);
+			Vars.pendingRetries = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_RETRY_ID, Vars.retries, PendingIntent.FLAG_UPDATE_CURRENT);
+			Vars.heartbeat = new Intent(Vars.applicationContext, AlarmReceiver.class);
+			Vars.heartbeat.putExtra(Const.ALARM_ACTION, Const.ALARM_ACTION_HEARTBEAT);
+			Vars.pendingHeartbeat = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_HEARTBEAT_ID, Vars.heartbeat, PendingIntent.FLAG_UPDATE_CURRENT);
+		}
+	}
 }

@@ -38,8 +38,8 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.background.Async.CallEndAsync;
-import dt.call.aclient.background.Async.CallTimeoutAsync;
+import dt.call.aclient.background.async.CallEndAsync;
+import dt.call.aclient.background.async.CallTimeoutAsync;
 
 public class CallMain extends AppCompatActivity implements View.OnClickListener, SensorEventListener
 {

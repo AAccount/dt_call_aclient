@@ -28,6 +28,6 @@ public class LogDetails extends AppCompatActivity
 		tag = (TextView)findViewById(R.id.log_details_value_tag);
 		tag.setText(" " + log.getTag());
 		message = (TextView)findViewById(R.id.log_details_value_message);
-		message.setText(log.getMessage());
+		message.setText(log.getFullMessage());
 	}
 }

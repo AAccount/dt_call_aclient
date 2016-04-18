@@ -1,11 +1,14 @@
 package dt.call.aclient.screens;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.TableLayout;
 import android.widget.TableRow;
@@ -15,12 +18,14 @@ import java.util.ArrayList;
 
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
+import dt.call.aclient.Vars;
 import dt.call.aclient.sqlite.DB;
 import dt.call.aclient.sqlite.DBLog;
 
 public class LogViewer extends AppCompatActivity implements View.OnClickListener
 {
 	private Button clear;
+	private CheckBox enable;
 	private LinearLayout logTable;
 	private DB db;
 
@@ -34,8 +39,15 @@ public class LogViewer extends AppCompatActivity implements View.OnClickListener
 		clear = (Button)findViewById(R.id.log_viewer_clear);
 		clear.setOnClickListener(this);
 		clear.setTag(null);
+		enable = (CheckBox)findViewById(R.id.log_viewer_enable);
+		enable.setOnClickListener(this);
 		logTable = (LinearLayout)findViewById(R.id.log_viewer_scroller_table);
 		db = new DB(this);
+
+		if(Vars.SHOUDLOG)
+		{
+			enable.setChecked(true);
+		}
 
 		ArrayList<DBLog> logs;
 		logs = db.getLogs();
@@ -51,7 +63,7 @@ public class LogViewer extends AppCompatActivity implements View.OnClickListener
 			tag.setText(log.getTag());
 			Button message = (Button)logRow.findViewById(R.id.row_log_viewer_message);
 			message.setOnClickListener(this);
-			message.setText(log.getMessage());
+			message.setText(log.getShortMessage());
 			message.setTag(log);
 
 			logTable.addView(logRow);
@@ -61,6 +73,22 @@ public class LogViewer extends AppCompatActivity implements View.OnClickListener
 	@Override
 	public void onClick(View v)
 	{
+		if(v == enable)
+		{
+			if(enable.isChecked())
+			{
+				Vars.SHOUDLOG = true;
+			}
+			else
+			{
+				Vars.SHOUDLOG = false;
+			}
+			SharedPreferences prefs = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
+			SharedPreferences.Editor ed = prefs.edit();
+			ed.putBoolean(Const.PREF_LOG, Vars.SHOUDLOG);
+			ed.apply();
+		}
+
 		if(v == clear)
 		{
 			db.clearLogs();

@@ -12,9 +12,7 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.background.Async.KillSocketsAsync;
-import dt.call.aclient.background.Async.LoginAsync;
-import dt.call.aclient.background.CmdListener;
+import dt.call.aclient.background.async.LoginAsync;
 
 public class InitialUserInfo extends AppCompatActivity implements View.OnClickListener
 {
@@ -36,8 +34,8 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 
 		//load the saved information if it's there and preset the edittexts
 		SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, MODE_PRIVATE);
-		String savedUname = sharedPreferences.getString(Const.UNAME, "");
-		String savedPasswd = sharedPreferences.getString(Const.PASSWD, "");
+		String savedUname = sharedPreferences.getString(Const.PREF_UNAME, "");
+		String savedPasswd = sharedPreferences.getString(Const.PREF_PASSWD, "");
 
 		if(!savedUname.equals(""))
 		{
@@ -66,14 +64,14 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 
 			try
 			{
-				boolean loginOk = new LoginAsync(enteredUname, enteredPasswd, getApplicationContext(), false).execute().get();
+				boolean loginOk = new LoginAsync(enteredUname, enteredPasswd, false).execute().get();
 				if(loginOk)
 				{
 					//because the login was successful, save the info
 					SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, MODE_PRIVATE);
 					SharedPreferences.Editor editor = sharedPreferences.edit();
-					editor.putString(Const.UNAME, enteredUname);
-					editor.putString(Const.PASSWD, enteredPasswd);
+					editor.putString(Const.PREF_UNAME, enteredUname);
+					editor.putString(Const.PREF_PASSWD, enteredPasswd);
 					editor.apply();
 
 					//save it to the session variables too, to avoid always doing a disk lookup with shared prefs

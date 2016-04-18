@@ -1,5 +1,6 @@
-package dt.call.aclient.background.Async;
+package dt.call.aclient.background.async;
 
+import android.app.AlarmManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
@@ -15,6 +16,8 @@ import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.CmdListener;
+import dt.call.aclient.sqlite.DB;
+import dt.call.aclient.sqlite.DBLog;
 
 /**
  * Created by Daniel on 1/21/16.
@@ -28,26 +31,25 @@ import dt.call.aclient.background.CmdListener;
 public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 {
 	private String uname, passwd;
-	private Context context;
 	private boolean asyncMode = false;
-	private static final String tag = "Login Async Task";
+	private DB db;
 
+	private static final String tag = "Login Async Task";
 	private static final Object loginLock = new Object();
 	private static boolean tryingLogin;
 
 	/**
-	 *
-	 * @param cuname User name to login with
+	 *  @param cuname User name to login with
 	 * @param cpasswd Plain text password to login with
-	 * @param ccontext Annoying android context
 	 * @param casync Whether the result should also be sent by the broadcast intent Const.BROADCAST_LOGIN
 	 */
-	public LoginAsync(String cuname, String cpasswd, Context ccontext, boolean casync)
+	public LoginAsync(String cuname, String cpasswd, boolean casync)
 	{
 		uname = cuname;
 		passwd = cpasswd;
-		context = ccontext;
 		asyncMode = casync;
+
+		db = new DB(Vars.applicationContext);
 	}
 
 	@Override
@@ -130,13 +132,14 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
 			Vars.mediaSocket.getOutputStream().write("testing testing 1 2 3".getBytes()); //sometimes java socket craps out
 
-			Intent cmdListenerIntent = new Intent(context, CmdListener.class);
-			context.startService(cmdListenerIntent);
+			Intent cmdListenerIntent = new Intent(Vars.applicationContext, CmdListener.class);
+			Vars.applicationContext.startService(cmdListenerIntent);
 			Vars.cmdListenerRunning = true;
 
-			Intent startHeartbeat = new Intent(Const.BROADCAST_BK_HEARTBEAT);
-			startHeartbeat.putExtra(Const.BROADCAST_BK_HEARTBEAT_DOIT, true);
-			context.sendBroadcast(startHeartbeat);
+			Utils.initAlarmVars(); //double check it's not null before usage
+			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+			manager.cancel(Vars.pendingHeartbeat);
+			manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), Const.FIVE_MINS, Vars.pendingHeartbeat);
 
 			onPostExecute(true);
 			return true;
@@ -161,8 +164,20 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		{
 			Intent loginResult = new Intent(Const.BROADCAST_LOGIN);
 			loginResult.putExtra(Const.BROADCAST_LOGIN_RESULT, result);
-			context.sendBroadcast(loginResult);
+			Vars.applicationContext.sendBroadcast(loginResult);
 		}
+
+		if(result)
+		{
+			DBLog pass = new DBLog(tag, "sign in attempt succeeded :-)");
+			db.insertLog(pass);
+		}
+		else
+		{
+			DBLog fail = new DBLog(tag, "sign in attempt FAILED :-(");
+			db.insertLog(fail);
+		}
+
 		synchronized (loginLock)
 		{
 			tryingLogin = false;

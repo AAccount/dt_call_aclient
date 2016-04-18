@@ -9,6 +9,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import java.util.ArrayList;
 
 import dt.call.aclient.Const;
+import dt.call.aclient.Vars;
 
 /**
  * Created by Daniel on 1/21/16.
@@ -162,12 +163,12 @@ public class DB extends SQLiteOpenHelper
 
 	public void insertLog(DBLog log)
 	{
-		if(Const.SHOUDLOG) //only if there is a need for this, bother to do it
+		if(Vars.SHOUDLOG) //only if there is a need for this, bother to do it
 		{
 			ContentValues newLog = new ContentValues();
 			newLog.put(colLogTs, log.getTimestamp());
 			newLog.put(colTag, log.getTag());
-			newLog.put(colMessage, log.getMessage());
+			newLog.put(colMessage, log.getFullMessage());
 			appdb.insert(tableLogs, null, newLog);
 		}
 	}
@@ -187,6 +188,7 @@ public class DB extends SQLiteOpenHelper
 			result.add(entry);
 			cursor.moveToNext();
 		}
+		cursor.close();
 		return result;
 	}
 

@@ -21,6 +21,26 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!-- Handles resign-in when internet dies and when the socket dies -->
+        <!-- Also handles the hearbeat service -->
+        <receiver android:name=".background.BackgroundManager">
+            <intent-filter>
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
+                <action android:name="cmd_dead"/>
+                <action android:name="heartbeat"/>
+            </intent-filter>
+        </receiver>
+
+        <!-- Handles timer tasks using android alarms -->
+        <receiver android:name=".background.AlarmReceiver">
+        </receiver>
+
+        <!-- Listens for commands/responses from the server and reacts appropriately -->
+        <service
+            android:name=".background.CmdListener"
+            android:exported="false"/>
+
+
         <!-- First run server information screen -->
         <activity
             android:name=".screens.InitialServer"
@@ -48,21 +68,6 @@
             android:label="@string/user_home_title"
             android:launchMode="singleTop">
         </activity>
-
-        <!-- Handles resign-in when internet dies and when the socket dies -->
-        <!-- Also handles the hearbeat service -->
-        <receiver android:name=".background.BackgroundManager">
-            <intent-filter>
-                <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
-                <action android:name="cmd_dead"/>
-                <action android:name="heartbeat"/>
-            </intent-filter>
-        </receiver>
-
-        <!-- Listens for commands/responses from the server and reacts appropriately -->
-        <service
-            android:name=".background.CmdListener"
-            android:exported="false"/>
 
         <!-- Voice call screen -->
         <activity
@@ -99,5 +104,4 @@
                 android:value=".screens.LogViewer"/>
         </activity>
     </application>
-
 </manifest>

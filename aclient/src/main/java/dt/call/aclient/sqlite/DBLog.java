@@ -13,6 +13,8 @@ public class DBLog implements Serializable
 	private long timestamp;
 	private String message;
 	private String tag;
+	private SimpleDateFormat longFormat = new SimpleDateFormat("MMMM dd, yyyy @ HH:mm:ss ZZZZ", Locale.US);
+	private SimpleDateFormat shortFormat = new SimpleDateFormat("HH:mm", Locale.US);
 
 	public DBLog(String ctag, String cmsg)
 	{
@@ -35,17 +37,24 @@ public class DBLog implements Serializable
 
 	public String getHumanReadableTimestamp()
 	{
-		SimpleDateFormat formatter = new SimpleDateFormat("MMMM dd yyyy @ HH:mm:ss ZZZZ", Locale.US);
-		return formatter.format(new Date(timestamp));
+		return longFormat.format(new Date(timestamp));
 	}
 
 	public String getHumanReadableTimestampShort()
 	{
-		SimpleDateFormat formatter = new SimpleDateFormat("HH:mm", Locale.US);
-		return formatter.format(new Date(timestamp));
+		return shortFormat.format(new Date(timestamp));
 	}
 
-	public String getMessage()
+	public String getShortMessage()
+	{
+		if(message.length() > 15)
+		{
+			return message.substring(0, 14);
+		}
+		return message;
+	}
+
+	public String getFullMessage()
 	{
 		return message;
 	}

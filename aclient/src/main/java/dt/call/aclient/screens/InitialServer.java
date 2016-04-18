@@ -59,14 +59,15 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		//if the information is already there, go straight to the home screen
 		SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
 		//you need this stuff anyways for this screen
-		String savedAddr = sharedPreferences.getString(Const.ADDR, "");
-		int savedCommand = sharedPreferences.getInt(Const.COMMANDPORT, 0);
-		int savedMedia = sharedPreferences.getInt(Const.MEDIAPORT, 0);
-		String savedCertFName = sharedPreferences.getString(Const.CERTFNAME, "");
-		cert64 = sharedPreferences.getString(Const.CERT64, "");
+		String savedAddr = sharedPreferences.getString(Const.PREF_ADDR, "");
+		int savedCommand = sharedPreferences.getInt(Const.PREF_COMMANDPORT, 0);
+		int savedMedia = sharedPreferences.getInt(Const.PREF_MEDIAPORT, 0);
+		String savedCertFName = sharedPreferences.getString(Const.PREF_CERTFNAME, "");
+		cert64 = sharedPreferences.getString(Const.PREF_CERT64, "");
 		//you need this stuff for the next screen. if it's already there then skip to the home screen
-		String savedUname = sharedPreferences.getString(Const.UNAME, "");
-		String savedPasswd = sharedPreferences.getString(Const.PASSWD, "");
+		String savedUname = sharedPreferences.getString(Const.PREF_UNAME, "");
+		String savedPasswd = sharedPreferences.getString(Const.PREF_PASSWD, "");
+		Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, false);
 
 		if(!savedUname.equals("") && !savedPasswd.equals(""))
 		{
@@ -210,11 +211,11 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			//Store all server information in shared preferences.
 			SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
 			SharedPreferences.Editor editor = sharedPreferences.edit();
-			editor.putString(Const.ADDR, addrString);
-			editor.putInt(Const.COMMANDPORT, commandInt);
-			editor.putInt(Const.MEDIAPORT, mediaInt);
-			editor.putString(Const.CERT64, cert64);
-			editor.putString(Const.CERTFNAME, certFile);
+			editor.putString(Const.PREF_ADDR, addrString);
+			editor.putInt(Const.PREF_COMMANDPORT, commandInt);
+			editor.putInt(Const.PREF_MEDIAPORT, mediaInt);
+			editor.putString(Const.PREF_CERT64, cert64);
+			editor.putString(Const.PREF_CERTFNAME, certFile);
 			editor.apply();
 
 			//setup all the Vars
