@@ -78,6 +78,7 @@ public class CmdListener extends IntentService
 				String fromServer = txtin.readLine();
 				String[] respContents = fromServer.split("\\|");
 				Utils.logcat(Const.LOGD, tag, "Server response raw: " + fromServer);
+				db.insertLog(new DBLog(tag, "Server response raw: " + fromServer));
 
 				//check for properly formatted command
 				if(respContents.length != 4)
@@ -91,6 +92,7 @@ public class CmdListener extends IntentService
 				if(!Utils.validTS(ts))
 				{
 					Utils.logcat(Const.LOGW, tag, "Rejecting server response for bad timestamp");
+					db.insertLog(new DBLog(tag, "Rejecting server response for bad timestamp"));
 					continue;
 				}
 
