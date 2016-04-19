@@ -62,6 +62,8 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			{
 				if(tryingLogin)
 				{
+					Utils.logcat(Const.LOGW, tag, "already trying a login. ignoring request");
+					db.insertLog(new DBLog(tag, "already trying a login. ignoring request"));
 					return false;
 				}
 				tryingLogin = true;
@@ -86,7 +88,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			//http://stackoverflow.com/a/34228756
 			//check if server is available first before committing to anything
-			//	otherwise this proccess will stall. host not available trips timeout exception
+			//	otherwise this process will stall. host not available trips timeout exception
 			Socket diag = new Socket();
 			diag.connect(new InetSocketAddress(Vars.serverAddress, Vars.commandPort), 2000);
 			diag.close();
@@ -169,13 +171,11 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 		if(result)
 		{
-			DBLog pass = new DBLog(tag, "sign in attempt succeeded :-)");
-			db.insertLog(pass);
+			db.insertLog(new DBLog(tag, "sign in attempt succeeded :-)"));
 		}
 		else
 		{
-			DBLog fail = new DBLog(tag, "sign in attempt FAILED :-(");
-			db.insertLog(fail);
+			db.insertLog(new DBLog(tag, "sign in attempt FAILED :-("));
 		}
 
 		synchronized (loginLock)
