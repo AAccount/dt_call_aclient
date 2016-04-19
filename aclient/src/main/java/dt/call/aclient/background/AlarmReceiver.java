@@ -57,6 +57,18 @@ public class AlarmReceiver extends BroadcastReceiver
 		}
 		else if (action.equals(Const.ALARM_ACTION_RETRY))
 		{
+			//no point of a retry if there is no internet to try on
+			if(!Vars.hasInternet)
+			{
+				db.insertLog(new DBLog(tag, "no internet for sign in retry"));
+				Utils.logcat(Const.LOGD, tag, "no internet for sing in retry");
+				manager.cancel(Vars.pendingRetries);
+
+				//reset counters
+				retryStage = INITIAL;
+				retried = 0;
+			}
+
 			db.insertLog(new DBLog(tag, "received retry alarm; stage: " + retryStage + " @ " + retried + " times"));
 			Utils.logcat(Const.LOGD, tag, "received retry alarm; stage: " + retryStage + " @ " + retried + " times");
 			try
@@ -92,6 +104,10 @@ public class AlarmReceiver extends BroadcastReceiver
 				else
 				{
 					manager.cancel(Vars.pendingRetries);
+
+					//reset counters
+					retryStage = INITIAL;
+					retried = 0;
 				}
 			}
 			catch (Exception e)
