@@ -188,6 +188,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 						//if you can't sign in, start the retry alarm
 						//don't want the retry alarm start in LoginAsync because an incorrect first login will fail
 						//	but don't want that to trigger the retries
+						Utils.initAlarmVars(); //double check it's not null before usage
 						AlarmManager manager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 						manager.cancel(Vars.pendingRetries);
 						manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), Const.ONE_MIN, Vars.pendingRetries);
