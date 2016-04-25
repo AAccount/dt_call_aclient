@@ -48,7 +48,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final String tag = "CallMain";
 	private static final boolean ENABLE_VORBISLOG = false; //this level of logcat shouldn't normally be needed when logcat is enabled
 
-	//various vorbis audio quality presets
 	/**
 	 * Vorbis chosen because
 	 * 	-I can actually find a library to do it (can't use mediarecorder, mediaplayer for unknown reasons)
@@ -56,16 +55,14 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	 * 		... the worst, stupidest, most artificial, most despicable, least respectable, moronic type of BS
 	 * 	-Sounds as good as aac, mp3 according to my ears
 	 */
-	private static final int CHANNELS = 2; //mono makes little difference in file size for ogg
-	private static final int BR96k = 96*1000; //2010 self test couldn't tell above 96kbps for top40 music
+	private static final int CHANNELS = 1;
+	private static final int BITRATE = 32*1000;
 	private static final int FREQ441 = 44100; //standard sampling frequency
 
 	//wave audio presets: uses its own variables for stereo, format etc
-	private static final int WAVSRC = MediaRecorder.AudioSource.MIC;
-	private static final int WAVSTERO = AudioFormat.CHANNEL_IN_STEREO;
 	private static final int WAVFORMAT = AudioFormat.ENCODING_PCM_16BIT;
 	private static final int STREAMCALL = AudioManager.STREAM_VOICE_CALL;
-	private static final int WAVBUFFER = 4096;
+	private static final int WAVBUFFER = 1024;
 
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
@@ -212,7 +209,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		audioManager.setSpeakerphoneOn(false);
 
 		//setup stuff needed for vorbis playback
-		wavPlayer = new AudioTrack(STREAMCALL, FREQ441, WAVSTERO, WAVFORMAT, WAVBUFFER, AudioTrack.MODE_STREAM);
+		wavPlayer = new AudioTrack(STREAMCALL, FREQ441, AudioFormat.CHANNEL_OUT_MONO, WAVFORMAT, WAVBUFFER, AudioTrack.MODE_STREAM);
 		decodeFeed = new DecodeFeed()
 		{
 			@Override
@@ -311,7 +308,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		vorbisPlayer = new VorbisPlayer(decodeFeed);
 
 		//setup the audio recording stuff
-		wavRecorder = new AudioRecord(WAVSRC, FREQ441, WAVSTERO, WAVFORMAT, WAVBUFFER);
 		encodeFeed = new EncodeFeed()
 		{
 			@Override
@@ -391,7 +387,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			public void start()
 			{
 				//https://stackoverflow.com/questions/8499042/android-audiorecord-example
-				wavRecorder = new AudioRecord(WAVSRC, FREQ441, WAVSTERO, WAVFORMAT, WAVBUFFER);
+				wavRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC, FREQ441, AudioFormat.CHANNEL_IN_MONO, WAVFORMAT, WAVBUFFER);
 				wavRecorder.startRecording();
 			}
 		};
@@ -533,7 +529,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			@Override
 			public void run()
 			{
-				vorbisRecorder.start(FREQ441, CHANNELS, BR96k);
+				vorbisRecorder.start(FREQ441, CHANNELS, BITRATE);
 			}
 		});
 		recordThread.setName("Vorbis Recorder");
