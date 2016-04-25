@@ -50,6 +50,9 @@ public class AlarmReceiver extends BroadcastReceiver
 			{
 				db.insertLog(new DBLog(tag, "no internet to try hearbeat on. SHOULD'VE EVEN BEEN TOLD TO DO SO"));
 				Utils.logcat(Const.LOGW, tag, "no internet to try hearbeat on. SHOULD'VE EVEN BEEN TOLD TO DO SO");
+
+				//no point of continuing the heart beat service if there is no internet
+				manager.cancel(Vars.pendingHeartbeat);
 				return;
 			}
 			new HeartBeatAsync().execute();
@@ -61,12 +64,16 @@ public class AlarmReceiver extends BroadcastReceiver
 			if(!Vars.hasInternet)
 			{
 				db.insertLog(new DBLog(tag, "no internet for sign in retry"));
-				Utils.logcat(Const.LOGD, tag, "no internet for sing in retry");
+				Utils.logcat(Const.LOGD, tag, "no internet for sign in retry");
 				manager.cancel(Vars.pendingRetries);
 
 				//reset counters
 				retryStage = INITIAL;
 				retried = 0;
+
+				//no point of doing the retry process if there is no internet
+				manager.cancel(Vars.pendingRetries);
+				return;
 			}
 
 			db.insertLog(new DBLog(tag, "received retry alarm; stage: " + retryStage + " @ " + retried + " times"));
@@ -113,12 +120,14 @@ public class AlarmReceiver extends BroadcastReceiver
 			catch (Exception e)
 			{
 				db.insertLog(new DBLog(tag, "problems trying login in: " + e.getClass().getName()));
+				Utils.logcat(Const.LOGE, tag, "problems trying login in: " + e.getClass().getName());
 				Utils.dumpException(tag, e);
 			}
 		}
 		else
 		{
 			db.insertLog(new DBLog(tag, "received ??unknown?? alarm"));
+			Utils.logcat(Const.LOGW, tag, "received ??unknown?? alarm");
 		}
 		db.close();
 	}
