@@ -67,7 +67,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		//you need this stuff for the next screen. if it's already there then skip to the home screen
 		String savedUname = sharedPreferences.getString(Const.PREF_UNAME, "");
 		String savedPasswd = sharedPreferences.getString(Const.PREF_PASSWD, "");
-		Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, false);
+		Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, Vars.SHOUDLOG);
 
 		if(!savedUname.equals("") && !savedPasswd.equals(""))
 		{
