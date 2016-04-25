@@ -49,7 +49,7 @@ public class DBLog implements Serializable
 	{
 		if(message.length() > 25)
 		{
-			return message.substring(0, 24);
+			return message.substring(0, 24) + "...";
 		}
 		return message;
 	}
@@ -67,7 +67,7 @@ public class DBLog implements Serializable
 	@Override
 	public String toString()
 	{
-		return getHumanReadableTimestamp() + ": " + message;
+		return getHumanReadableTimestamp() + ": " + tag + "/" + message;
 	}
 
 	@Override
