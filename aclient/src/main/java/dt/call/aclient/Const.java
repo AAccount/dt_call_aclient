@@ -75,5 +75,6 @@ public class Const
 	public static final int ONE_MIN = 1*60*1000;
 	public static final int FIVE_MINS = 5*60*1000;
 	public static final int TEN_MINS = 10*60*1000;
+	public static final int HEARTBEAT_FREQ = TEN_MINS;
 
 }
