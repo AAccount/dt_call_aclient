@@ -6,10 +6,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 
+import java.util.concurrent.ExecutionException;
+
 import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.KillSocketsAsync;
+import dt.call.aclient.background.async.LoginAsync;
 import dt.call.aclient.sqlite.DB;
 import dt.call.aclient.sqlite.DBLog;
 
@@ -23,6 +26,7 @@ public class BackgroundManager extends BroadcastReceiver
 {
 	private static final String tag = "BackgroundManager";
 	private DB db;
+	private Context context;
 
 	public BackgroundManager()
 	{
@@ -32,6 +36,7 @@ public class BackgroundManager extends BroadcastReceiver
 	@Override
 	public void onReceive(final Context context, Intent intent)
 	{
+		this.context = context;
 		Utils.logcat(Const.LOGD, tag, "received broadcast intent");
 		Utils.initAlarmVars(); //double check to make sure these things are setup
 		AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
@@ -70,8 +75,7 @@ public class BackgroundManager extends BroadcastReceiver
 				Utils.logcat(Const.LOGD, tag, "Internet was reconnected");
 				Vars.hasInternet = true;
 
-				manager.cancel(Vars.pendingRetries);
-				manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), Const.ONE_MIN, Vars.pendingRetries);
+				relogin();
 			}
 		}
 		else if (intent.getAction().equals(Const.BROADCAST_BK_CMDDEAD))
@@ -84,6 +88,34 @@ public class BackgroundManager extends BroadcastReceiver
 				Utils.logcat(Const.LOGW, tag, "no internet connection to restart command listener");
 				return;
 			}
+			relogin();
+		}
+	}
+
+	/**
+	 * If you need to relogin, try immediately first. If that doesn't work, then start the retry
+	 * process.
+	 */
+	private void relogin()
+	{
+		AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+		boolean firstTry = false;
+		try
+		{
+			firstTry = new LoginAsync(Vars.uname, Vars.passwd, false).execute().get();
+		}
+		catch (Exception e)
+		{
+			db.insertLog(new DBLog(tag, "exception on first try of relogin"));
+			Utils.logcat(Const.LOGE, tag, "exception on first try of relogin");
+		}
+
+		if(!firstTry)
+		{
+
+			db.insertLog(new DBLog(tag, "first try relogin failed (check if exception); using alarm retries"));
+			Utils.logcat(Const.LOGE, tag, "first try relogin failed (check if exception); using alarm retries");
+
 			manager.cancel(Vars.pendingRetries);
 			manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), Const.ONE_MIN, Vars.pendingRetries);
 		}
