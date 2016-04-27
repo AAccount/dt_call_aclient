@@ -17,12 +17,6 @@ import dt.call.aclient.Vars;
 public class CallEndAsync extends AsyncTask<String, String, Boolean>
 {
 	private static final String tag = "CallEndAsync";
-	private Context context;
-
-	public CallEndAsync(Context ccontext)
-	{
-		context = ccontext;
-	}
 
 	@Override
 	protected Boolean doInBackground(String... params)
@@ -61,7 +55,7 @@ public class CallEndAsync extends AsyncTask<String, String, Boolean>
 		Vars.state = CallState.NONE;
 		Vars.callWith = Const.nobody;
 
-		Utils.updateNotification(context.getString(R.string.state_popup_idle), Vars.go2HomePending);
+		Utils.updateNotification(Vars.applicationContext.getString(R.string.state_popup_idle), Vars.go2HomePending);
 		return result;
 	}
 }
