@@ -161,7 +161,7 @@ public class CmdListener extends IntentService
 							Utils.logcat(Const.LOGD, tag, "60seconds is up to answer a call from " + Vars.callWith);
 							Vars.state = CallState.NONE;
 							Vars.callWith = Const.nobody;
-							notifyStateChange(Const.BROADCAST_CALL_END);
+							notifyCallStateChange(Const.BROADCAST_CALL_END);
 							Utils.updateNotification(getString(R.string.state_popup_idle), Vars.go2HomePending);
 						}
 						else
@@ -184,7 +184,7 @@ public class CmdListener extends IntentService
 						{
 							Utils.logcat(Const.LOGD, tag, Vars.callWith + " picked up. Start talking.");
 							Vars.state = CallState.INCALL;
-							notifyStateChange(Const.BROADCAST_CALL_START);
+							notifyCallStateChange(Const.BROADCAST_CALL_START);
 							Utils.updateNotification(getString(R.string.state_popup_incall), Vars.go2CallMainPending);
 						}
 						else
@@ -200,7 +200,7 @@ public class CmdListener extends IntentService
 							//don't change the call state and call with. those will be managed by the screens
 							Vars.state = CallState.NONE;
 							Vars.callWith = Const.nobody;
-							notifyStateChange(Const.BROADCAST_CALL_END);
+							notifyCallStateChange(Const.BROADCAST_CALL_END);
 							Utils.updateNotification(getString(R.string.state_popup_idle), Vars.go2HomePending);
 
 							if(subCommand.equals("end"))
@@ -234,7 +234,7 @@ public class CmdListener extends IntentService
 							Utils.logcat(Const.LOGD, tag, "Call with " + Vars.callWith + " was dropped");
 							Vars.state = CallState.NONE;
 							Vars.callWith = Const.nobody;
-							notifyStateChange(Const.BROADCAST_CALL_END);
+							notifyCallStateChange(Const.BROADCAST_CALL_END);
 							Utils.updateNotification(getString(R.string.state_popup_idle), Vars.go2HomePending);
 
 							//there is no way to kill the thread but to stop the socket to cause an exception
@@ -315,7 +315,7 @@ public class CmdListener extends IntentService
 	 * Broadcasts to CallInit and CallMain about call state changes
 	 * @param change Either Const.BROADCAST_CALL_END (end call) or Const.BROADCAST_CALL_START (start call)
 	 */
-	private void notifyStateChange(String change)
+	private void notifyCallStateChange(String change)
 	{
 		Intent stateChange = new Intent(Const.BROADCAST_CALL);
 		if(change.equals(Const.BROADCAST_CALL_END))
