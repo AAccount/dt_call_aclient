@@ -32,6 +32,7 @@ import org.xiph.vorbis.recorder.VorbisRecorder;
 import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ExecutionException;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
@@ -85,15 +86,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private VorbisPlayer vorbisPlayer;
 	private DecodeFeed decodeFeed;
 	private AudioTrack wavPlayer;
-	private boolean didStop = false; //to kill vorbis threads. see below
 	/*
-	 * Vorbis threads refuse to die when told to stop.
-	 * They will keep trying to read from the mic or network.
-	 * If reading from mic the cpu will continue to be used :-( if network it will hang :-|
-	 * Because no end of file is ever reached the vorbis threads think they should keep going.
-	 * Use this workaround to make the next read to mic/network say 0 bytes were returned.
-	 * This looks like a fake end of file.
-	 * Then the vorbis threads will agree to stop. Produces a force close message that doesn't mean anything.
+	 * Vorbis recorder refuses to die. The only reason callEndAsync exists.
+	 * Need to pull the socket out from under its feet so it stops... and crashes the whole app.
 	 */
 
 	@Override
@@ -226,11 +221,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				int totalRead=0, dataRead;
 				try
 				{
-					if(didStop) //call is over... end of file
-					{
-						return 0;
-					}
-
 					//guarantee you have amountToWrite bytes to send to the native library
 					while(totalRead < amountToWrite)
 					{
@@ -253,8 +243,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					int missing = amountToWrite - totalRead;
 					Utils.logcat(Const.LOGE, tag, "vorbis data missing " + missing + "bytes. VORBIS LIBRARY WILL FAIL IN 3 2 1...");
-
-					new CallEndAsync(getApplicationContext()).execute();
 					onStop();
 				}
 				return totalRead;
@@ -291,7 +279,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						Utils.dumpException(tag, i);
 					}
 				}
-				didStop = true;
 			}
 
 			@Override
@@ -314,11 +301,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			//amountToWrite is the amount of wav data that ??must?? be read to satisfy the native library
 			public long readPCMData(byte[] pcmDataBuffer, int amountToWrite)
 			{
-				if (didStop)
-				{
-					return 0;
-				}
-
 				if (micMute)
 				{//can't stop the thread without causing a crash. just return all zeros buffer for mic mute
 					return amountToWrite;
@@ -352,8 +334,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					Utils.logcat(Const.LOGE, tag, "ioexception writing vorbis to server: ");
 					Utils.dumpException(tag, i);
-
-					new CallEndAsync(getApplicationContext()).execute();
 					onStop();
 				}
 				return amountToRead;
@@ -380,7 +360,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					Utils.logcat(Const.LOGE, tag, "probably tried called stop on an already stopped encoder ");
 					Utils.dumpException(tag, ex);
 				}
-				didStop = true;
 			}
 
 			@Override
@@ -434,9 +413,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		 */
 		if(Vars.state == CallState.NONE)
 		{
-			//stop vorbis threads
 			vorbisRecorder.stop();
 			vorbisPlayer.stop();
+			new CallEndAsync().execute(); //a must to stop the recorder thread
 
 			//no longer in a call
 			audioManager.setMode(AudioManager.MODE_NORMAL);
@@ -464,7 +443,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	{
 		if(v == end)
 		{
-			new CallEndAsync(getApplicationContext()).execute();
 			Vars.state = CallState.NONE; //guarantee onStop sees state == NONE
 			onStop();
 		}
