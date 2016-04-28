@@ -9,4 +9,5 @@
     <!-- https://www.google.com/design/spec/style/color.html#color-color-palette -->
     <color name="material_red">#f44336</color>
     <color name="material_green">#4caf50</color>
+    <color name="material_dark_green">#388e3c</color>
 </resources>

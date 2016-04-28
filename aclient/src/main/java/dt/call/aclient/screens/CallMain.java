@@ -14,6 +14,7 @@ import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
@@ -415,7 +416,14 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		{
 			vorbisRecorder.stop();
 			vorbisPlayer.stop();
-			new CallEndAsync().execute(); //a must to stop the recorder thread
+			try //must make sure the async runs while this screen is active otherwise the recording thread won't die
+			{
+				new CallEndAsync().execute().get(); //a must to stop the recorder thread... and crash
+			}
+			catch (Exception e)
+			{
+				Utils.dumpException(tag, e);
+			}
 
 			//no longer in a call
 			audioManager.setMode(AudioManager.MODE_NORMAL);
@@ -488,16 +496,25 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private void callMode()
 	{
-		//setup the ui to call mode
-		try
-		{//apparently this line has the possibility of a null pointer exception as warned by android studio...???
-			getSupportActionBar().setBackgroundDrawable(new ColorDrawable(ContextCompat.getColor(CallMain.this, R.color.material_green)));
-		}
-		catch (NullPointerException n)
+		//it is impossible to change the status bar @ run time below 5.0, only the action bar color.
+		//results in a weird blue/green look. only change the look for >= 5.0
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
 		{
-			Utils.logcat(Const.LOGE, tag, "null pointer changing action bar to green: ");
-			Utils.dumpException(tag, n);
+			try
+			{//apparently this line has the possibility of a null pointer exception as warned by android studio...???
+				getSupportActionBar().setBackgroundDrawable(new ColorDrawable(ContextCompat.getColor(CallMain.this, R.color.material_green)));
+
+				Window window = getWindow();
+				window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+				window.setStatusBarColor(ContextCompat.getColor(CallMain.this, R.color.material_dark_green));
+				window.setNavigationBarColor(ContextCompat.getColor(CallMain.this, R.color.material_dark_green));
+			}
+			catch (NullPointerException n)
+			{
+				Utils.dumpException(tag, n);
+			}
 		}
+
 		status.setText(getString(R.string.call_main_status_incall));
 		mic.setEnabled(true);
 		speaker.setEnabled(true);
