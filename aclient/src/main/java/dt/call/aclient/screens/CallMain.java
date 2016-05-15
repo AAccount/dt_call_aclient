@@ -24,12 +24,6 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.TextView;
 
-import org.xiph.vorbis.decoder.DecodeFeed;
-import org.xiph.vorbis.decoder.DecodeStreamInfo;
-import org.xiph.vorbis.encoder.EncodeFeed;
-import org.xiph.vorbis.player.VorbisPlayer;
-import org.xiph.vorbis.recorder.VorbisRecorder;
-
 import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -48,15 +42,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	//https://stackoverflow.com/questions/26990816/mediarecorder-issue-on-android-lollipop
 	//https://stackoverflow.com/questions/14437571/recording-audio-not-to-file-on-android
 	private static final String tag = "CallMain";
-	private static final boolean ENABLE_VORBISLOG = false; //this level of logcat shouldn't normally be needed when logcat is enabled
 
-	/**
-	 * Vorbis chosen because
-	 * 	-I can actually find a library to do it (can't use mediarecorder, mediaplayer for unknown reasons)
-	 * 	-Doesn't have all the legal BS associated with other codecs
-	 * 		... the worst, stupidest, most artificial, most despicable, least respectable, moronic type of BS
-	 * 	-Sounds as good as aac, mp3 according to my ears
-	 */
 	private static final int CHANNELS = 1;
 	private static final int BITRATE = 32*1000;
 	private static final int FREQ441 = 44100; //standard sampling frequency
@@ -81,16 +67,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	//related to audio playback and recording
 	private AudioManager audioManager;
-	private VorbisRecorder vorbisRecorder;
-	private EncodeFeed encodeFeed;
 	private AudioRecord wavRecorder;
-	private VorbisPlayer vorbisPlayer;
-	private DecodeFeed decodeFeed;
 	private AudioTrack wavPlayer;
-	/*
-	 * Vorbis recorder refuses to die. The only reason callEndAsync exists.
-	 * Need to pull the socket out from under its feet so it stops... and crashes the whole app.
-	 */
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -206,172 +184,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 		//setup stuff needed for vorbis playback
 		wavPlayer = new AudioTrack(STREAMCALL, FREQ441, AudioFormat.CHANNEL_OUT_MONO, WAVFORMAT, WAVBUFFER, AudioTrack.MODE_STREAM);
-		decodeFeed = new DecodeFeed()
-		{
-			@Override
-			/**
-			 * ==============================THIS FUNCTION IS VERY PICKY===============================
-			 * ===================== READ THESE JAVADOCS BEFORE TOUCHING ==============================
-			 * @param buffer: the buffer sent to the native vorbis library which will be converted to wav.
-			 * @param amountToWrite: the amount of bytes the native vorbis library expects.
-			 *                     you MUST send it this many bytes or else the library will CRAP OUT AND STOP
-			 * @return: the amount of vorbis bytes you read. MUST: return == amountToWrite for the decoding to work
-			 */
-			public int readVorbisData(byte[] buffer, int amountToWrite)
-			{
-				int totalRead=0, dataRead;
-				try
-				{
-					//guarantee you have amountToWrite bytes to send to the native library
-					while(totalRead < amountToWrite)
-					{
-						dataRead = Vars.mediaSocket.getInputStream().read(buffer, totalRead, amountToWrite-totalRead);
-						totalRead = totalRead + dataRead;
-						vorbisLogcat(Const.LOGD, tag, "got " + dataRead + "bytes from the MEDIA SOCKET, total: " + totalRead);
-					}
-					vorbisLogcat(Const.LOGD, tag, "buffer: " + new String(buffer));
-				}
-				catch (IOException i)
-				{
-					Utils.logcat(Const.LOGE, tag, "ioexception reading media: ");
-					Utils.dumpException(tag, i);
-				}
+		wavRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC, FREQ441, AudioFormat.CHANNEL_IN_MONO, WAVFORMAT, WAVBUFFER);
 
-				//as stated in the javadoc, you MUST fill the buffer with amountToWrite bytes of vorbis data.
-				//you must confirm to the native library (using return) that you're sending amountToWrite bytes.
-				//if you don't send back that much bytes, the library will fail
-				if(totalRead != amountToWrite)
-				{
-					int missing = amountToWrite - totalRead;
-					Utils.logcat(Const.LOGE, tag, "vorbis data missing " + missing + "bytes. VORBIS LIBRARY WILL FAIL IN 3 2 1...");
-					onStop();
-				}
-				return totalRead;
-			}
-
-			@Override
-			public void writePCMData(short[] pcmData, int amountToRead)
-			{
-				try
-				{
-					wavPlayer.write(pcmData, 0, amountToRead);
-					vorbisLogcat(Const.LOGD, tag, "converted vorbis to wav");
-				}
-				catch (IllegalStateException i)
-				{//in the case where you hang up but there was still a bit of stuff left in the buffer
-					Utils.logcat(Const.LOGD, tag, "still had stuff to play, oh well");
-				}
-			}
-
-			@Override
-			public void stop()
-			{
-				Utils.logcat(Const.LOGD, tag, "Vorbis player stop called");
-				if(wavPlayer != null)
-				{
-					try
-					{
-						wavPlayer.stop();
-						wavPlayer.release();
-					}
-					catch (IllegalStateException i)
-					{
-						Utils.logcat(Const.LOGD, tag, "tried to re-stop: ");
-						Utils.dumpException(tag, i);
-					}
-				}
-			}
-
-			@Override
-			public void startReadingHeader()
-			{
-			}
-
-			@Override
-			public void start(DecodeStreamInfo decodeStreamInfo)
-			{
-				wavPlayer.play();
-			}
-		};
-		vorbisPlayer = new VorbisPlayer(decodeFeed);
-
-		//setup the audio recording stuff
-		encodeFeed = new EncodeFeed()
-		{
-			@Override
-			//amountToWrite is the amount of wav data that ??must?? be read to satisfy the native library
-			public long readPCMData(byte[] pcmDataBuffer, int amountToWrite)
-			{
-				if (micMute)
-				{//can't stop the thread without causing a crash. just return all zeros buffer for mic mute
-					return amountToWrite;
-				}
-
-				//although unlikely to be necessary, buffer the mic input
-				int totalRead = 0, dataRead;
-				while(totalRead < amountToWrite)
-				{
-					dataRead = wavRecorder.read(pcmDataBuffer, totalRead, amountToWrite - totalRead);
-					totalRead = totalRead + dataRead;
-					vorbisLogcat(Const.LOGD, tag, "got " + dataRead + "bytes from the mic, total: " + totalRead);
-				}
-				vorbisLogcat(Const.LOGD, tag, "buffer: " + new String(pcmDataBuffer));
-				return totalRead;
-			}
-
-			@Override
-			public int writeVorbisData(byte[] vorbisData, int amountToRead)
-			{
-				try
-				{
-					//BE CAREFUL!!! the vorbisData buffer isn't always filled to the max with vorbis
-					//	data. make sure you don't send the extra space in the buffer (bunch of zeros).
-					//	specify to socket write the amount of data in vorbisData that is ACTUALLY vorbis
-					//	data and not extra space
-					Vars.mediaSocket.getOutputStream().write(vorbisData, 0, amountToRead);
-					vorbisLogcat(Const.LOGD, tag, "sent " + amountToRead + " voice data out");
-				}
-				catch (IOException i)
-				{
-					Utils.logcat(Const.LOGE, tag, "ioexception writing vorbis to server: ");
-					Utils.dumpException(tag, i);
-					onStop();
-				}
-				return amountToRead;
-			}
-
-			@Override
-			public void stop()
-			{
-				//doesn't do anything. it's stopEncoding that gets called
-				stopEncoding();
-			}
-
-			@Override
-			public void stopEncoding()
-			{
-				Utils.logcat(Const.LOGD, tag, "vorbis RECORDER stop called");
-				try
-				{
-					wavRecorder.stop();
-					wavRecorder.release();
-				}
-				catch (IllegalStateException | NullPointerException ex)
-				{
-					Utils.logcat(Const.LOGE, tag, "probably tried called stop on an already stopped encoder ");
-					Utils.dumpException(tag, ex);
-				}
-			}
-
-			@Override
-			public void start()
-			{
-				//https://stackoverflow.com/questions/8499042/android-audiorecord-example
-				wavRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC, FREQ441, AudioFormat.CHANNEL_IN_MONO, WAVFORMAT, WAVBUFFER);
-				wavRecorder.startRecording();
-			}
-		};
-		vorbisRecorder = new VorbisRecorder(encodeFeed);
 
 		//now that the setup has been complete:
 		//set the ui to call mode: if you got to this screen after accepting an incoming call
@@ -414,8 +228,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		 */
 		if(Vars.state == CallState.NONE)
 		{
-			vorbisRecorder.stop();
-			vorbisPlayer.stop();
 			try //must make sure the async runs while this screen is active otherwise the recording thread won't die
 			{
 				new CallEndAsync().execute().get(); //a must to stop the recorder thread... and crash
@@ -524,10 +336,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			@Override
 			public void run()
 			{
-				vorbisRecorder.start(FREQ441, CHANNELS, BITRATE);
 			}
 		});
-		recordThread.setName("Vorbis Recorder");
+		recordThread.setName("Recorder");
 		recordThread.start();
 
 
@@ -536,10 +347,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			@Override
 			public void run()
 			{
-				vorbisPlayer.start();
 			}
 		});
-		playbackThread.setName("Vorbis Playback");
+		playbackThread.setName("Playback");
 		playbackThread.start();
 	}
 
@@ -579,15 +389,5 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	public void onAccuracyChanged(Sensor sensor, int accuracy)
 	{
 		//not relevant for proximity sensor so do nothing
-	}
-
-	//for debugging vorbis encoder/decoder internals. produces excessive logcat spam
-	//only turn this on when necessary
-	private void vorbisLogcat(int level, String tag, String message)
-	{
-		if(ENABLE_VORBISLOG)
-		{
-			Utils.logcat(level, tag, message);
-		}
 	}
 }
