@@ -13,6 +13,8 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
+import android.media.MediaCodec;
+import android.media.MediaFormat;
 import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
@@ -24,10 +26,9 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.TextView;
 
-import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.ExecutionException;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
@@ -39,18 +40,13 @@ import dt.call.aclient.background.async.CallTimeoutAsync;
 
 public class CallMain extends AppCompatActivity implements View.OnClickListener, SensorEventListener
 {
-	//https://stackoverflow.com/questions/26990816/mediarecorder-issue-on-android-lollipop
-	//https://stackoverflow.com/questions/14437571/recording-audio-not-to-file-on-android
 	private static final String tag = "CallMain";
 
 	private static final int CHANNELS = 1;
-	private static final int BITRATE = 32*1000;
-	private static final int FREQ441 = 44100; //standard sampling frequency
-
-	//wave audio presets: uses its own variables for stereo, format etc
-	private static final int WAVFORMAT = AudioFormat.ENCODING_PCM_16BIT;
+	private static final int SAMPLES = 44100; //only sample frequency guaranteed on android
+	private static final int FORMAT = AudioFormat.ENCODING_PCM_16BIT;
 	private static final int STREAMCALL = AudioManager.STREAM_VOICE_CALL;
-	private static final int WAVBUFFER = 1024;
+	private static final int BUFFER = 4096;
 
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
@@ -182,9 +178,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
 		audioManager.setSpeakerphoneOn(false);
 
-		//setup stuff needed for vorbis playback
-		wavPlayer = new AudioTrack(STREAMCALL, FREQ441, AudioFormat.CHANNEL_OUT_MONO, WAVFORMAT, WAVBUFFER, AudioTrack.MODE_STREAM);
-		wavRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC, FREQ441, AudioFormat.CHANNEL_IN_MONO, WAVFORMAT, WAVBUFFER);
+		//setup stuff for raw audio processing
+		wavPlayer = new AudioTrack(STREAMCALL, SAMPLES, AudioFormat.CHANNEL_OUT_MONO, FORMAT, BUFFER, AudioTrack.MODE_STREAM);
+		wavRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLES, AudioFormat.CHANNEL_IN_MONO, FORMAT, BUFFER);
 
 
 		//now that the setup has been complete:
@@ -336,9 +332,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			@Override
 			public void run()
 			{
+				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has started");
+				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has stopped");
 			}
 		});
-		recordThread.setName("Recorder");
+		recordThread.setName("Media_Encoder");
 		recordThread.start();
 
 
@@ -347,9 +345,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			@Override
 			public void run()
 			{
+				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has started");
+				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has stopped, state:" + Vars.state);
 			}
 		});
-		playbackThread.setName("Playback");
+		playbackThread.setName("Media_Decoder");
 		playbackThread.start();
 	}
 
