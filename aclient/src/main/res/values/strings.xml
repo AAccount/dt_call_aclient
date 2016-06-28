@@ -54,6 +54,7 @@
     <string name="call_main_title">Voice Call</string>
     <string name="call_main_status_ringing">Ringing</string>
     <string name="call_main_status_incall">In Call</string>
+    <string name="call_main_toast_micstatus">DOUBLE CHECK mic button icon. It can take up to 1 second to change mute/unmute.</string>
 
     <!-- Incoming call screen -->
     <string name="call_incoming_title">Incoming Call</string>

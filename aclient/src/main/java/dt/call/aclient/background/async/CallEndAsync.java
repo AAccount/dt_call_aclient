@@ -30,6 +30,9 @@ public class CallEndAsync extends AsyncTask<String, String, Boolean>
 			Vars.commandSocket.getOutputStream().write(endit.getBytes());
 
 			//reset the media socket to kill the media read/write threads
+			//also need to kill the media socket to flush out any data still in its buffers so the next call
+			//doesn't play a few seconds off the previous call, followed by the next call or worse...
+			//the old call data causes a "frameshift mutation" of the new call data and produces alien morse code
 			Utils.logcat(Const.LOGD, tag, "Killing old media port");
 			Vars.mediaSocket.close();
 
@@ -38,6 +41,7 @@ public class CallEndAsync extends AsyncTask<String, String, Boolean>
 			String associateMedia = Const.JBYTE + Utils.generateServerTimestamp() + "|" + Vars.sessionid;
 			Utils.logcat(Const.LOGD, tag, associateMedia);
 			Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
+
 			result = true;
 		}
 		catch (CertificateException c)
