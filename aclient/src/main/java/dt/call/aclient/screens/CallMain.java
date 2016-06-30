@@ -14,12 +14,9 @@ import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder;
-import android.media.PlaybackParams;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
-import android.provider.ContactsContract;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -29,17 +26,8 @@ import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.FileDescriptor;
-import java.io.IOException;
-import java.net.SocketException;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.ExecutionException;
-
-import javax.net.ssl.SSLException;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
@@ -385,10 +373,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						{
 							Vars.mediaSocket.getOutputStream().write(amrbuffer, 0, encodeLength);
 						}
-						catch (IOException i)
+						catch (Exception e)
 						{
 							Utils.logcat(Const.LOGE, encTag, "Cannot send amr out the media socket");
-							Utils.dumpException(encTag, i);
+							Utils.dumpException(encTag, e);
 
 							//if the socket died it's impossible to continue the call.
 							//the other person will get a dropped call and you can start the call again.
@@ -399,13 +387,14 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							{//must guarantee that the sockets are killed before going to the home screen. otherwise
 								//the userhome's crash recovery won't kick in. don't leave it to dumb luck (race condition)
 								new KillSocketsAsync().execute().get();
+								onStop(); //don't know whether encode or decode will call onStop() first. the second one will get a null exception
+										//because the main ui thead will be gone after the first onStop() is called. catch the exception
 							}
-							catch (Exception e)
+							catch (Exception e2)
 							{
 								Utils.logcat(Const.LOGE, encTag, "Trying to kill sockets because of an exception but got another exception in the process");
-								Utils.dumpException(encTag, e);
+								Utils.dumpException(encTag, e2);
 							}
-							onStop();
 						}
 					}
 					else
@@ -429,7 +418,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					}
 				}
 
-				//various object cleanups and flag setting
+				//various object cleanups
 				AmrEncoder.exit();
 				wavRecorder.stop();
 				wavRecorder.release();
@@ -441,7 +430,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	}
 
 	private void startMediaDecodeThread()
-	{//doesn't really need to be its own function for for consistency (startMediaEncodeThread) make it so
+	{
 		Thread playbackThread = new Thread(new Runnable()
 		{
 			@Override
@@ -459,13 +448,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				long amrstate = AmrDecoder.init();
 				while(Vars.state == CallState.INCALL)
 				{
-					//code copied and pasted from the original angelic sounding 32kbps ogg library usage
 					int totalRead=0, dataRead;
 					try
 					{
 						//guarantee you have AMRBUFFERSIZE(32) bytes to send to the native library
 						while(totalRead < AMRBUFFERSIZE)
 						{
+							Utils.logcat(Const.LOGD, decTag, "offset: " + totalRead + " request: " + (AMRBUFFERSIZE -totalRead));
 							dataRead = Vars.mediaSocket.getInputStream().read(amrbuffer, totalRead, AMRBUFFERSIZE -totalRead);
 							totalRead = totalRead + dataRead;
 						}
@@ -479,11 +468,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 						//if the socket died it's impossible to continue the call.
 						//the other person will get a dropped call and you can start the call again.
-						Vars.state = CallState.NONE;
-						onStop();
-
-						//if the socket died it's impossible to continue the call.
-						//the other person will get a dropped call and you can start the call again.
 						//
 						//kill the sockets so that UserHome's crash recovery will reinitialize them
 						Vars.state = CallState.NONE;
@@ -491,13 +475,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						{//must guarantee that the sockets are killed before going to the home screen. otherwise
 							//the userhome's crash recovery won't kick in. don't leave it to dumb luck (race condition)
 							new KillSocketsAsync().execute().get();
+							onStop(); //see encoder thread for why onStop() is called in a try
 						}
 						catch (Exception e)
 						{
 							Utils.logcat(Const.LOGE, encTag, "Trying to kill sockets because of an exception but got another exception in the process");
 							Utils.dumpException(encTag, e);
 						}
-						onStop();
 					}
 				}
 				AmrDecoder.exit(amrstate);
@@ -523,12 +507,15 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	@Override
 	public void onSensorChanged(SensorEvent event)
 	{
-		float distance = event.values[0];
-		if(distance <= 5)
+		float x = event.values[0];
+		float y = event.values[1];
+		float z = event.values[2];
+
+		if(x <= 5)
 		{
 			//with there being no good information on turning the screen on and off
 			//go with the next best thing of disabling all the buttons
-			Utils.logcat(Const.LOGD, tag, "proximity sensor NEAR: " + distance);
+			Utils.logcat(Const.LOGD, tag, "proximity sensor NEAR: " + x + " " + y + " "+ z);
 			screenShowing = false;
 			end.setEnabled(false);
 			mic.setEnabled(false);
@@ -536,7 +523,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		}
 		else
 		{
-			Utils.logcat(Const.LOGD, tag, "proximity sensor FAR: " + distance);
+			Utils.logcat(Const.LOGD, tag, "proximity sensor FAR: " + x + " " + y + " "+ z);
 			screenShowing = true;
 			end.setEnabled(true);
 			mic.setEnabled(true);
