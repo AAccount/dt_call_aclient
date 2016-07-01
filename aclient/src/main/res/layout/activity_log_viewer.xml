@@ -28,10 +28,19 @@
         android:layout_alignParentRight="true"
         android:layout_alignParentEnd="true"/>
 
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/log_viewer_more"
+        android:id="@+id/log_viewer_more"
+        android:layout_alignParentTop="true"
+        android:layout_toLeftOf="@+id/log_viewer_clear"
+        android:layout_toStartOf="@+id/log_viewer_clear"/>
+
     <ScrollView
         android:id="@+id/log_viewer_scroller"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:layout_below="@id/log_viewer_clear"
         >
 
