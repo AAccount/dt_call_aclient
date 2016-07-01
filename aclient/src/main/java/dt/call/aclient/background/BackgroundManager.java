@@ -6,14 +6,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 
-import java.util.concurrent.ExecutionException;
-
 import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.KillSocketsAsync;
 import dt.call.aclient.background.async.LoginAsync;
-import dt.call.aclient.sqlite.DB;
+import dt.call.aclient.sqlite.SQLiteDb;
 import dt.call.aclient.sqlite.DBLog;
 
 /**
@@ -25,13 +23,7 @@ import dt.call.aclient.sqlite.DBLog;
 public class BackgroundManager extends BroadcastReceiver
 {
 	private static final String tag = "BackgroundManager";
-	private DB db;
 	private Context context;
-
-	public BackgroundManager()
-	{
-		db = new DB(Vars.applicationContext);
-	}
 
 	@Override
 	public void onReceive(final Context context, Intent intent)
@@ -55,7 +47,6 @@ public class BackgroundManager extends BroadcastReceiver
 			Utils.logcat(Const.LOGD, tag, "Got a connectivity event from android");
 			if(intent.getExtras() != null && intent.getExtras().getBoolean(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false))
 			{//internet lost case
-				db.insertLog(new DBLog(tag, "android OS says there is no internet"));
 				Utils.logcat(Const.LOGD, tag, "Internet was lost");
 
 				//Apparently you can't close a socket from here because it's on the UI thread???
@@ -71,7 +62,6 @@ public class BackgroundManager extends BroadcastReceiver
 				//internet reconnected case
 				// don't immediately try to reconnect on fail in case the person has to do a wifi sign in
 				//	or other things
-				db.insertLog(new DBLog(tag, "android OS says there is internet"));
 				Utils.logcat(Const.LOGD, tag, "Internet was reconnected");
 				Vars.hasInternet = true;
 
@@ -80,11 +70,9 @@ public class BackgroundManager extends BroadcastReceiver
 		}
 		else if (intent.getAction().equals(Const.BROADCAST_BK_CMDDEAD))
 		{
-			db.insertLog(new DBLog(tag, "dead command listener intent received"));
 			Utils.logcat(Const.LOGD, tag, "command listener dead received");
 			if(!Vars.hasInternet)
 			{
-				db.insertLog(new DBLog(tag, "dead command listener intent received but no internet to restart"));
 				Utils.logcat(Const.LOGW, tag, "no internet connection to restart command listener");
 				return;
 			}
@@ -106,16 +94,12 @@ public class BackgroundManager extends BroadcastReceiver
 		}
 		catch (Exception e)
 		{
-			db.insertLog(new DBLog(tag, "exception on first try of relogin"));
 			Utils.logcat(Const.LOGE, tag, "exception on first try of relogin");
 		}
 
 		if(!firstTry)
 		{
-
-			db.insertLog(new DBLog(tag, "first try relogin failed (check if exception); using alarm retries"));
 			Utils.logcat(Const.LOGE, tag, "first try relogin failed (check if exception); using alarm retries");
-
 			manager.cancel(Vars.pendingRetries);
 			manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), Const.ONE_MIN, Vars.pendingRetries);
 		}

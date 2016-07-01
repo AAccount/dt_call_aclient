@@ -21,17 +21,35 @@
         android:id="@+id/log_details_value_date"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="April 10, 2016 @ 21:22:18 EDT"
+        android:text="Sunday April 10, 2016"
         android:layout_alignParentTop="true"
         android:layout_toRightOf="@+id/log_details_label_date"
         android:layout_toEndOf="@+id/log_details_label_date"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/log_details_label_time"
+        android:id="@+id/log_details_label_time"
+        android:layout_below="@+id/log_details_label_date"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="21:22:18 EDT"
+        android:id="@+id/log_details_value_time"
+        android:layout_below="@+id/log_details_value_date"
+        android:layout_toRightOf="@+id/log_details_label_time"
+        android:layout_toEndOf="@+id/log_details_label_time"/>
 
     <TextView
         android:id="@+id/log_details_label_tag"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/log_details_tag_label"
-        android:layout_below="@+id/log_details_label_date"
+        android:layout_below="@+id/log_details_label_time"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"/>
 
@@ -39,10 +57,10 @@
         android:id="@+id/log_details_value_tag"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Tag Here"
-        android:layout_alignTop="@+id/log_details_label_tag"
-        android:layout_toRightOf="@+id/log_details_label_tag"
-        android:layout_toEndOf="@+id/log_details_label_tag"/>
+        android:text="Dooms Day"
+        android:layout_above="@+id/log_details_value_message"
+        android:layout_toRightOf="@+id/log_details_label_date"
+        android:layout_toEndOf="@+id/log_details_label_date"/>
 
     <TextView
         android:id="@+id/log_details_value_message"

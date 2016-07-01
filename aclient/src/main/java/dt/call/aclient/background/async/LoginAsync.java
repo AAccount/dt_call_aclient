@@ -16,7 +16,7 @@ import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.CmdListener;
-import dt.call.aclient.sqlite.DB;
+import dt.call.aclient.sqlite.SQLiteDb;
 import dt.call.aclient.sqlite.DBLog;
 
 /**
@@ -32,7 +32,6 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 {
 	private String uname, passwd;
 	private boolean asyncMode = false;
-	private DB db;
 
 	private static final String tag = "Login Async Task";
 	private static final Object loginLock = new Object();
@@ -48,8 +47,6 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		uname = cuname;
 		passwd = cpasswd;
 		asyncMode = casync;
-
-		db = new DB(Vars.applicationContext);
 	}
 
 	@Override
@@ -63,7 +60,6 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 				if(tryingLogin)
 				{
 					Utils.logcat(Const.LOGW, tag, "already trying a login. ignoring request");
-					db.insertLog(new DBLog(tag, "already trying a login. ignoring request"));
 					return false;
 				}
 				tryingLogin = true;
@@ -167,15 +163,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			Intent loginResult = new Intent(Const.BROADCAST_LOGIN);
 			loginResult.putExtra(Const.BROADCAST_LOGIN_RESULT, result);
 			Vars.applicationContext.sendBroadcast(loginResult);
-		}
-
-		if(result)
-		{
-			db.insertLog(new DBLog(tag, "sign in attempt succeeded :-)"));
-		}
-		else
-		{
-			db.insertLog(new DBLog(tag, "sign in attempt FAILED :-("));
+			Utils.logcat(Const.LOGD, tag, "Login result: " + result);
 		}
 
 		synchronized (loginLock)

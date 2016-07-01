@@ -13,8 +13,9 @@ public class DBLog implements Serializable
 	private long timestamp;
 	private String message;
 	private String tag;
-	private SimpleDateFormat longFormat = new SimpleDateFormat("MMMM dd, yyyy @ HH:mm:ss ZZZZ", Locale.US);
-	private SimpleDateFormat shortFormat = new SimpleDateFormat("HH:mm", Locale.US);
+	private SimpleDateFormat dateOnlyFormat = new SimpleDateFormat("EEEE MMMM dd, yyyy", Locale.US);
+	private SimpleDateFormat timeOnlyFormat = new SimpleDateFormat("HH:mm:ss ZZZZ", Locale.US);
+	private SimpleDateFormat shortFormat = new SimpleDateFormat("MMM dd @ HH:mm", Locale.US);
 
 	public DBLog(String ctag, String cmsg)
 	{
@@ -35,26 +36,23 @@ public class DBLog implements Serializable
 		return timestamp;
 	}
 
-	public String getHumanReadableTimestamp()
+	public String getDateOnly()
 	{
-		return longFormat.format(new Date(timestamp));
+		return dateOnlyFormat.format(new Date(timestamp));
 	}
+
+	public String getTimeOnly()
+	{
+		return timeOnlyFormat.format(new Date(timestamp));
+	}
+
 
 	public String getHumanReadableTimestampShort()
 	{
 		return shortFormat.format(new Date(timestamp));
 	}
 
-	public String getShortMessage()
-	{
-		if(message.length() > 25)
-		{
-			return message.substring(0, 24) + "...";
-		}
-		return message;
-	}
-
-	public String getFullMessage()
+	public String getMessage()
 	{
 		return message;
 	}
@@ -67,7 +65,7 @@ public class DBLog implements Serializable
 	@Override
 	public String toString()
 	{
-		return getHumanReadableTimestamp() + ": " + tag + "/" + message;
+		return getDateOnly() + " @ " + getTimeOnly() + ": " + tag + "/" + message;
 	}
 
 	@Override

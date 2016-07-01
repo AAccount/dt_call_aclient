@@ -8,13 +8,12 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import java.util.ArrayList;
 
-import dt.call.aclient.Const;
 import dt.call.aclient.Vars;
 
 /**
  * Created by Daniel on 1/21/16.
  */
-public class DB extends SQLiteOpenHelper
+public class SQLiteDb extends SQLiteOpenHelper
 {
 	private static final String dbname = "calldb";
 	private static final String tableContacts = "contacts";
@@ -52,8 +51,18 @@ public class DB extends SQLiteOpenHelper
 			colMessage +" text" +
 			")";
 	private SQLiteDatabase appdb;
+	private static SQLiteDb SQLiteDb = null;
 
-	public DB(Context c)
+	public static synchronized SQLiteDb getInstance(Context c)
+	{//http://www.androiddesignpatterns.com/2012/05/correctly-managing-your-sqlite-database.html
+		if(SQLiteDb == null)
+		{
+			SQLiteDb = new SQLiteDb(c.getApplicationContext());
+		}
+		return SQLiteDb;
+	}
+
+	private SQLiteDb(Context c)
 	{
 		super(c, dbname, null, 1);
 		appdb = getWritableDatabase();
@@ -168,7 +177,7 @@ public class DB extends SQLiteOpenHelper
 			ContentValues newLog = new ContentValues();
 			newLog.put(colLogTs, log.getTimestamp());
 			newLog.put(colTag, log.getTag());
-			newLog.put(colMessage, log.getFullMessage());
+			newLog.put(colMessage, log.getMessage());
 			appdb.insert(tableLogs, null, newLog);
 		}
 	}

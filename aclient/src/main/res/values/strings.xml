@@ -68,6 +68,7 @@
     <string name="log_details_title">Log Details</string>
     <string name="log_details_date_label"><b>Date:</b></string>
     <string name="log_details_tag_label"><b>Tag:</b></string>
+    <string name="log_details_label_time"><b>Time:</b></string>
 
     <!-- Menu items that don't have an icon -->
     <string name="menu_main_settings">Settings</string>

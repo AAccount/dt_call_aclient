@@ -5,15 +5,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-import java.util.concurrent.ExecutionException;
-
 import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.HeartBeatAsync;
-import dt.call.aclient.background.async.KillSocketsAsync;
 import dt.call.aclient.background.async.LoginAsync;
-import dt.call.aclient.sqlite.DB;
+import dt.call.aclient.sqlite.SQLiteDb;
 import dt.call.aclient.sqlite.DBLog;
 
 /**
@@ -33,22 +30,17 @@ public class AlarmReceiver extends BroadcastReceiver
 	private static String retryStage = INITIAL;
 	private static int retried = 0;
 
-	private DB db;
-
 	@Override
 	public void onReceive(Context context, Intent intent)
 	{
-		db = new DB(context);
 		AlarmManager manager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
 
 		String action = intent.getStringExtra(Const.ALARM_ACTION);
 		if(action.equals(Const.ALARM_ACTION_HEARTBEAT))
 		{
-			db.insertLog(new DBLog(tag, "received heart beat alarm"));
 			Utils.logcat(Const.LOGD, tag, "received heart beat alarm");
 			if(!Vars.hasInternet)
 			{
-				db.insertLog(new DBLog(tag, "no internet to try hearbeat on. SHOULD'VE EVEN BEEN TOLD TO DO SO"));
 				Utils.logcat(Const.LOGW, tag, "no internet to try hearbeat on. SHOULD'VE EVEN BEEN TOLD TO DO SO");
 
 				//no point of continuing the heart beat service if there is no internet
@@ -63,7 +55,6 @@ public class AlarmReceiver extends BroadcastReceiver
 			//no point of a retry if there is no internet to try on
 			if(!Vars.hasInternet)
 			{
-				db.insertLog(new DBLog(tag, "no internet for sign in retry"));
 				Utils.logcat(Const.LOGD, tag, "no internet for sign in retry");
 				manager.cancel(Vars.pendingRetries);
 
@@ -76,7 +67,6 @@ public class AlarmReceiver extends BroadcastReceiver
 				return;
 			}
 
-			db.insertLog(new DBLog(tag, "received retry alarm; stage: " + retryStage + " @ " + retried + " times"));
 			Utils.logcat(Const.LOGD, tag, "received retry alarm; stage: " + retryStage + " @ " + retried + " times");
 			try
 			{
@@ -119,16 +109,13 @@ public class AlarmReceiver extends BroadcastReceiver
 			}
 			catch (Exception e)
 			{
-				db.insertLog(new DBLog(tag, "problems trying login in: " + e.getClass().getName()));
 				Utils.logcat(Const.LOGE, tag, "problems trying login in: " + e.getClass().getName());
 				Utils.dumpException(tag, e);
 			}
 		}
 		else
 		{
-			db.insertLog(new DBLog(tag, "received ??unknown?? alarm"));
 			Utils.logcat(Const.LOGW, tag, "received ??unknown?? alarm");
 		}
-		db.close();
 	}
 }

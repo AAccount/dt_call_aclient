@@ -15,7 +15,7 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.screens.CallIncoming;
 import dt.call.aclient.sqlite.Contact;
-import dt.call.aclient.sqlite.DB;
+import dt.call.aclient.sqlite.SQLiteDb;
 import dt.call.aclient.sqlite.History;
 import dt.call.aclient.sqlite.DBLog;
 
@@ -30,9 +30,6 @@ public class CmdListener extends IntentService
 	//copied over from jclient
 	private boolean inputValid = false; //causes the thread to stop whether for technical or paranoia
 	private BufferedReader txtin;
-
-	//new to aclient!!!
-	private DB db;
 
 	public CmdListener()
 	{
@@ -55,7 +52,6 @@ public class CmdListener extends IntentService
 		//TODO: look into why media socket dies after making a call, ending it, then turning off the screen
 		//	don't want this to catch the login resposne
 		Utils.logcat(Const.LOGD, tag, "command listener INTENT SERVICE started");
-		db = new DB(getApplicationContext());
 
 		while(inputValid)
 		{
@@ -78,7 +74,6 @@ public class CmdListener extends IntentService
 				String fromServer = txtin.readLine();
 				String[] respContents = fromServer.split("\\|");
 				Utils.logcat(Const.LOGD, tag, "Server response raw: " + fromServer);
-				db.insertLog(new DBLog(tag, "Server response raw: " + fromServer));
 
 				//check for properly formatted command
 				if(respContents.length != 4)
@@ -92,7 +87,6 @@ public class CmdListener extends IntentService
 				if(!Utils.validTS(ts))
 				{
 					Utils.logcat(Const.LOGW, tag, "Rejecting server response for bad timestamp");
-					db.insertLog(new DBLog(tag, "Rejecting server response for bad timestamp"));
 					continue;
 				}
 
@@ -138,7 +132,6 @@ public class CmdListener extends IntentService
 						Vars.state = CallState.INIT;
 						Contact contact = new Contact(involved, Vars.contactTable.get(involved));
 						History history = new History(Utils.getLocalTimestamp(), contact, Const.incoming);
-						db.insertHistory(history);
 						Vars.callWith = contact;
 
 						Utils.updateNotification(getString(R.string.state_popup_incoming), null);
@@ -339,7 +332,6 @@ public class CmdListener extends IntentService
 	private void notifyDead()
 	{
 		DBLog dead = new DBLog(tag, "command listener died");
-		db.insertLog(dead);
 		Utils.logcat(Const.LOGE, tag, "broadcasting dead command listner");
 		Vars.cmdListenerRunning = false;
 

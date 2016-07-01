@@ -16,25 +16,14 @@
             android:text="22:26"
             />
 
-        <TextView
+        <Button
             android:id="@+id/row_log_viewer_tag"
             android:layout_width="0dp"
-            android:layout_weight="3"
+            android:layout_weight="1"
             android:layout_height="match_parent"
             android:gravity="center"
             android:padding="@dimen/row_log_viewer_cell_padding"
-            android:background="@drawable/blue_table_cell"
+            android:background="@drawable/pink_button"
             android:text="BackgroundManager"
             />
-
-        <Button
-            android:id="@+id/row_log_viewer_message"
-            android:layout_width="0dp"
-            android:layout_weight="3"
-            android:layout_height="wrap_content"
-            android:padding="@dimen/row_log_viewer_cell_padding"
-            android:background="@drawable/pink_button"
-            android:text="Something bad happened!!!! The world will end soon!!!"
-            />
-
     </LinearLayout>

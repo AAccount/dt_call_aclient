@@ -43,7 +43,7 @@ import dt.call.aclient.background.async.CallInitAsync;
 import dt.call.aclient.background.async.KillSocketsAsync;
 import dt.call.aclient.background.async.LookupAsync;
 import dt.call.aclient.sqlite.Contact;
-import dt.call.aclient.sqlite.DB;
+import dt.call.aclient.sqlite.SQLiteDb;
 import dt.call.aclient.sqlite.DBLog;
 import dt.call.aclient.sqlite.History;
 
@@ -59,7 +59,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	private LinearLayout contactList;
 	private boolean inEdit = false;
 	private Contact contactInEdit; //whenever renaming a contact just change its nickname here and pass around this object
-	private DB db;
+	private SQLiteDb sqliteDb = dt.call.aclient.sqlite.SQLiteDb.getInstance(Vars.applicationContext);
 	private BroadcastReceiver myReceiver;
 	private ProgressDialog loginProgress;
 
@@ -74,10 +74,9 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		add = (FloatingActionButton)findViewById(R.id.user_home_add);
 		add.setOnClickListener(this);
 		contactList = (LinearLayout)findViewById(R.id.user_home_contact_list);
-		db = new DB(this);
 
 		//build the contacts list
-		ArrayList<Contact> allContacts = db.getContacts();
+		ArrayList<Contact> allContacts = sqliteDb.getContacts();
 		Vars.contactTable = new HashMap<String, String>();
 		for(Contact contact : allContacts)
 		{
@@ -144,7 +143,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 						if (result.equals("exists"))
 						{
 							Contact newGuy = new Contact(user);
-							db.insertContact(newGuy);
+							sqliteDb.insertContact(newGuy);
 							addToContactList(newGuy);
 							actionbox.setText("");
 							Vars.contactTable.put(user, "");
@@ -181,7 +180,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 					if(!ok)
 					{
 						Utils.logcat(Const.LOGW, tag, "received login failed");
-						db.insertLog(new DBLog(tag, "received login failed intent"));
 						if(!Vars.hasInternet)
 						{//if the reason is no internet, say it
 							Utils.showOk(UserHome.this, getString(R.string.alert_user_home_no_internet));
@@ -284,7 +282,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			}
 
 			//check to see if the new contact to add already exists
-			if(db.contactExists(actionBoxContact))
+			if(sqliteDb.contactExists(actionBoxContact))
 			{
 				Utils.showOk(this, getString(R.string.alert_user_home_duplicate));
 				actionbox.setText("");
@@ -303,10 +301,10 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			Contact contact = new Contact(who, Vars.contactTable.get(who));
 			new CallInitAsync(contact).execute();
 			long now = Utils.getLocalTimestamp();
-			//don't need the nickname because db only records user name
-			//	db doesn' need to record nickname because it will be figured out when drawing the history table
+			//don't need the nickname because sqliteDb only records user name
+			//	sqliteDb doesn' need to record nickname because it will be figured out when drawing the history table
 			History history = new History(now, contact, Const.outgoing);
-			db.insertHistory(history);
+			sqliteDb.insertHistory(history);
 
 		}
 	}
@@ -431,7 +429,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 							{
 								String newNick = chNick.getText().toString();
 								contactInEdit.setNickname(newNick);
-								db.changeNickname(contactInEdit);
+								sqliteDb.changeNickname(contactInEdit);
 								refreshContacts(CHRENAME, contactInEdit);
 								inEdit = false;
 								invalidateOptionsMenu();
@@ -455,7 +453,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				chnick.show();
 				return true;
 			case R.id.menu_edit_rm:
-				db.deleteContact(contactInEdit);
+				sqliteDb.deleteContact(contactInEdit);
 				refreshContacts(CHRM, contactInEdit);
 				inEdit = false;
 				invalidateOptionsMenu();

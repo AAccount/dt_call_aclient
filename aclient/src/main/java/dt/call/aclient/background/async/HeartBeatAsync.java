@@ -7,7 +7,7 @@ import android.os.AsyncTask;
 import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.sqlite.DB;
+import dt.call.aclient.sqlite.SQLiteDb;
 import dt.call.aclient.sqlite.DBLog;
 
 /**
@@ -19,10 +19,8 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 	@Override
 	protected Boolean doInBackground(String... params)
 	{
-		DB db = new DB(Vars.applicationContext);
 		try
 		{
-			db.insertLog(new DBLog(tag, "try to send heart beat"));
 			Utils.logcat(Const.LOGD, tag, "trying to send heart beat");
 			Vars.commandSocket.getOutputStream().write(Const.JBYTE.getBytes());
 			Vars.mediaSocket.getOutputStream().write(Const.JBYTE.getBytes());
@@ -30,7 +28,6 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 		}
 		catch (Exception e)
 		{
-			db.insertLog(new DBLog(tag, "problems with the connection: " + e.getClass().getName()));
 			Utils.logcat(Const.LOGE, tag, "heart beat failed");
 			Utils.dumpException(tag, e);
 			AlarmManager manager = (AlarmManager)Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);

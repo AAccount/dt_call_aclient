@@ -25,6 +25,8 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 import dt.call.aclient.background.AlarmReceiver;
+import dt.call.aclient.sqlite.DBLog;
+import dt.call.aclient.sqlite.SQLiteDb;
 
 /**
  * Created by Daniel on 1/18/16.
@@ -130,6 +132,8 @@ public class Utils
 			{
 				Log.w(tag, message);
 			}
+			SQLiteDb sqLiteDb = SQLiteDb.getInstance(Vars.applicationContext);
+			sqLiteDb.insertLog(new DBLog(tag, message));
 		}
 	}
 
@@ -163,12 +167,15 @@ public class Utils
 	//https://stackoverflow.com/questions/1149703/how-can-i-convert-a-stack-trace-to-a-string
 	public static void dumpException(String tag, Exception e)
 	{
-		StringWriter sw = new StringWriter();
-		PrintWriter pw = new PrintWriter(sw);
-		e.printStackTrace(pw);
-		String dump = sw.toString();
+		if(Vars.SHOUDLOG) //don't waste time dumping the exception if it isn't wanted in the first place
+		{
+			StringWriter sw = new StringWriter();
+			PrintWriter pw = new PrintWriter(sw);
+			e.printStackTrace(pw);
+			String dump = sw.toString();
 
-		logcat(Const.LOGE, tag, dump);
+			logcat(Const.LOGE, tag, dump);
+		}
 	}
 
 	public static void initAlarmVars()
