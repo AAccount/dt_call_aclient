@@ -26,6 +26,8 @@ import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.IOError;
+import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -454,16 +456,20 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						//guarantee you have AMRBUFFERSIZE(32) bytes to send to the native library
 						while(totalRead < AMRBUFFERSIZE)
 						{
-							Utils.logcat(Const.LOGD, decTag, "offset: " + totalRead + " request: " + (AMRBUFFERSIZE -totalRead));
 							dataRead = Vars.mediaSocket.getInputStream().read(amrbuffer, totalRead, AMRBUFFERSIZE -totalRead);
 							totalRead = totalRead + dataRead;
+
+							if(dataRead == -1)
+							{
+								throw new IOException("read from media socket thought it was the end of file (-1)");
+							}
 						}
 						AmrDecoder.decode(amrstate, amrbuffer, wavbuffer);
 						wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
 					}
 					catch (Exception i) //io or null pointer depending on when the connection dies
 					{
-						Utils.logcat(Const.LOGE, decTag, "ioexception reading media: ");
+						Utils.logcat(Const.LOGE, decTag, "exception reading media: ");
 						Utils.dumpException(decTag, i);
 
 						//if the socket died it's impossible to continue the call.

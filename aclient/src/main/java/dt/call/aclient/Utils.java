@@ -116,6 +116,32 @@ public class Utils
 		}
 	}
 
+	//for temporary spammy logging. don't junk up the db
+	public static void logcat(int type, String tag, String message, boolean nodb)
+	{
+		if(Vars.SHOUDLOG)
+		{
+			if(type == Const.LOGD)
+			{
+				Log.d(tag, message);
+			}
+			else if (type == Const.LOGE)
+			{
+				Log.e(tag, message);
+			}
+			else if (type == Const.LOGW)
+			{
+				Log.w(tag, message);
+			}
+
+			if(!nodb)
+			{
+				SQLiteDb sqLiteDb = SQLiteDb.getInstance(Vars.applicationContext);
+				sqLiteDb.insertLog(new DBLog(tag, message));
+			}
+		}
+	}
+
 	public static void logcat(int type, String tag, String message)
 	{
 		if(Vars.SHOUDLOG)

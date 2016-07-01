@@ -30,7 +30,7 @@ public class Vars
 	public static Socket mediaSocket;
 
 	//call related information
-	public static CallState state = CallState.NONE;
+	public volatile static CallState state = CallState.NONE;
 	public static Contact callWith;
 
 	//contacts hash table to avoid having to lookup the db for incoming calls
