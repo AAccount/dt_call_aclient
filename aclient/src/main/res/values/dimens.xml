@@ -5,4 +5,5 @@
     <dimen name="call_main_bottom_row_padding">36dp</dimen>
     <dimen name="call_incoming_vertical_spacing">48dp</dimen>
     <dimen name="row_log_viewer_cell_padding">2dp</dimen>
+    <dimen name="about_info_padding">10dp</dimen>
 </resources>

@@ -44,7 +44,6 @@ import dt.call.aclient.background.async.KillSocketsAsync;
 import dt.call.aclient.background.async.LookupAsync;
 import dt.call.aclient.sqlite.Contact;
 import dt.call.aclient.sqlite.SQLiteDb;
-import dt.call.aclient.sqlite.DBLog;
 import dt.call.aclient.sqlite.History;
 
 public class UserHome extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener
@@ -339,7 +338,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		}
 		else
 		{
-			getMenuInflater().inflate(R.menu.menu_main_set, menu);
+			getMenuInflater().inflate(R.menu.menu_main, menu);
 			try
 			{
 				getSupportActionBar().setBackgroundDrawable(new ColorDrawable(ContextCompat.getColor(this, R.color.colorPrimary)));
@@ -387,8 +386,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		switch(item.getItemId())
 		{
 			case R.id.menu_main_dblogs:
-				Intent seeLogs = new Intent(UserHome.this, LogViewer.class);
-				startActivity(seeLogs);
+				startActivity(new Intent(this, LogViewer.class));
 				return true;
 			case R.id.menu_main_history:
 				//TODO: once the history screen is made
@@ -399,6 +397,9 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			//use the same actions whether settings is form the main menu or edit menu
 			case R.id.menu_main_settings:
 				//TODO: once the settings screen is made
+				return true;
+			case R.id.menu_main_about:
+				startActivity(new Intent(this, About.class));
 				return true;
 			case R.id.menu_edit_done:
 				inEdit = false;
