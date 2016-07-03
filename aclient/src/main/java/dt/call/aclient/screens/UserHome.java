@@ -391,7 +391,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			case R.id.menu_main_history:
 				//TODO: once the history screen is made
 				return true;
-			case R.id.menu_main_logout:
+			case R.id.menu_main_exit:
 				quit();
 				return true;
 			//use the same actions whether settings is form the main menu or edit menu

@@ -77,12 +77,19 @@
     <string name="about_compile_label">Compile Date:</string>
     <string name="about_compile_date">Sometime 2016</string>
     <string name="about_version_label">Version:</string>
-    <string name="about_version_number">0.91</string>
+    <string name="about_version_number">0.91</string> <!-- do not translate. it's just a number -->
     <string name="about_by_label">By:</string>
     <string name="about_people">Daniel Tjandra</string>
 
+    <!-- For menu items that always show an icon, their text can be accessed by long pressing the item -->
     <!-- Menu items that don't have an icon -->
+    <string name="menu_main_history">History</string>
+    <string name="menu_main_exit">Sign Out</string>
     <string name="menu_main_settings">Settings</string>
     <string name="menu_main_dblogs">DB Logs</string>
     <string name="menu_main_about">App Info</string>
+
+    <string name="menu_edit_ok">Save Changes</string>
+    <string name="menu_edit_edit">Edit Contact</string>
+    <string name="menu_edit_remove">Remove Contact</string>
 </resources>

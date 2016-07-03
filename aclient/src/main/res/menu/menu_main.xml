@@ -8,14 +8,14 @@
     <item
         android:id="@+id/menu_main_history"
         android:icon="@drawable/ic_history_white_48dp"
-        android:title="History"
+        android:title="@string/menu_main_history"
         app:showAsAction="always"
         />
 
     <item
-        android:id="@+id/menu_main_logout"
+        android:id="@+id/menu_main_exit"
         android:icon="@drawable/ic_exit_to_app_white_48dp"
-        android:title="Sign Out"
+        android:title="@string/menu_main_exit"
         app:showAsAction="always"
         />
 
