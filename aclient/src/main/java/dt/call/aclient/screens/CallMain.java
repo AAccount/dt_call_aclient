@@ -26,7 +26,7 @@ import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.IOError;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -45,8 +45,6 @@ import io.kvh.media.amr.AmrEncoder;
 public class CallMain extends AppCompatActivity implements View.OnClickListener, SensorEventListener
 {
 	private static final String tag = "CallMain";
-	private static final String encTag = "EncodingThread";
-	private static final String decTag = "DecodingThread";
 
 	private static final int SAMPLESAMR = 8000;
 	private static final int SAMPLESWAV = 44100; //only sample frequency guaranteed on android
@@ -334,12 +332,44 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	{
 		Thread recordThread = new Thread(new Runnable()
 		{
+			private static final String encTag = "EncodingThread";
+			private static final int CLUMPSIZE = 1024; //a kilobyte; arbitrarily chosen
+
 			@Override
 			public void run()
 			{
 				Utils.logcat(Const.LOGD, encTag, "MediaCodec encoder thread has started");
 				byte[] amrbuffer = new byte[AMRBUFFERSIZE];
 				short[] wavbuffer = new short[WAVBUFFERSIZE];
+				BufferedOutputStream bufferedOutputStream = null;
+
+				//https://stackoverflow.com/questions/1846077/size-of-empty-udp-and-tcp-packet
+				//https://en.wikipedia.org/wiki/Silly_window_syndrome#Send-side_silly_window_avoidance
+				//for each 32 bytes of voice, 40bytes of header will be written which means > 50% of data IO is
+				//headers (not useful)!!! a waste of ridiculously overpriced canadian lte
+				//use the wikipedia clumping strategy
+				try
+				{
+					bufferedOutputStream = new BufferedOutputStream(Vars.mediaSocket.getOutputStream(), CLUMPSIZE);
+				}
+				catch (Exception e)
+				{
+					//no point of doing the call if the clumping strategy can't be used.
+					//don't waste data falling back to sending 32bytes @ a time. hang up and try again
+					Vars.state = CallState.NONE;
+					try
+					{//must guarantee that the sockets are killed before going to the home screen. otherwise
+						//the userhome's crash recovery won't kick in. don't leave it to dumb luck (race condition)
+						new KillSocketsAsync().execute().get();
+						onStop(); //don't know whether encode or decode will call onStop() first. the second one will get a null exception
+						//because the main ui thead will be gone after the first onStop() is called. catch the exception
+					}
+					catch (Exception e2)
+					{
+						Utils.logcat(Const.LOGE, encTag, "Trying to kill sockets because of an exception but got another exception in the process");
+						Utils.dumpException(encTag, e2);
+					}
+				}
 
 				//setup the wave audio recorder. since it is released and restarted, it needs to be setup here and not onCreate
 				wavRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLESWAV, AudioFormat.CHANNEL_IN_MONO, FORMAT, WAVBUFFERSIZE);
@@ -373,7 +403,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						int encodeLength = AmrEncoder.encode(AmrEncoder.Mode.MR122.ordinal(), wavbuffer, amrbuffer);
 						try
 						{
-							Vars.mediaSocket.getOutputStream().write(amrbuffer, 0, encodeLength);
+							bufferedOutputStream.write(amrbuffer, 0, encodeLength);
 						}
 						catch (Exception e)
 						{
@@ -435,6 +465,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	{
 		Thread playbackThread = new Thread(new Runnable()
 		{
+			private static final String decTag = "DecodingThread";
+
 			@Override
 			public void run()
 			{
@@ -444,7 +476,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 				//setup the wave audio track
 				int buffer = AudioTrack.getMinBufferSize(SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT);
-				wavPlayer = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, WAVBUFFERSIZE, AudioTrack.MODE_STREAM);
+				Utils.logcat(Const.LOGD, decTag, "wave audio buffer for mono @ 8000sample/sec: " + buffer);
+				wavPlayer = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, buffer, AudioTrack.MODE_STREAM);
 				wavPlayer.play();
 
 				long amrstate = AmrDecoder.init();
@@ -485,8 +518,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						}
 						catch (Exception e)
 						{
-							Utils.logcat(Const.LOGE, encTag, "Trying to kill sockets because of an exception but got another exception in the process");
-							Utils.dumpException(encTag, e);
+							Utils.logcat(Const.LOGE, decTag, "Trying to kill sockets because of an exception but got another exception in the process");
+							Utils.dumpException(decTag, e);
 						}
 					}
 				}
