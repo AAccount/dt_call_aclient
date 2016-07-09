@@ -16,7 +16,7 @@
     <string name="alert_login_failed">Login failed</string>
 
     <!-- Dialog Messages (screen specific) -->
-    <string name="alert_technical_difficulties">Currently experience technical difficulties. Check logcat if possible.</string>
+    <string name="alert_technical_difficulties">Currently experience technical difficulties. Check DB Logs if possible.</string>
     <string name="alert_initial_server_no_caja">No file explorers installed on your device</string>
     <string name="alert_initial_server_incomplete_server">Incomplete server information</string>
     <string name="alert_initial_server_invalid_port">Port # must be between 1 and 65535</string>
@@ -95,4 +95,22 @@
 
     <string name="history_title">History</string>
     <string name="history_more">Show More</string>
+
+    <!-- Settings stuff and its fragment -->
+    <string name="title_activity_settings">Settings</string>
+    <string name="settings_server_title">Server Info</string>
+    <string name="settings_server_addr_title">Address</string>
+    <string name="settings_server_addr_summary">Call server\'s domain name or ip address</string>
+    <string name="settings_server_cmd_title">Command Port</string>
+    <string name="settings_server_cmd_summary">Port on the server for accepting call commands</string>
+    <string name="settings_server_media_title">Media Port</string>
+    <string name="settings_server_media_summary">Port on the server for accepting call media data</string>
+    <string name="settings_server_cert_title">Certificate</string>
+    <string name="settings_server_cert_summary">Server\'s public key file</string>
+    <string name="settings_user_title">User Account</string>
+    <string name="settings_user_uname_title">User Name</string>
+    <string name="settings_user_uname_summary">CASE SENSITIVE user account name</string>
+    <string name="settings_user_passwd_title">Password</string>
+    <string name="settings_user_passwd_summary">CASE SENSITIVE password</string>
+
 </resources>

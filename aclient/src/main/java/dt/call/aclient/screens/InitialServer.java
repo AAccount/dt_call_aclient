@@ -60,14 +60,24 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
 		//you need this stuff anyways for this screen
 		String savedAddr = sharedPreferences.getString(Const.PREF_ADDR, "");
-		int savedCommand = sharedPreferences.getInt(Const.PREF_COMMANDPORT, 0);
-		int savedMedia = sharedPreferences.getInt(Const.PREF_MEDIAPORT, 0);
+		String savedCommandString = sharedPreferences.getString(Const.PREF_COMMANDPORT, "");
+		String savedMediaString = sharedPreferences.getString(Const.PREF_MEDIAPORT, "");
 		String savedCertFName = sharedPreferences.getString(Const.PREF_CERTFNAME, "");
 		cert64 = sharedPreferences.getString(Const.PREF_CERT64, "");
 		//you need this stuff for the next screen. if it's already there then skip to the home screen
 		String savedUname = sharedPreferences.getString(Const.PREF_UNAME, "");
 		String savedPasswd = sharedPreferences.getString(Const.PREF_PASSWD, "");
 		Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, Vars.SHOUDLOG);
+
+		int savedCommand=0, savedMedia=0;
+		if(!savedCommandString.equals(""))
+		{
+			savedCommand = Integer.valueOf(savedCommandString);
+		}
+		if(!savedMediaString.equals(""))
+		{
+			savedMedia = Integer.valueOf(savedCommandString);
+		}
 
 		if(!savedUname.equals("") && !savedPasswd.equals(""))
 		{
@@ -212,8 +222,8 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
 			SharedPreferences.Editor editor = sharedPreferences.edit();
 			editor.putString(Const.PREF_ADDR, addrString);
-			editor.putInt(Const.PREF_COMMANDPORT, commandInt);
-			editor.putInt(Const.PREF_MEDIAPORT, mediaInt);
+			editor.putString(Const.PREF_COMMANDPORT, commandString);
+			editor.putString(Const.PREF_MEDIAPORT, mediaString);
 			editor.putString(Const.PREF_CERT64, cert64);
 			editor.putString(Const.PREF_CERTFNAME, certFile);
 			editor.apply();

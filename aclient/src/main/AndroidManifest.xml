@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+
     <!-- allowBackup=false to prevent automatic cloud backup which will unknowingly leak your information. -->
     <!-- the goal is to prevent unknowingly/unintentionally sending your information to someone else's servers -->
     <!--  -->
@@ -118,6 +119,16 @@
         <activity
             android:name=".screens.HistoryUI"
             android:label="@string/history_title"
+            android:parentActivityName=".screens.UserHome">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="dt.call.aclient.screens.UserHome"/>
+        </activity>
+
+        <!-- Settings screen -->
+        <activity
+            android:name=".screens.Settings"
+            android:label="@string/title_activity_settings"
             android:parentActivityName=".screens.UserHome">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"

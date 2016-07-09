@@ -20,7 +20,9 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.sqlite.History;
 import dt.call.aclient.sqlite.SQLiteDb;
-
+/**
+ * Created by Daniel on 07/03/2016
+ */
 public class HistoryUI extends AppCompatActivity implements View.OnClickListener
 {
 	private LinearLayout historyLayout;

@@ -216,10 +216,10 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			Vars.uname = sharedPreferences.getString(Const.PREF_UNAME, "");
 			Vars.passwd = sharedPreferences.getString(Const.PREF_PASSWD, "");
 			Vars.serverAddress = sharedPreferences.getString(Const.PREF_ADDR, "");
-			Vars.commandPort = sharedPreferences.getInt(Const.PREF_COMMANDPORT, 0);
-			Vars.mediaPort = sharedPreferences.getInt(Const.PREF_MEDIAPORT, 0);
+			Vars.commandPort = Integer.valueOf(sharedPreferences.getString(Const.PREF_COMMANDPORT, ""));
+			Vars.mediaPort = Integer.valueOf(sharedPreferences.getString(Const.PREF_MEDIAPORT, ""));
 			Vars.expectedCertDump = sharedPreferences.getString(Const.PREF_CERT64, "");
-			Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, false);
+			Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, Vars.SHOUDLOG);
 			new LoginAsync(Vars.uname, Vars.passwd, true).execute();
 		}
 	}
@@ -398,7 +398,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				quit();
 				return true;
 			case R.id.menu_main_settings:
-				//TODO: once the settings screen is made
+				startActivity(new Intent(this, Settings.class));
 				return true;
 			case R.id.menu_main_about:
 				startActivity(new Intent(this, About.class));
