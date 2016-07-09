@@ -30,7 +30,7 @@
     <string name="alert_user_home_rename_button_nvm">Cancel</string>
     <string name="alert_user_home_cant_dial">User is not available to call</string>
     <string name="alert_user_home_no_internet">No internet connection. Can\'t login.</string>
-    <string name="aler_user_home_mic_perm">Call does not have permission to use the microphone. It won\'t be much of a call if the other person can\'t hear you.</string>
+    <string name="alert_user_home_mic_perm">Call does not have permission to use the microphone. It won\'t be much of a call if the other person can\'t hear you.</string>
     <string name="alert_initial_server_storage_perm">Call does not have permission to access storage. There is no point of an encrypted connection if the server you\'re connecting isn\'t the one you\'re expecting.</string>
 
     <!-- Persistent popup statuses -->
@@ -72,7 +72,7 @@
     <string name="log_details_label_time"><b>Time:</b></string>
 
     <!-- About this app screen -->
-    <string name="about_title">About This App</string>
+    <string name="about_title">App Info</string>
     <string name="about_desc">Android client for Daniel Tjandra call server. Forces TLS 1.2, trusting only the supplied certificate regardless of its ceritifcate chain.</string>
     <string name="about_compile_label">Compile Date:</string>
     <string name="about_compile_date">Sometime 2016</string>
@@ -92,4 +92,7 @@
     <string name="menu_edit_ok">Save Changes</string>
     <string name="menu_edit_edit">Edit Contact</string>
     <string name="menu_edit_remove">Remove Contact</string>
+
+    <string name="history_title">History</string>
+    <string name="history_more">Show More</string>
 </resources>

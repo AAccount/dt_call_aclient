@@ -44,8 +44,9 @@ public class Const
 	public static final String BROADCAST_BK_CMDDEAD = "cmd_dead";
 
 	//call history types
-	public static final int outgoing = 1;
-	public static final int incoming = 2;
+	public static final int CALLOUTGOING = 1;
+	public static final int CALLINCOMING = 2;
+	public static final int CALLMISSED = 3;
 
 	//broadcast intent shared by call main and incoming call screen
 	//both need the call end signal

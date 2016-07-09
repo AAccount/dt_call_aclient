@@ -146,13 +146,13 @@ public class SQLiteDb extends SQLiteOpenHelper
 		appdb.insert(tableHistory, null, newHistory);
 	}
 
-	public ArrayList<History> getRecentHistory()
+	public ArrayList<History> getCallHistory()
 	{
 		ArrayList<History> result = new ArrayList<History>();
 		final String query = "select timestamp, who, nickname, call_type\n" +
 				"from history left join contacts\n" +
 				"on history.who = contacts.name\n" +
-				"limit 20";
+				"order by timestamp desc";
 		Cursor cursor = appdb.rawQuery(query, null);
 		cursor.moveToFirst();
 		while(!cursor.isAfterLast())

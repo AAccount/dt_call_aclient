@@ -74,13 +74,16 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		add.setOnClickListener(this);
 		contactList = (LinearLayout)findViewById(R.id.user_home_contact_list);
 
-		//build the contacts list
-		ArrayList<Contact> allContacts = sqliteDb.getContacts();
-		Vars.contactTable = new HashMap<String, String>();
-		for(Contact contact : allContacts)
+		//build the contacts list if it doesn't already exist
+		if(Vars.contactTable == null)
 		{
-			addToContactList(contact);
-			Vars.contactTable.put(contact.getName(), contact.getNickname());
+			ArrayList<Contact> allContacts = sqliteDb.getContacts();
+			Vars.contactTable = new HashMap<String, String>();
+			for (Contact contact : allContacts)
+			{
+				addToContactList(contact);
+				Vars.contactTable.put(contact.getName(), contact.getNickname());
+			}
 		}
 
 		//setup the pending intents that make the ongoing notification bring you to the
@@ -236,7 +239,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		if(ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
 		{
 			AlertDialog.Builder mkdialog = new AlertDialog.Builder(this);
-			mkdialog.setMessage(getString(R.string.aler_user_home_mic_perm))
+			mkdialog.setMessage(getString(R.string.alert_user_home_mic_perm))
 					.setPositiveButton(R.string.alert_ok, new DialogInterface.OnClickListener()
 					{
 						@Override
@@ -299,10 +302,10 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 
 			Contact contact = new Contact(who, Vars.contactTable.get(who));
 			new CallInitAsync(contact).execute();
-			long now = Utils.getLocalTimestamp();
+			long now = System.currentTimeMillis();
 			//don't need the nickname because sqliteDb only records user name
 			//	sqliteDb doesn' need to record nickname because it will be figured out when drawing the history table
-			History history = new History(now, contact, Const.outgoing);
+			History history = new History(now, contact, Const.CALLOUTGOING);
 			sqliteDb.insertHistory(history);
 
 		}
@@ -389,12 +392,11 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				startActivity(new Intent(this, LogViewer.class));
 				return true;
 			case R.id.menu_main_history:
-				//TODO: once the history screen is made
+				startActivity(new Intent(this, HistoryUI.class));
 				return true;
 			case R.id.menu_main_exit:
 				quit();
 				return true;
-			//use the same actions whether settings is form the main menu or edit menu
 			case R.id.menu_main_settings:
 				//TODO: once the settings screen is made
 				return true;

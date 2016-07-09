@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Android studio automatically chose the indigo/pink theme-->
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
+    <color name="colorPrimarySuperDark">#1A237E</color>
     <color name="colorAccent">#FF4081</color>
     <color name="colorAccentLight">#ff80aa</color>
 
@@ -10,4 +12,5 @@
     <color name="material_red">#f44336</color>
     <color name="material_green">#4caf50</color>
     <color name="material_dark_green">#388e3c</color>
+    <color name="material_light_blue">#2196F3</color>
 </resources>

@@ -21,6 +21,8 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.CallAcceptAsync;
 import dt.call.aclient.background.async.CallRejectAsync;
+import dt.call.aclient.sqlite.*;
+import dt.call.aclient.sqlite.History;
 
 public class CallIncoming extends AppCompatActivity implements View.OnClickListener
 {
@@ -66,7 +68,7 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 				if(response.equals(Const.BROADCAST_CALL_END))
 				{
 					//go back to the home screen and clear the back history so there is no way to come back to
-					//call incoming
+					//call CALLINCOMING
 					Intent goHome = new Intent(CallIncoming.this, UserHome.class);
 					goHome.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 					startActivity(goHome);
@@ -74,18 +76,26 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 			}
 		};
 
-		//take the initiative to stop ringing after a minute + 3 seconds in case the connection went bad
+		//take the initiative to stop ringing after a minute in case the connection went bad
 		//and the server never says anything.
+		//
+		//because this timer is intended only for a single use, use the first run delay (param 2 of counter.schedule)
+		//to prevent the timer from running immediately. set an arbitrary short period to give the timer time to get killed.
+		//if the initial delay is run then the task will run immediately (record a missed call in onCreate) and possibly once again
+		//when it's time to file the call as a missed call
 		TimerTask counterTask = new TimerTask()
 		{
 			@Override
 			public void run()
 			{
 				counter.cancel(); //it's served its purpose
+				counter = null;
+				SQLiteDb sqLiteDb = SQLiteDb.getInstance(getApplicationContext());
+				sqLiteDb.insertHistory(new History(System.currentTimeMillis(), Vars.callWith, Const.CALLMISSED));
 				onStop();
 			}
 		};
-		counter.schedule(counterTask, 0, 63*1000);
+		counter.schedule(counterTask, 60*1000, 5*1000);
 	}
 
 	@Override
@@ -114,6 +124,17 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 	@Override
 	public void onClick(View v)
 	{
+		//the nly 2 buttons are accept and reject so no matter which button is clicked, it's safe to do
+		//the reject and accept's common stuff no matter what. there will also every only be 1 click
+		//(can't reject and change your mind you actually wanted to accpet)
+		SQLiteDb sqLiteDb = SQLiteDb.getInstance(this);
+		sqLiteDb.insertHistory(new History(System.currentTimeMillis(), Vars.callWith, Const.CALLINCOMING));
+		if(counter != null)
+		{
+			counter.cancel(); //stop the "minute to answer" counter
+			counter.purge();
+		}
+
 		if(v == accept)
 		{
 			new CallAcceptAsync().execute();

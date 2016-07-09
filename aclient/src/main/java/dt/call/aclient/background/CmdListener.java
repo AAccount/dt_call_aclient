@@ -15,8 +15,6 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.screens.CallIncoming;
 import dt.call.aclient.sqlite.Contact;
-import dt.call.aclient.sqlite.SQLiteDb;
-import dt.call.aclient.sqlite.History;
 import dt.call.aclient.sqlite.DBLog;
 
 /**
@@ -131,7 +129,6 @@ public class CmdListener extends IntentService
 						Utils.logcat(Const.LOGD, tag, "Incoming call from: " + involved);
 						Vars.state = CallState.INIT;
 						Contact contact = new Contact(involved, Vars.contactTable.get(involved));
-						History history = new History(Utils.getLocalTimestamp(), contact, Const.incoming);
 						Vars.callWith = contact;
 
 						Utils.updateNotification(getString(R.string.state_popup_incoming), null);

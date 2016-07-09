@@ -6,8 +6,14 @@
     <!-- Based on the supplied examples, just using the formula dimens normal *4 -->
 
     <dimen name="activity_horizontal_margin">64dp</dimen>
+
     <dimen name="call_main_bottom_row_padding">144dp</dimen>
     <dimen name="call_incoming_vertical_spacing">192dp</dimen>
+
     <dimen name="row_log_viewer_cell_padding">8dp</dimen>
+
     <dimen name="about_info_padding">40dp</dimen>
+
+    <dimen name="history_spacer">8dp</dimen>
+
 </resources>

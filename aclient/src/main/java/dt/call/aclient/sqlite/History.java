@@ -43,11 +43,15 @@ public class History
 		SimpleDateFormat dateFormat = new SimpleDateFormat("MMMM dd yyyy HH:mm:ss.zzzz", Locale.US);
 		String dateString = dateFormat.format(date);
 
-		if(type == Const.outgoing)
+		if(type == Const.CALLOUTGOING)
 		{
 			return "Outgoing call @ " + dateString + " to: " + who;
 		}
-		else //if (type == Const.incoming)
+		else if (type == Const.CALLINCOMING)
+		{
+			return "Incoming call @ " + dateString + " from: " + who;
+		}
+		else //if (type == Const.CALLMISSED)
 		{
 			return "Incoming call @ " + dateString + " from: " + who;
 		}
