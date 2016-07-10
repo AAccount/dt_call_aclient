@@ -8,8 +8,8 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.Preference;
-import android.preference.PreferenceActivity;
 import android.preference.PreferenceFragment;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
 
 import java.io.FileNotFoundException;
@@ -25,35 +25,45 @@ import dt.call.aclient.Vars;
 /**
  * Created by Daniel on 07/08/2016
  */
-public class Settings extends PreferenceActivity
+public class Settings extends AppCompatActivity
 {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
-		getFragmentManager().beginTransaction().replace(android.R.id.content, new SettingsFragment()).commit();
+		setContentView(R.layout.activity_settings);
+		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+		getFragmentManager().beginTransaction().replace(R.id.settings_placeholder, new SettingsFragment()).commit();
 	}
 
-	public static class SettingsFragment extends PreferenceFragment implements Preference.OnPreferenceClickListener
+	public static class SettingsFragment extends PreferenceFragment implements Preference.OnPreferenceClickListener, Preference.OnPreferenceChangeListener
 	{
+		private static final String tag = "SettingsFragment";
 		private static final int FILE_SELECT_CODE = 1;
-		private Preference certPicker = null;
+		private Preference certPicker;
+		private Preference cmdPortPicker;
+		private Preference mediaPortPicker;
 
 		@Override
 		public void onCreate(Bundle savedInstanceState)
 		{
 			super.onCreate(savedInstanceState);
-
 			//don't use the default preference file name of dt.call... use the actual one.
 			//all preferences that are to show up in a preference fragment MUST BE STRINGS
 			getPreferenceManager().setSharedPreferencesName(Const.PREFSFILE);
 			getPreferenceManager().setSharedPreferencesMode(MODE_PRIVATE);
-			addPreferencesFromResource(R.xml.activity_settings);
+			addPreferencesFromResource(R.xml.settings_fragment);
 
 			//setup the file picker for the certificate preference
 			certPicker = findPreference(Const.PREF_CERTFNAME);
 			certPicker.setOnPreferenceClickListener(this);
+
+			//setup the command and media ports to make sure the port number is between 1 and 65536
+			cmdPortPicker = findPreference(Const.PREF_COMMANDPORT);
+			cmdPortPicker.setOnPreferenceChangeListener(this);
+			mediaPortPicker = findPreference(Const.PREF_MEDIAPORT);
+			mediaPortPicker.setOnPreferenceChangeListener(this);
 		}
 
 		@Override
@@ -104,7 +114,7 @@ public class Settings extends PreferenceActivity
 
 					//store the certificate file name for esthetic purposes
 					certFile = expanded[expanded.length-1];
-					SharedPreferences sharedPreferences = Vars.applicationContext.getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
+					SharedPreferences sharedPreferences = getActivity().getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
 					SharedPreferences.Editor editor = sharedPreferences.edit();
 					editor.putString(Const.PREF_CERT64, cert64);
 					editor.putString(Const.PREF_CERTFNAME, certFile);
@@ -118,6 +128,36 @@ public class Settings extends PreferenceActivity
 					Utils.showOk(getActivity(), getString(R.string.alert_initial_server_corrupted_cert));
 				}
 			}
+		}
+
+		@Override
+		//validate the port #
+		public boolean onPreferenceChange(Preference preference, Object newValue)
+		{
+			if(preference == cmdPortPicker || preference == mediaPortPicker)
+			{
+				try
+				{
+					int newPort = Integer.valueOf((String) newValue);
+					if(newPort > 1 && newPort < 65536)
+					{
+						return true;
+					}
+					else
+					{
+						Utils.showOk(getActivity(), getString(R.string.alert_initial_server_invalid_port));
+						return false;
+					}
+				}
+				catch (Exception e)
+				{
+					Utils.dumpException(tag, e);
+					return false;
+				}
+			}
+
+			//other settings don't need validating
+			return true;
 		}
 	}
 

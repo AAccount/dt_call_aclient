@@ -26,6 +26,7 @@
             android:summary="@string/settings_server_cmd_summary"
             android:dialogTitle="@string/settings_server_cmd_title"
             android:inputType="number"
+            android:maxLength="5"
             />
         <EditTextPreference
             android:key="media_port"
@@ -33,6 +34,7 @@
             android:summary="@string/settings_server_media_summary"
             android:dialogTitle="@string/settings_server_media_title"
             android:inputType="number"
+            android:maxLength="5"
             />
         <Preference
             android:key="certificate_file_name"

@@ -43,14 +43,9 @@ public class Utils
 	{
 		TimeZone localTZ = TimeZone.getDefault();
 		TimeZone eastern = TimeZone.getTimeZone("America/Toronto"); //change this to match your server's local time
-		long now = Utils.getLocalTimestamp();
+		long now = System.currentTimeMillis()/1000L;
 		int offset =  localTZ.getOffset(now) - eastern.getOffset(now);
 		return now - offset;
-	}
-
-	public static long getLocalTimestamp()
-	{
-		return System.currentTimeMillis()/1000L;
 	}
 
 	public static boolean validTS(long ts)

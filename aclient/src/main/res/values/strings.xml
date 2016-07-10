@@ -73,7 +73,7 @@
 
     <!-- About this app screen -->
     <string name="about_title">App Info</string>
-    <string name="about_desc">Android client for Daniel Tjandra call server. Forces TLS 1.2, trusting only the supplied certificate regardless of its ceritifcate chain.</string>
+    <string name="about_desc">Android client for Daniel Tjandra call server. Forces TLS 1.2, trusting only the supplied certificate regardless of its ceritifcate chain. Uses amr narrow band @ 12.2kbit/s for voice.</string>
     <string name="about_compile_label">Compile Date:</string>
     <string name="about_compile_date">Sometime 2016</string>
     <string name="about_version_label">Version:</string>
