@@ -24,6 +24,15 @@ public class CallEndAsync extends AsyncTask<String, String, Boolean>
 		boolean result;
 		try
 		{
+			//CallMain.onStop turns out to be the only place that calls this async. however, this async will actually be called twice
+			// 1: user ends call --> onStop, 2: android detects the screen is going away --> onStop.
+			// the second one sends a bogus ts|end|(nobody)|sessionid command because the Vars.callwith has already been cleared after the
+			// first onStop. In that case, recognize the second onStop and don't do it. Don't waste resources redoing a redone socket
+			if(Vars.callWith.equals(Const.nobody))
+			{
+				return true;
+			}
+
 			//tell the server to end the call
 			String endit = Const.JBYTE + Utils.generateServerTimestamp() + "|end|" + Vars.callWith.getName() + "|" + Vars.sessionid;
 			Utils.logcat(Const.LOGD, tag, endit);
