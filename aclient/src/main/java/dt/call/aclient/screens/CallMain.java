@@ -47,7 +47,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final String tag = "CallMain";
 
 	private static final int SAMPLESAMR = 8000;
-	private static final int SAMPLESWAV = 44100; //only sample frequency guaranteed on android
 	private static final int FORMAT = AudioFormat.ENCODING_PCM_16BIT;
 	private static final int STREAMCALL = AudioManager.STREAM_VOICE_CALL;
 	private static final int WAVBUFFERSIZE = 160;
@@ -372,7 +371,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				}
 
 				//setup the wave audio recorder. since it is released and restarted, it needs to be setup here and not onCreate
-				wavRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLESWAV, AudioFormat.CHANNEL_IN_MONO, FORMAT, WAVBUFFERSIZE);
+				wavRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLESAMR, AudioFormat.CHANNEL_IN_MONO, FORMAT, WAVBUFFERSIZE);
 				wavRecorder.startRecording();
 				AmrEncoder.init(0);
 
