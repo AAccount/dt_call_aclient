@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
+import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
@@ -39,7 +40,7 @@ public class AlarmReceiver extends BroadcastReceiver
 		if(action.equals(Const.ALARM_ACTION_HEARTBEAT))
 		{
 			Utils.logcat(Const.LOGD, tag, "received heart beat alarm");
-			if(!Vars.hasInternet)
+			if (!Vars.hasInternet)
 			{
 				Utils.logcat(Const.LOGW, tag, "no internet to try hearbeat on. SHOULD'VE EVEN BEEN TOLD TO DO SO");
 
@@ -47,7 +48,13 @@ public class AlarmReceiver extends BroadcastReceiver
 				manager.cancel(Vars.pendingHeartbeat);
 				return;
 			}
-			new HeartBeatAsync().execute();
+
+			//only send out a heartbeat if not in a call or waiting for one. don't want to send garbage on the media port
+			// when there might be call data. it will probably produce weird sound
+			if (Vars.state == CallState.NONE)
+			{
+				new HeartBeatAsync().execute();
+			}
 
 		}
 		else if (action.equals(Const.ALARM_ACTION_RETRY))
