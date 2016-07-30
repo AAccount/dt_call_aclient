@@ -2,6 +2,7 @@ package dt.call.aclient.background.async;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.os.SystemClock;
 
 import java.security.cert.CertificateException;
 
@@ -37,6 +38,7 @@ public class CallEndAsync extends AsyncTask<String, String, Boolean>
 			String endit = Const.JBYTE + Utils.generateServerTimestamp() + "|end|" + Vars.callWith.getName() + "|" + Vars.sessionid;
 			Utils.logcat(Const.LOGD, tag, endit);
 			Vars.commandSocket.getOutputStream().write(endit.getBytes());
+			SystemClock.sleep(1000); //give some time for the command to reach the server before "pulling the plug"
 
 			//reset the media socket to kill the media read/write threads
 			//also need to kill the media socket to flush out any data still in its buffers so the next call
