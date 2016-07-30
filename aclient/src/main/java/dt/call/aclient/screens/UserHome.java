@@ -253,6 +253,16 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			AlertDialog showOkAlert = mkdialog.create();
 			showOkAlert.show();
 		}
+
+		//double check the contacts buttons are there when loading the screen in case it got killed for memory saving
+		if(contactList.getChildCount() == 0)
+		{
+			Utils.logcat(Const.LOGD, tag, "contacts list linear layout is empty. repopulating contacts");
+			for(String key : Vars.contactTable.keySet())
+			{
+				addToContactList(new Contact(key, Vars.contactTable.get(key)));
+			}
+		}
 	}
 
 	@Override
