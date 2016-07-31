@@ -5,7 +5,7 @@
 
     <uses-permission android:name="android.permission.INTERNET"/> <!-- send/receive commands using custom protocol and call data -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/> <!-- to get the public key of the server -->
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/> <!-- check if there is internet to retry login on broken connection / automatically relogin when going from no internet --> internet -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/> <!-- check if there is internet to retry login on broken connection / automatically relogin when going from no internet -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/> <!-- so the other person can hear you talk -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/> <!-- switch ear piece/speaker phone -->
     <uses-permission android:name="android.permission.VIBRATE"/> <!-- vibrate when in silent mode -->
