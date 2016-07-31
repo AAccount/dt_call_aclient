@@ -25,10 +25,10 @@ public class AlarmReceiver extends BroadcastReceiver
 	private static final String tag = "AlarmReceiver";
 
 	//initially retry every 1, 5 then eventually 10 mins.
-	private static final String INITIAL = "initial";
-	private static final String SECOND = "second";
-	private static final String INDEFINITE = "indefinite";
-	private static String retryStage = INITIAL;
+	private static final int INITIAL = 1;
+	private static final int SECOND = 2;
+	private static final int INDEFINITE = 3;
+	private static int retryStage = INITIAL;
 	private static int retried = 0;
 
 	@Override
@@ -87,16 +87,16 @@ public class AlarmReceiver extends BroadcastReceiver
 					 * a temporary problem with either the server or that person's internet. Don't waste battery and try
 					 * 5 mins. If after retrying every 5 mins doesn't work, then try every 10.
 					 */
-					if(retried == 5 && !retryStage.equals(INDEFINITE))
+					if(retried == 5 && !(retryStage == INDEFINITE))
 					{
-						if(retryStage.equals(INITIAL))
+						if(retryStage == INITIAL)
 						{
 							manager.cancel(Vars.pendingRetries);
 							manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), Const.FIVE_MINS, Vars.pendingRetries);
 							retryStage = SECOND;
 							retried = 0;
 						}
-						else if(retryStage.equals(SECOND))
+						else if(retryStage == SECOND)
 						{
 							manager.cancel(Vars.pendingRetries);
 							manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), Const.TEN_MINS, Vars.pendingRetries);
