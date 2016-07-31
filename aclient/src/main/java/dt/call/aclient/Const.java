@@ -78,4 +78,6 @@ public class Const
 	public static final int TEN_MINS = 10*60*1000;
 	public static final int HEARTBEAT_FREQ = TEN_MINS;
 
+	//timeout (IN SECONDS) before giving up on calling someone
+	public static final int CALL_TIMEOUT = 20;
 }

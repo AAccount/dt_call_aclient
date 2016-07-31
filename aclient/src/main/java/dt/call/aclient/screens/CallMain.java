@@ -126,9 +126,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					sec++;
 				}
-				if((Vars.state == CallState.INIT) && (min == 1))
+
+				//if the person hasn't answered after 60 seconds give up. it's probably not going to happen.
+				if((Vars.state == CallState.INIT) && (sec == Const.CALL_TIMEOUT))
 				{
-					//if the person hasn't answered after 60 seconds give up. it's probably not going to happen.
 					new CallTimeoutAsync().execute();
 					Vars.state = CallState.NONE; //guarantee state == NONE. don't leave it to chance
 					onStop();

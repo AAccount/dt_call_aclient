@@ -4,7 +4,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.AudioManager;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Vibrator;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -28,11 +33,15 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 {
 
 	private static final String tag = "CallIncoming";
+	private static final long[] vibratePattern = new long[] {0, 400, 200};
 
 	private FloatingActionButton accept, reject;
 	private TextView callerid;
 	private BroadcastReceiver myReceiver;
 	private Timer counter = new Timer();
+	private Uri ringtoneUri = null;
+	private Ringtone ringtone = null;
+	private Vibrator vibrator = null;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -69,9 +78,7 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 				{
 					//go back to the home screen and clear the back history so there is no way to come back to
 					//call CALLINCOMING
-					Intent goHome = new Intent(CallIncoming.this, UserHome.class);
-					goHome.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-					startActivity(goHome);
+					goHome();
 				}
 			}
 		};
@@ -93,9 +100,10 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 				SQLiteDb sqLiteDb = SQLiteDb.getInstance(getApplicationContext());
 				sqLiteDb.insertHistory(new History(System.currentTimeMillis(), Vars.callWith, Const.CALLMISSED));
 				onStop();
+				goHome();
 			}
 		};
-		counter.schedule(counterTask, 60*1000, 5*1000);
+		counter.schedule(counterTask, Const.CALL_TIMEOUT*1000, 30*1000/*give 30 seconds for the task to complete*/);
 	}
 
 	@Override
@@ -103,7 +111,33 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 	{
 		super.onResume();
 		registerReceiver(myReceiver, new IntentFilter(Const.BROADCAST_CALL));
-		//TODO: start the ringtone
+
+		//safety checks before making a big scene
+		if(ringtone != null && ringtone.isPlaying())
+		{
+			ringtone.stop();
+		}
+		if(vibrator != null)
+		{
+			vibrator.cancel();
+		}
+
+		//now time to make a scene
+		AudioManager audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+		switch(audioManager.getRingerMode())
+		{
+			case AudioManager.RINGER_MODE_NORMAL:
+				ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+				ringtone = RingtoneManager.getRingtone(getApplicationContext(), ringtoneUri);
+				ringtone.play();
+				break;
+			case AudioManager.RINGER_MODE_VIBRATE:
+				vibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
+				vibrator.vibrate(vibratePattern, 0);
+				break;
+			//no need for the dead silent case. if it is dead silent just light up the screen with no nothing
+		}
+
 	}
 
 	@Override
@@ -118,7 +152,17 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 		{
 			Utils.logcat(Const.LOGW, tag, "don't unregister you get a leak, do unregister you get an exception... " + a.getMessage());
 		}
-		//TODO: stop the ringtone
+
+		//stop the show
+		if(ringtone != null && ringtone.isPlaying())
+		{
+			ringtone.stop();
+		}
+
+		if(vibrator != null)
+		{
+			vibrator.cancel();
+		}
 	}
 
 	@Override
@@ -145,9 +189,7 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 		else if (v == reject)
 		{
 			new CallRejectAsync().execute();
-			Intent goHome = new Intent(this, UserHome.class);
-			goHome.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-			startActivity(goHome);
+			goHome();
 		}
 	}
 
@@ -158,5 +200,14 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 		 * Do nothing. There's nowhere to go back to
 		 *
 		 */
+	}
+
+	//go back to the UserHome screen. These few lines seem to be called in a few places.
+	// reuse this code
+	private void goHome()
+	{
+		Intent goHome = new Intent(this, UserHome.class);
+		goHome.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+		startActivity(goHome);
 	}
 }
