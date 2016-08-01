@@ -72,11 +72,15 @@
         </activity>
 
         <!-- Voice call screen -->
+        <!-- Don't allow orientation changes because the activity is recreated while the 2 threads are still alive... -->
+        <!--  causes some bad stuff to happen. Also no value of the lanscape layout for this screen -->
         <activity
             android:name=".screens.CallMain"
             android:label="@string/call_main_title"
             android:launchMode="singleTop"
-            android:parentActivityName=".screens.UserHome">
+            android:parentActivityName=".screens.UserHome"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|keyboardHidden">
         </activity>
 
         <!-- Incoming call screen -->
