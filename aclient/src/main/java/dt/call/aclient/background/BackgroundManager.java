@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
+import android.os.SystemClock;
 
 import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
@@ -71,6 +72,7 @@ public class BackgroundManager extends BroadcastReceiver
 		else if (intent.getAction().equals(Const.BROADCAST_BK_CMDDEAD))
 		{
 			Utils.logcat(Const.LOGD, tag, "command listener dead received");
+			SystemClock.sleep(1000); //sometimes java is stupid and cannot reconnect properly so it will do an endless cycle of connect<-->die. give some time for java to get itself in order
 			if(!Vars.hasInternet)
 			{
 				Utils.logcat(Const.LOGW, tag, "no internet connection to restart command listener");

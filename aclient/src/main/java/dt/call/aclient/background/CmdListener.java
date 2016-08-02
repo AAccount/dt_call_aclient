@@ -201,7 +201,7 @@ public class CmdListener extends IntentService
 								try
 								{
 									Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);
-									String associateMedia = Utils.generateServerTimestamp() + "|" + Vars.sessionid;
+									String associateMedia = Const.JBYTE + Utils.generateServerTimestamp() + "|" + Vars.sessionid;
 									Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
 								}
 								catch (CertificateException c)
@@ -233,7 +233,7 @@ public class CmdListener extends IntentService
 							try
 							{
 								Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);
-								String associateMedia = Utils.generateServerTimestamp() + "|" + Vars.sessionid;
+								String associateMedia = Const.JBYTE + Utils.generateServerTimestamp() + "|" + Vars.sessionid;
 								Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
 							}
 							catch (CertificateException c)
@@ -328,10 +328,7 @@ public class CmdListener extends IntentService
 
 	private void notifyDead()
 	{
-		DBLog dead = new DBLog(tag, "command listener died");
 		Utils.logcat(Const.LOGE, tag, "broadcasting dead command listner");
-		Vars.cmdListenerRunning = false;
-
 		if(Vars.dontRestart)
 		{
 			Utils.logcat(Const.LOGD, tag, "not restart command listener because dontRestart == true");

@@ -65,21 +65,24 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 				tryingLogin = true;
 			}
 
-			if(Vars.cmdListenerRunning)
+			//cleanup the old stuff to make sure it's dead???
+			try
 			{
-				try
+				if(Vars.commandSocket != null)
 				{
 					Vars.commandSocket.close();
 					Vars.commandSocket = null;
+				}
+				if(Vars.mediaSocket != null)
+				{
 					Vars.mediaSocket.close();
 					Vars.mediaSocket = null;
 				}
-				catch (Exception e)
-				{
-					Utils.logcat(Const.LOGE, tag, "problems closing open sockets before attempting login: ");
-					Utils.dumpException(tag, e);
-				}
-				Vars.cmdListenerRunning = false;
+			}
+			catch (Exception e)
+			{
+				Utils.logcat(Const.LOGE, tag, "problems closing open sockets before attempting login: ");
+				Utils.dumpException(tag, e);
 			}
 
 			//http://stackoverflow.com/a/34228756
@@ -132,7 +135,6 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			Intent cmdListenerIntent = new Intent(Vars.applicationContext, CmdListener.class);
 			Vars.applicationContext.startService(cmdListenerIntent);
-			Vars.cmdListenerRunning = true;
 
 			Utils.initAlarmVars(); //double check it's not null before usage
 			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
