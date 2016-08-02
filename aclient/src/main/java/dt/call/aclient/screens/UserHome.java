@@ -405,7 +405,26 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				startActivity(new Intent(this, HistoryUI.class));
 				return true;
 			case R.id.menu_main_exit:
-				quit();
+				AlertDialog.Builder mkDialog = new AlertDialog.Builder(UserHome.this);
+				mkDialog.setMessage(getString(R.string.alert_user_home_really_quit))
+						.setPositiveButton(getString(R.string.alert_yes), new DialogInterface.OnClickListener()
+						{
+							@Override
+							public void onClick(DialogInterface dialog, int which)
+							{
+								quit();
+							}
+						})
+						.setNegativeButton(getString(R.string.alert_no), new DialogInterface.OnClickListener()
+						{
+							@Override
+							public void onClick(DialogInterface dialog, int which)
+							{
+								dialog.cancel();
+							}
+						});
+				AlertDialog reallyQuit = mkDialog.create();
+				reallyQuit.show();
 				return true;
 			case R.id.menu_main_settings:
 				startActivity(new Intent(this, Settings.class));

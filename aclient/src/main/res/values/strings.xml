@@ -16,6 +16,8 @@
     <string name="alert_login_failed">Login failed</string>
 
     <!-- Dialog Messages (screen specific) -->
+    <string name="alert_yes">Yes</string>
+    <string name="alert_no">No</string>
     <string name="alert_technical_difficulties">Currently experience technical difficulties. Check DB Logs if possible.</string>
     <string name="alert_initial_server_no_caja">No file explorers installed on your device</string>
     <string name="alert_initial_server_incomplete_server">Incomplete server information</string>
@@ -31,6 +33,7 @@
     <string name="alert_user_home_cant_dial">User is not available to call</string>
     <string name="alert_user_home_no_internet">No internet connection. Can\'t login.</string>
     <string name="alert_user_home_mic_perm">Call does not have permission to use the microphone. It won\'t be much of a call if the other person can\'t hear you.</string>
+    <string name="alert_user_home_really_quit">Are you sure you want to quit? People will not be able to call you.</string>
     <string name="alert_initial_server_storage_perm">Call does not have permission to access storage. There is no point of an encrypted connection if the server you\'re connecting isn\'t the one you\'re expecting.</string>
 
     <!-- Persistent popup statuses -->
