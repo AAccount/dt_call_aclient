@@ -163,6 +163,13 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 		{
 			vibrator.cancel();
 		}
+
+		//double check the counter to timeout is stopped or it will leak and crash when it's supposed to stop and this screen is gone
+		if(counter != null)
+		{
+			counter.cancel();
+			counter.purge();
+		}
 	}
 
 	@Override
@@ -177,6 +184,7 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 		{
 			counter.cancel(); //stop the "minute to answer" counter
 			counter.purge();
+			counter = null;
 		}
 
 		if(v == accept)
