@@ -333,7 +333,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		Thread recordThread = new Thread(new Runnable()
 		{
 			private static final String encTag = "EncodingThread";
-			private static final int CLUMPSIZE = 1024; //a kilobyte; arbitrarily chosen
+			private static final int CLUMPSIZE = 500;
 
 			@Override
 			public void run()
@@ -374,6 +374,19 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				//setup the wave audio recorder. since it is released and restarted, it needs to be setup here and not onCreate
 				wavRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLESAMR, AudioFormat.CHANNEL_IN_MONO, FORMAT, WAVBUFFERSIZE);
 				wavRecorder.startRecording();
+
+				//my dying i9300 on CM12.1 sometimes can't get the audio record on its first try
+				int recorderRetries = 5;
+				while(wavRecorder.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING && recorderRetries > 0)
+				{
+					wavRecorder.stop();
+					wavRecorder.release();
+					wavRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLESAMR, AudioFormat.CHANNEL_IN_MONO, FORMAT, WAVBUFFERSIZE);
+					wavRecorder.startRecording();
+					Utils.logcat(Const.LOGW, encTag, "audiorecord failed to initialized. retried");
+					recorderRetries--;
+				}
+
 				AmrEncoder.init(0);
 
 				while(Vars.state == CallState.INCALL)
