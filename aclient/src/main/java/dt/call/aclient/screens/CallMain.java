@@ -493,6 +493,12 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				wavPlayer = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, buffer, AudioTrack.MODE_STREAM);
 				wavPlayer.play();
 
+				/*
+				 * Detect when a bunch of audio starts rushing in. This happens because the network connection that went bad is suddenly "good"
+				 * and all the missing packets are flooding. This will create an audio backlog and delay the audio from the real conversation.
+				 * Discard the audio flood and just ask "what did you say. my connection was bad"
+				 */
+				long start, elapsed, minNanos = (long)(32/3700*1000000000); //~ (5629(avg)+1764(stddev))/2
 				long amrstate = AmrDecoder.init();
 				while(Vars.state == CallState.INCALL)
 				{
@@ -500,6 +506,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					try
 					{
 						//guarantee you have AMRBUFFERSIZE(32) bytes to send to the native library
+						start = System.nanoTime();
 						while(totalRead < AMRBUFFERSIZE)
 						{
 							dataRead = Vars.mediaSocket.getInputStream().read(amrbuffer, totalRead, AMRBUFFERSIZE -totalRead);
@@ -510,8 +517,16 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 								throw new IOException("read from media socket thought it was the end of file (-1)");
 							}
 						}
-						AmrDecoder.decode(amrstate, amrbuffer, wavbuffer);
-						wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
+						elapsed = System.nanoTime() - start;
+						if(elapsed > minNanos)
+						{
+							AmrDecoder.decode(amrstate, amrbuffer, wavbuffer);
+							wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
+						}
+						else
+						{
+							Utils.logcat(Const.LOGD, decTag, "Detected rushing in of audio... probably from network lag. Discard to get to realtime position");
+						}
 					}
 					catch (Exception i) //io or null pointer depending on when the connection dies
 					{
