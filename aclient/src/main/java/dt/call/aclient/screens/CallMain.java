@@ -387,6 +387,14 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					recorderRetries--;
 				}
 
+				//if the wav recorder can't be initialized hang up and try again
+				//nothing i can do when the cell phone itself has problems
+				if(recorderRetries == 0)
+				{
+					endThread();
+					return;
+				}
+
 				AmrEncoder.init(0);
 
 				while(Vars.state == CallState.INCALL)
@@ -427,19 +435,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							//the other person will get a dropped call and you can start the call again.
 							//
 							//kill the sockets so that UserHome's crash recovery will reinitialize them
-							Vars.state = CallState.NONE;
-							try
-							{//must guarantee that the sockets are killed before going to the home screen. otherwise
-								//the userhome's crash recovery won't kick in. don't leave it to dumb luck (race condition)
-								new KillSocketsAsync().execute().get();
-								onStop(); //don't know whether encode or decode will call onStop() first. the second one will get a null exception
-										//because the main ui thead will be gone after the first onStop() is called. catch the exception
-							}
-							catch (Exception e2)
-							{
-								Utils.logcat(Const.LOGE, encTag, "Trying to kill sockets because of an exception but got another exception in the process");
-								Utils.dumpException(encTag, e2);
-							}
+							endThread();
 						}
 					}
 					else
@@ -468,6 +464,23 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				wavRecorder.stop();
 				wavRecorder.release();
 				Utils.logcat(Const.LOGD, encTag, "MediaCodec encoder thread has stopped");
+			}
+
+			private void endThread()
+			{
+				Vars.state = CallState.NONE;
+				try
+				{//must guarantee that the sockets are killed before going to the home screen. otherwise
+					//the userhome's crash recovery won't kick in. don't leave it to dumb luck (race condition)
+					new KillSocketsAsync().execute().get();
+					onStop(); //don't know whether encode or decode will call onStop() first. the second one will get a null exception
+					//because the main ui thead will be gone after the first onStop() is called. catch the exception
+				}
+				catch (Exception e2)
+				{
+					Utils.logcat(Const.LOGE, encTag, "Trying to kill sockets because of an exception but got another exception in the process");
+					Utils.dumpException(encTag, e2);
+				}
 			}
 		});
 		recordThread.setName("Media_Encoder");
