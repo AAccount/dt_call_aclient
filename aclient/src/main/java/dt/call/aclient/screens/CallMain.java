@@ -391,6 +391,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				//nothing i can do when the cell phone itself has problems
 				if(recorderRetries == 0)
 				{
+					Utils.logcat(Const.LOGE, encTag, "couldn't get the microphone from the cell phone. hanging up");
 					endThread();
 					return;
 				}
