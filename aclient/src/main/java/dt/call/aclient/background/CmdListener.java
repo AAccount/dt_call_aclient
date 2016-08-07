@@ -336,7 +336,15 @@ public class CmdListener extends IntentService
 			return;
 		}
 
-		Intent deadBroadcast = new Intent(Const.BROADCAST_BK_CMDDEAD);
-		sendBroadcast(deadBroadcast);
+		try
+		{
+			Intent deadBroadcast = new Intent(Const.BROADCAST_BK_CMDDEAD);
+			sendBroadcast(deadBroadcast);
+		}
+		catch (Exception e)
+		{
+			Utils.logcat(Const.LOGE, tag, "couldn't broadcast dead command listener... leftover broadacast from java socket stupidities?");
+			Utils.dumpException(tag, e);
+		}
 	}
 }

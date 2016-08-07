@@ -68,5 +68,7 @@ public class Vars
 	public static Intent heartbeat = null;
 	public static PendingIntent pendingHeartbeat = null;
 
-
+	//for keeping track of when the last cmd listener dead happened. allows the app to detect the stupid java socket connect/die quick cycle
+	public static long lastDead = 0;
+	public static int quickDeadCount = 0;
 }

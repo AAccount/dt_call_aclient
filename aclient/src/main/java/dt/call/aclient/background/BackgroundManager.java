@@ -1,6 +1,7 @@
 package dt.call.aclient.background;
 
 import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -12,6 +13,8 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.KillSocketsAsync;
 import dt.call.aclient.background.async.LoginAsync;
+import dt.call.aclient.screens.InitialServer;
+import dt.call.aclient.screens.UserHome;
 import dt.call.aclient.sqlite.SQLiteDb;
 import dt.call.aclient.sqlite.DBLog;
 
@@ -72,10 +75,39 @@ public class BackgroundManager extends BroadcastReceiver
 		else if (intent.getAction().equals(Const.BROADCAST_BK_CMDDEAD))
 		{
 			Utils.logcat(Const.LOGD, tag, "command listener dead received");
-			SystemClock.sleep(1000); //sometimes java is stupid and cannot reconnect properly so it will do an endless cycle of connect<-->die. give some time for java to get itself in order
+
+			//all of this just to address the stupid java socket issue where it might just endlessly die/reconnect
+			//initialize the quick dead count and timestamp if this is the first time
+			long now = System.currentTimeMillis();
+			long deadDiff =  now - Vars.lastDead;
+			Vars.lastDead = now;
+			if(deadDiff < Const.QUICK_DEAD_THRESHOLD)
+			{
+				Vars.quickDeadCount++;
+				Utils.logcat(Const.LOGW, tag, "Another quick death (java socket stupidity) occured. Current count: " + Vars.quickDeadCount);
+			}
+
+			//with the latest quick death, was it 1 too many? if so restart the app
+			//https://stackoverflow.com/questions/6609414/how-to-programatically-restart-android-app
+			if(Vars.quickDeadCount > Const.QUICK_DEAD_MAX)
+			{
+				Utils.logcat(Const.LOGE, tag, "Too many quick deaths (java socket stupidities). Restarting the app");
+
+				//self restart, give it a 5 seconds to quit
+				Intent selfStart = new Intent(Vars.applicationContext, InitialServer.class);
+				int pendingSelfId = 999;
+				PendingIntent selfStartPending = PendingIntent.getActivity(Vars.applicationContext, pendingSelfId, selfStart, PendingIntent.FLAG_CANCEL_CURRENT);
+				AlarmManager alarmManager = (AlarmManager)Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+				alarmManager.set(AlarmManager.RTC, System.currentTimeMillis()+Const.RESTART_DELAY, selfStartPending);
+
+				//hopefully 5 seconds will be enough to get out
+				Utils.quit();
+				return;
+			}
+
 			if(!Vars.hasInternet)
 			{
-				Utils.logcat(Const.LOGW, tag, "no internet connection to restart command listener");
+				Utils.logcat(Const.LOGD, tag, "no internet connection to restart command listener");
 				return;
 			}
 			relogin();

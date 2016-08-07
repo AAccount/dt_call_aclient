@@ -365,34 +365,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		return super.onCreateOptionsMenu(menu);
 	}
 
-	//its only purpose is to be called when you click the logout button
-	//for whatever reason you can't access android internals like notification manager inside onOptionsItemSelected
-	private void quit()
-	{
-		//get rid of the status notification
-		Vars.notificationManager.cancelAll();
-
-		//Kill alarms
-		AlarmManager manager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-		manager.cancel(Vars.pendingHeartbeat);
-		manager.cancel(Vars.pendingRetries);
-
-		//prevent background manager from restarting command listener when sockets kill async is called
-		ComponentName backgroundManager = new ComponentName(this, BackgroundManager.class);
-		getPackageManager().setComponentEnabledSetting(backgroundManager, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
-
-		//get rid of the sockets
-		new KillSocketsAsync().execute();
-
-		//https://stackoverflow.com/questions/3226495/android-exit-application-code
-		//basically a way to get out of aclient
-		Intent intent = new Intent(Intent.ACTION_MAIN);
-		intent.addCategory(Intent.CATEGORY_HOME);
-		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		startActivity(intent);
-		System.exit(0); //actually close the app so it will start fresh from login
-	}
-
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item)
 	{
@@ -412,7 +384,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 							@Override
 							public void onClick(DialogInterface dialog, int which)
 							{
-								quit();
+								Utils.quit();
 							}
 						})
 						.setNegativeButton(getString(R.string.alert_no), new DialogInterface.OnClickListener()
@@ -553,7 +525,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_DENIED)
 				{
 					//with mic denied, this app can't do anything useful
-					quit();
+					Utils.quit();
 				}
 			}
 		}

@@ -1,10 +1,14 @@
 package dt.call.aclient;
 
+import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Process;
 import android.util.Base64;
 import android.util.Log;
 
@@ -25,6 +29,8 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 import dt.call.aclient.background.AlarmReceiver;
+import dt.call.aclient.background.BackgroundManager;
+import dt.call.aclient.background.async.KillSocketsAsync;
 import dt.call.aclient.sqlite.DBLog;
 import dt.call.aclient.sqlite.SQLiteDb;
 
@@ -211,5 +217,32 @@ public class Utils
 			Vars.heartbeat.putExtra(Const.ALARM_ACTION, Const.ALARM_ACTION_HEARTBEAT);
 			Vars.pendingHeartbeat = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_HEARTBEAT_ID, Vars.heartbeat, PendingIntent.FLAG_UPDATE_CURRENT);
 		}
+	}
+
+	public static void quit()
+	{
+		//get rid of the status notification
+		Vars.notificationManager.cancelAll();
+
+		//Kill alarms
+		AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+		manager.cancel(Vars.pendingHeartbeat);
+		manager.cancel(Vars.pendingRetries);
+
+		//prevent background manager from restarting command listener when sockets kill async is called
+		ComponentName backgroundManager = new ComponentName(Vars.applicationContext, BackgroundManager.class);
+		Vars.applicationContext.getPackageManager().setComponentEnabledSetting(backgroundManager, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+
+		//get rid of the sockets
+		new KillSocketsAsync().execute();
+
+		//https://stackoverflow.com/questions/3226495/android-exit-application-code
+		//basically a way to get out of aclient
+		Intent intent = new Intent(Intent.ACTION_MAIN);
+		intent.addCategory(Intent.CATEGORY_HOME);
+		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+		Vars.applicationContext.startActivity(intent);
+		Process.killProcess(Process.myPid()); //using System.exit(0) produces weird crashes when restarting from java socket stupidities
+											//https://stackoverflow.com/questions/6609414/how-to-programatically-restart-android-app
 	}
 }
