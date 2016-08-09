@@ -592,7 +592,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		float y = event.values[1];
 		float z = event.values[2];
 
-		if(x <= 5)
+		if(x < 5)
 		{
 			//with there being no good information on turning the screen on and off
 			//go with the next best thing of disabling all the buttons
