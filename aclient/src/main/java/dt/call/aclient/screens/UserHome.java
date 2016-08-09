@@ -8,7 +8,6 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -38,9 +37,7 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.LoginAsync;
-import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.background.async.CallInitAsync;
-import dt.call.aclient.background.async.KillSocketsAsync;
 import dt.call.aclient.background.async.LookupAsync;
 import dt.call.aclient.sqlite.Contact;
 import dt.call.aclient.sqlite.SQLiteDb;
@@ -84,43 +81,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				addToContactList(contact);
 				Vars.contactTable.put(contact.getName(), contact.getNickname());
 			}
-		}
-
-		//setup the pending intents that make the ongoing notification bring you to the
-		//right screen based on what you're doing
-		if(Vars.go2HomePending == null)
-		{
-			Intent go2Home = new Intent(getApplicationContext(), UserHome.class);
-			Vars.go2HomePending = PendingIntent.getActivity(this, 0, go2Home, PendingIntent.FLAG_UPDATE_CURRENT);
-		}
-		if(Vars.go2CallMainPending == null)
-		{
-			Intent go2CallMain = new Intent(getApplicationContext(), CallMain.class);
-			Vars.go2CallMainPending = PendingIntent.getActivity(this, 0, go2CallMain, PendingIntent.FLAG_UPDATE_CURRENT);
-		}
-
-		//TODO: manage this properly for meaningful results
-		//setup the ongoing notification shared accross screens that shows
-		//	the state of the app: signed in, no internet, in call etc...
-		//
-		//if this is the first time the notification is being setup do it from scratch.
-		//otherwise just update it to relfect home
-		if(Vars.stateNotificationBuilder == null || Vars.notificationManager == null)
-		{
-			Vars.stateNotificationBuilder = new Notification.Builder(getApplicationContext())
-					.setContentTitle(getString(R.string.app_name))
-					.setContentText(getString(R.string.state_popup_idle))
-					.setSmallIcon(R.drawable.ic_vpn_lock_white_48dp)
-					.setContentIntent(Vars.go2HomePending)
-					.setOngoing(true);
-			Vars.notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-			Vars.notificationManager.notify(Const.stateNotificationId, Vars.stateNotificationBuilder.build());
-		}
-		else
-		{
-			Vars.stateNotificationBuilder.setContentText(getString(R.string.state_popup_idle))
-					.setContentIntent(Vars.go2HomePending);
-			Vars.notificationManager.notify(Const.stateNotificationId, Vars.stateNotificationBuilder.build());
 		}
 
 		//receives the server response from clicking the 2 FAB buttons

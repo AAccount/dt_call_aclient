@@ -17,7 +17,7 @@ import dt.call.aclient.sqlite.Contact;
  *
  * Holds various session related variables
  * These variables are not permanent and change with each sign in.
- * Therefore they are not changed.
+ * Therefore they are not stored on disk.
  */
 public class Vars
 {
@@ -56,8 +56,9 @@ public class Vars
 	public static NotificationManager notificationManager = null;
 	public static PendingIntent go2HomePending = null;
 	public static PendingIntent go2CallMainPending = null;
+	public static PendingIntent go2CallIncomingPending = null;
 
-	//for db logging which always needs an annoying context, set it once, use it forever
+	//for every little annoying thing that needs a context... here's one
 	public static Context applicationContext = null;
 
 	//alarm manager pending intents
@@ -71,4 +72,5 @@ public class Vars
 	//for keeping track of when the last cmd listener dead happened. allows the app to detect the stupid java socket connect/die quick cycle
 	public static long lastDead = 0;
 	public static int quickDeadCount = 0;
+
 }

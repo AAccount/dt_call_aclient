@@ -1,6 +1,5 @@
 package dt.call.aclient.background.async;
 
-import android.content.Context;
 import android.os.AsyncTask;
 import android.os.SystemClock;
 
@@ -70,7 +69,7 @@ public class CallEndAsync extends AsyncTask<String, String, Boolean>
 		Vars.state = CallState.NONE;
 		Vars.callWith = Const.nobody;
 
-		Utils.updateNotification(Vars.applicationContext.getString(R.string.state_popup_idle), Vars.go2HomePending);
+		Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
 		return result;
 	}
 }

@@ -6,17 +6,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
-import android.os.SystemClock;
 
 import dt.call.aclient.Const;
+import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.KillSocketsAsync;
 import dt.call.aclient.background.async.LoginAsync;
 import dt.call.aclient.screens.InitialServer;
-import dt.call.aclient.screens.UserHome;
-import dt.call.aclient.sqlite.SQLiteDb;
-import dt.call.aclient.sqlite.DBLog;
 
 /**
  * Created by Daniel on 1/22/16.
@@ -60,6 +57,9 @@ public class BackgroundManager extends BroadcastReceiver
 				Vars.hasInternet = false;
 				manager.cancel(Vars.pendingHeartbeat);
 				manager.cancel(Vars.pendingRetries);
+
+				//update the persistent notification to offline
+				Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
 			}
 			else
 			{
@@ -104,6 +104,9 @@ public class BackgroundManager extends BroadcastReceiver
 				Utils.quit();
 				return;
 			}
+
+			//set persistent notificationi as offline for now while reconnect is trying
+			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
 
 			if(!Vars.hasInternet)
 			{

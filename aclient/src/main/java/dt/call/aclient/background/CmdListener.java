@@ -15,7 +15,6 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.screens.CallIncoming;
 import dt.call.aclient.sqlite.Contact;
-import dt.call.aclient.sqlite.DBLog;
 
 /**
  * Created by Daniel on 1/19/16.
@@ -102,7 +101,7 @@ public class CmdListener extends IntentService
 							Vars.state = CallState.NONE;
 							Vars.callWith = Const.nobody;
 							notifyCanInit(false);
-							Utils.updateNotification(getString(R.string.state_popup_idle), Vars.go2HomePending);
+							Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
 						}
 						else
 						{
@@ -116,7 +115,7 @@ public class CmdListener extends IntentService
 							Utils.logcat(Const.LOGD, tag, Vars.callWith + " is online. Ringing him/her now");
 							Vars.state = CallState.INIT;
 							notifyCanInit(true);
-							Utils.updateNotification(getString(R.string.state_popup_init), Vars.go2CallMainPending);
+							Utils.setNotification(R.string.state_popup_init, R.color.material_light_blue, Vars.go2CallMainPending);
 							//if the person is online, the server will ring him
 						}
 						else
@@ -131,7 +130,7 @@ public class CmdListener extends IntentService
 						Contact contact = new Contact(involved, Vars.contactTable.get(involved));
 						Vars.callWith = contact;
 
-						Utils.updateNotification(getString(R.string.state_popup_incoming), null);
+						Utils.setNotification(R.string.state_popup_incoming, R.color.material_light_blue, Vars.go2CallIncomingPending);
 						Intent showIncoming = new Intent(getApplicationContext(), CallIncoming.class);
 						showIncoming.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK); //needed to start activity from background
 						startActivity(showIncoming);
@@ -142,7 +141,7 @@ public class CmdListener extends IntentService
 						Vars.state = CallState.NONE;
 						Vars.callWith = Const.nobody;
 						notifyCanInit(false);
-						Utils.updateNotification(getString(R.string.state_popup_idle), Vars.go2HomePending);
+						Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
 					}
 					else if(subCommand.equals("timeout"))
 					{
@@ -152,7 +151,7 @@ public class CmdListener extends IntentService
 							Vars.state = CallState.NONE;
 							Vars.callWith = Const.nobody;
 							notifyCallStateChange(Const.BROADCAST_CALL_END);
-							Utils.updateNotification(getString(R.string.state_popup_idle), Vars.go2HomePending);
+							Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
 						}
 						else
 						{
@@ -175,7 +174,7 @@ public class CmdListener extends IntentService
 							Utils.logcat(Const.LOGD, tag, Vars.callWith + " picked up. Start talking.");
 							Vars.state = CallState.INCALL;
 							notifyCallStateChange(Const.BROADCAST_CALL_START);
-							Utils.updateNotification(getString(R.string.state_popup_incall), Vars.go2CallMainPending);
+							Utils.setNotification(R.string.state_popup_incall, R.color.material_light_blue, Vars.go2CallMainPending);
 						}
 						else
 						{
@@ -191,7 +190,7 @@ public class CmdListener extends IntentService
 							Vars.state = CallState.NONE;
 							Vars.callWith = Const.nobody;
 							notifyCallStateChange(Const.BROADCAST_CALL_END);
-							Utils.updateNotification(getString(R.string.state_popup_idle), Vars.go2HomePending);
+							Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
 
 							if(subCommand.equals("end"))
 							{//need for force stop the media read thread if it's an end
@@ -225,7 +224,7 @@ public class CmdListener extends IntentService
 							Vars.state = CallState.NONE;
 							Vars.callWith = Const.nobody;
 							notifyCallStateChange(Const.BROADCAST_CALL_END);
-							Utils.updateNotification(getString(R.string.state_popup_idle), Vars.go2HomePending);
+							Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
 
 							//there is no way to kill the thread but to stop the socket to cause an exception
 							//	restart after the exception

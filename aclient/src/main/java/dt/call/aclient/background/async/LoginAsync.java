@@ -13,11 +13,10 @@ import java.net.Socket;
 import java.security.cert.CertificateException;
 
 import dt.call.aclient.Const;
+import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.CmdListener;
-import dt.call.aclient.sqlite.SQLiteDb;
-import dt.call.aclient.sqlite.DBLog;
 
 /**
  * Created by Daniel on 1/21/16.
@@ -166,6 +165,16 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			loginResult.putExtra(Const.BROADCAST_LOGIN_RESULT, result);
 			Vars.applicationContext.sendBroadcast(loginResult);
 			Utils.logcat(Const.LOGD, tag, "Login result: " + result);
+		}
+
+		//update the persistent notification with the login results
+		if(result)
+		{
+			Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
+		}
+		else
+		{
+			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
 		}
 
 		synchronized (loginLock)

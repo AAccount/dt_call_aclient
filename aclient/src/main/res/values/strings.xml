@@ -41,7 +41,7 @@
     <string name="state_popup_incoming">Incoming Call</string>
     <string name="state_popup_init">Dialing Out</string>
     <string name="state_popup_incall">In Call</string>
-    <string name="state_popup_noconnection">Can\'t Reach Server</string>
+    <string name="state_popup_offline">Offline</string>
 
     <!-- Initial user setup -->
     <string name="initial_user_title">User Information</string>

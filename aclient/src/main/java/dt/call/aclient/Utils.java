@@ -1,14 +1,19 @@
 package dt.call.aclient;
 
+import android.app.ActivityManager;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Process;
+import android.support.v4.content.ContextCompat;
 import android.util.Base64;
 import android.util.Log;
 
@@ -31,6 +36,9 @@ import javax.net.ssl.X509TrustManager;
 import dt.call.aclient.background.AlarmReceiver;
 import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.background.async.KillSocketsAsync;
+import dt.call.aclient.screens.CallIncoming;
+import dt.call.aclient.screens.CallMain;
+import dt.call.aclient.screens.UserHome;
 import dt.call.aclient.sqlite.DBLog;
 import dt.call.aclient.sqlite.SQLiteDb;
 
@@ -182,13 +190,53 @@ public class Utils
 		showOkAlert.show();
 	}
 
-	//changes the message in the ongoing notification
-	public static void updateNotification(String message, PendingIntent go2)
+	//sets the ongoing notification message and color. also initializes any notification related variables if they're not setup
+	public static void setNotification(int stringRes, int colorRes, PendingIntent go2)
 	{
-		Vars.stateNotificationBuilder
-				.setContentText(message)
-				.setContentIntent(go2);
-		Vars.notificationManager.notify(Const.stateNotificationId, Vars.stateNotificationBuilder.build());
+		//first make sure all the pending intents are useable
+		if(Vars.go2HomePending == null)
+		{
+			Intent go2Home = new Intent(Vars.applicationContext, UserHome.class);
+			Vars.go2HomePending = PendingIntent.getActivity(Vars.applicationContext, 0, go2Home, PendingIntent.FLAG_UPDATE_CURRENT);
+		}
+		if(Vars.go2CallMainPending == null)
+		{
+			Intent go2CallMain = new Intent(Vars.applicationContext, CallMain.class);
+			Vars.go2CallMainPending = PendingIntent.getActivity(Vars.applicationContext, 0, go2CallMain, PendingIntent.FLAG_UPDATE_CURRENT);
+		}
+		if(Vars.go2CallIncomingPending == null)
+		{
+			Intent go2CallIncoming = new Intent(Vars.applicationContext, CallIncoming.class);
+			Vars.go2CallIncomingPending = PendingIntent.getActivity(Vars.applicationContext, 0, go2CallIncoming, PendingIntent.FLAG_UPDATE_CURRENT);
+		}
+
+		//if the ongoing notification is not setup, then set it up first
+		if(Vars.stateNotificationBuilder == null || Vars.notificationManager == null)
+		{
+			Vars.stateNotificationBuilder = new Notification.Builder(Vars.applicationContext)
+					.setContentTitle(Vars.applicationContext.getString(R.string.app_name))
+					.setContentText(Vars.applicationContext.getString(stringRes))
+					.setSmallIcon(R.drawable.ic_vpn_lock_white_48dp)
+					.setContentIntent(Vars.go2HomePending)
+					.setOngoing(true);
+			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+			{//only apply color if android >= 5.0 unfortunately
+				Vars.stateNotificationBuilder.setColor(ContextCompat.getColor(Vars.applicationContext, colorRes));
+			}
+			Vars.notificationManager = (NotificationManager) Vars.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE);
+			Vars.notificationManager.notify(Const.stateNotificationId, Vars.stateNotificationBuilder.build());
+		}
+		else
+		{
+			Vars.stateNotificationBuilder
+					.setContentText(Vars.applicationContext.getString(stringRes))
+					.setContentIntent(go2);
+			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+			{
+				Vars.stateNotificationBuilder.setColor(ContextCompat.getColor(Vars.applicationContext, colorRes));
+			}
+			Vars.notificationManager.notify(Const.stateNotificationId, Vars.stateNotificationBuilder.build());
+		}
 	}
 
 	//https://stackoverflow.com/questions/1149703/how-can-i-convert-a-stack-trace-to-a-string
