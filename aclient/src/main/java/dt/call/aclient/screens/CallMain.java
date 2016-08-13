@@ -17,6 +17,7 @@ import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -460,10 +461,18 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					}
 				}
 
-				//various object cleanups
+				//see media decoder thread for explanation of a try/catch here
 				AmrEncoder.exit();
-				wavRecorder.stop();
-				wavRecorder.release();
+				try
+				{
+					wavRecorder.stop();
+					wavRecorder.release();
+				}
+				catch (NullPointerException n)
+				{
+					Utils.logcat(Const.LOGE, encTag, "Call Main ui exited before the encoder thread. Cleanup of AudioRecord wavRecorder will fail");
+					Utils.dumpException(encTag, n);
+				}
 				Utils.logcat(Const.LOGD, encTag, "MediaCodec encoder thread has stopped");
 			}
 
@@ -566,10 +575,23 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					}
 				}
 				AmrDecoder.exit(amrstate);
-				wavPlayer.stop();
-				wavPlayer.flush(); //must flush after stop
-				wavPlayer.release(); //mandatory cleanup to prevent wavPlayer from outliving its usefulness
-				wavPlayer = null;
+
+				//if the call main ui exits first, then there is no way to stop the wavPlayer.
+				//it IS a race condition but not one that produces any bad results for the app.
+				//just catch the null and pretend like nothing happened. no point of making onStop wait
+				//for these 2 dec/enc threads to stop first. more complicated, doesn't add anything useful
+				try
+				{
+					wavPlayer.stop();
+					wavPlayer.flush(); //must flush after stop
+					wavPlayer.release(); //mandatory cleanup to prevent wavPlayer from outliving its usefulness
+					wavPlayer = null;
+				}
+				catch (NullPointerException n)
+				{
+					Utils.logcat(Const.LOGE, decTag, "CallMain is already gone. Cleanup of AudioTrack wavPlayer will fail.");
+					Utils.dumpException(decTag, n);
+				}
 				Utils.logcat(Const.LOGD, decTag, "MediaCodec decoder thread has stopped, state:" + Vars.state);
 			}
 		});
