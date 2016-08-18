@@ -16,10 +16,12 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -57,7 +59,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	private Contact contactInEdit; //whenever renaming a contact just change its nickname here and pass around this object
 	private SQLiteDb sqliteDb = dt.call.aclient.sqlite.SQLiteDb.getInstance(Vars.applicationContext);
 	private BroadcastReceiver myReceiver;
-	private ProgressDialog loginProgress;
+	private ProgressDialog loginProgress = null;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -138,7 +140,12 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				else if(intent.getAction().equals(Const.BROADCAST_LOGIN))
 				{
 					boolean ok = intent.getBooleanExtra(Const.BROADCAST_LOGIN_RESULT, false);
-					loginProgress.dismiss();
+					if(loginProgress != null)
+					{
+						loginProgress.dismiss();
+						loginProgress = null;
+					}
+
 					if(!ok)
 					{
 						Utils.logcat(Const.LOGW, tag, "received login failed");
@@ -170,7 +177,27 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		//for some types of crashes it goes back to the UserHome screen but with no save data (and missing connections)
 		if(Vars.commandSocket == null || Vars.mediaSocket == null)
 		{
-			loginProgress = ProgressDialog.show(UserHome.this, null, getString(R.string.progress_login));
+			PowerManager powerManager = (PowerManager)getSystemService(Context.POWER_SERVICE);
+			boolean screenOn = powerManager.isScreenOn();//no choice. targeting >=4.1
+			loginProgress = null;
+
+			//for self restarts or call end --> home while screen is off, this will never go away if the screen is off when the progressdialog is launched
+			if(screenOn)
+			{
+				loginProgress = ProgressDialog.show(UserHome.this, null, getString(R.string.progress_login));
+				loginProgress.setOnKeyListener(new DialogInterface.OnKeyListener()
+				{//https://stackoverflow.com/questions/10346011/how-to-handle-back-button-with-in-the-dialog
+					@Override
+					public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event)
+					{
+						if (keyCode == KeyEvent.KEYCODE_BACK)
+						{
+							loginProgress.dismiss();
+						}
+						return false;
+					}
+				});
+			}
 
 			SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
 			Vars.uname = sharedPreferences.getString(Const.PREF_UNAME, "");
@@ -180,7 +207,8 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			Vars.mediaPort = Integer.valueOf(sharedPreferences.getString(Const.PREF_MEDIAPORT, ""));
 			Vars.expectedCertDump = sharedPreferences.getString(Const.PREF_CERT64, "");
 			Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, Vars.SHOUDLOG);
-			new LoginAsync(Vars.uname, Vars.passwd, true).execute();
+
+			new LoginAsync(Vars.uname, Vars.passwd, screenOn).execute();
 		}
 	}
 
@@ -469,10 +497,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	@Override
 	public void onBackPressed()
 	{
-		/*
-		 * Do nothing. There's nowhere to go back to
-		 *
-		 */
+
 	}
 
 	@Override
