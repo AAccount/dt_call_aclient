@@ -35,6 +35,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 	private static final String tag = "Login Async Task";
 	private static final Object loginLock = new Object();
 	private static boolean tryingLogin;
+	private static final int TIMEOUT = 30*1000;
 
 	/**
 	 *  @param cuname User name to login with
@@ -59,6 +60,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 				if(tryingLogin)
 				{
 					Utils.logcat(Const.LOGW, tag, "already trying a login. ignoring request");
+					onPostExecute(false);
 					return false;
 				}
 				tryingLogin = true;
@@ -88,7 +90,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			//check if server is available first before committing to anything
 			//	otherwise this process will stall. host not available trips timeout exception
 			Socket diag = new Socket();
-			diag.connect(new InetSocketAddress(Vars.serverAddress, Vars.commandPort), 2000);
+			diag.connect(new InetSocketAddress(Vars.serverAddress, Vars.commandPort), TIMEOUT);
 			diag.close();
 
 			//send login command
