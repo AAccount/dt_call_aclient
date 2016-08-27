@@ -4,6 +4,7 @@ import android.app.AlarmManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
+import android.os.SystemClock;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -30,7 +31,7 @@ import dt.call.aclient.background.CmdListener;
 public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 {
 	private String uname, passwd;
-	private boolean asyncMode = false;
+	private String broadcastMode;
 
 	private static final String tag = "Login Async Task";
 	private static final Object loginLock = new Object();
@@ -40,13 +41,13 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 	/**
 	 *  @param cuname User name to login with
 	 * @param cpasswd Plain text password to login with
-	 * @param casync Whether the result should also be sent by the broadcast intent Const.BROADCAST_LOGIN
+	 * @param cbmode What action should be broadcasted for the login result?? null = no broadcast
 	 */
-	public LoginAsync(String cuname, String cpasswd, boolean casync)
+	public LoginAsync(String cuname, String cpasswd, String cbmode)
 	{
 		uname = cuname;
 		passwd = cpasswd;
-		asyncMode = casync;
+		broadcastMode = cbmode;
 	}
 
 	@Override
@@ -147,7 +148,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		}
 		catch (CertificateException c)
 		{
-			Utils.logcat(Const.LOGD, tag, "server certificate didn't match the expected");
+			Utils.logcat(Const.LOGE, tag, "server certificate didn't match the expected");
 			onPostExecute(false);
 			return false;
 		}
@@ -161,12 +162,12 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 	protected void onPostExecute(boolean result)
 	{
-		if(asyncMode)
+		if(broadcastMode != null)
 		{
-			Intent loginResult = new Intent(Const.BROADCAST_LOGIN);
+			Intent loginResult = new Intent(broadcastMode);
 			loginResult.putExtra(Const.BROADCAST_LOGIN_RESULT, result);
 			Vars.applicationContext.sendBroadcast(loginResult);
-			Utils.logcat(Const.LOGD, tag, "Login result: " + result);
+			Utils.logcat(Const.LOGD, tag, "Broadcasting as: " + broadcastMode + "; login result: " + result);
 		}
 
 		//update the persistent notification with the login results

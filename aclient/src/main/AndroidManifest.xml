@@ -25,17 +25,13 @@
         tools:replace="android:allowBackup">
 
         <!-- Handles resign-in when internet dies and when the socket dies -->
-        <!-- Also handles the hearbeat service -->
+        <!-- Also handles the heartbeat service -->
         <receiver android:name=".background.BackgroundManager">
             <intent-filter>
                 <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
                 <action android:name="cmd_dead"/>
-                <action android:name="heartbeat"/>
+                <action android:name="broadcast_login_background"/>
             </intent-filter>
-        </receiver>
-
-        <!-- Handles timer tasks using android alarms -->
-        <receiver android:name=".background.AlarmReceiver">
         </receiver>
 
         <!-- Listens for commands/responses from the server and reacts appropriately -->

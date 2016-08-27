@@ -6,11 +6,15 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.os.Bundle;
 
+import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
+import dt.call.aclient.background.async.HeartBeatAsync;
 import dt.call.aclient.background.async.KillSocketsAsync;
 import dt.call.aclient.background.async.LoginAsync;
 import dt.call.aclient.screens.InitialServer;
@@ -24,13 +28,17 @@ import dt.call.aclient.screens.InitialServer;
 public class BackgroundManager extends BroadcastReceiver
 {
 	private static final String tag = "BackgroundManager";
-	private Context context;
 
 	@Override
 	public void onReceive(final Context context, Intent intent)
 	{
-		this.context = context;
-		Utils.logcat(Const.LOGD, tag, "received broadcast intent");
+		if(Vars.applicationContext == null)
+		{
+			//sometimes intents come in when the app is in the process of shutting down so all the contexts won't work.
+			//it's shutting down anyways. no point of starting something
+			return;
+		}
+
 		Utils.initAlarmVars(); //double check to make sure these things are setup
 		AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 
@@ -38,43 +46,42 @@ public class BackgroundManager extends BroadcastReceiver
 		{
 			//if the person hasn't logged in then there's no way to start the command listener
 			//	since you won't have a command socket to listen on
-			Utils.logcat(Const.LOGD, tag, "can't login when there is no username/password information");
+			Utils.logcat(Const.LOGW, tag, "user name and password aren't available??, NOT CONTINUING");
 			return;
 		}
 
-
-		if(intent.getAction().equals(ConnectivityManager.CONNECTIVITY_ACTION))
+		String action = intent.getAction();
+		if(action.equals(ConnectivityManager.CONNECTIVITY_ACTION))
 		{
 			Utils.logcat(Const.LOGD, tag, "Got a connectivity event from android");
-			if(intent.getExtras() != null && intent.getExtras().getBoolean(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false))
-			{//internet lost case
-				Utils.logcat(Const.LOGD, tag, "Internet was lost");
+			manager.cancel(Vars.pendingHeartbeat);
+			manager.cancel(Vars.pendingRetries);
+			new KillSocketsAsync().execute();
 
-				//Apparently you can't close a socket from here because it's on the UI thread???
-				Vars.dontRestart = true; //why bother when there's no internet
-				new KillSocketsAsync().execute();
-
-				Vars.hasInternet = false;
-				manager.cancel(Vars.pendingHeartbeat);
-				manager.cancel(Vars.pendingRetries);
-
-				//update the persistent notification to offline
-				Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
+			if(Utils.hasInternet())
+			{
+				//internet reconnected case
+				Utils.logcat(Const.LOGD, tag, "Internet was reconnected");
+				new LoginAsync(Vars.uname, Vars.passwd, Const.BROADCAST_LOGIN_BG).execute();
 			}
 			else
 			{
-				//internet reconnected case
-				// don't immediately try to reconnect on fail in case the person has to do a wifi sign in
-				//	or other things
-				Utils.logcat(Const.LOGD, tag, "Internet was reconnected");
-				Vars.hasInternet = true;
-
-				relogin();
+				Utils.logcat(Const.LOGD, tag, "android detected internet loss");
 			}
+			//command listener does a better of job of figuring when the internet died than android's connectivity manager.
+			//android's connectivity manager doesn't always get subway internet loss
 		}
-		else if (intent.getAction().equals(Const.BROADCAST_BK_CMDDEAD))
+		else if (action.equals(Const.BROADCAST_BK_CMDDEAD))
 		{
 			Utils.logcat(Const.LOGD, tag, "command listener dead received");
+
+			//set persistent notification as offline for now while reconnect is trying
+			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
+
+			//cleanup the pending intents and make sure the old sockets are gone before making new ones
+			manager.cancel(Vars.pendingHeartbeat);
+			manager.cancel(Vars.pendingRetries);
+			new KillSocketsAsync().execute(); //make sure everything is good and dead
 
 			//all of this just to address the stupid java socket issue where it might just endlessly die/reconnect
 			//initialize the quick dead count and timestamp if this is the first time
@@ -89,7 +96,7 @@ public class BackgroundManager extends BroadcastReceiver
 
 			//with the latest quick death, was it 1 too many? if so restart the app
 			//https://stackoverflow.com/questions/6609414/how-to-programatically-restart-android-app
-			if(Vars.quickDeadCount > Const.QUICK_DEAD_MAX)
+			if(Vars.quickDeadCount == Const.QUICK_DEAD_MAX)
 			{
 				Utils.logcat(Const.LOGE, tag, "Too many quick deaths (java socket stupidities). Restarting the app");
 
@@ -105,40 +112,59 @@ public class BackgroundManager extends BroadcastReceiver
 				return;
 			}
 
-			//set persistent notificationi as offline for now while reconnect is trying
-			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
-
-			if(!Vars.hasInternet)
+			//if the network is dead then don't bother
+			if(!Utils.hasInternet())
 			{
-				Utils.logcat(Const.LOGD, tag, "no internet connection to restart command listener");
+				Utils.logcat(Const.LOGD, tag, "No internet detected from commnad listener dead");
 				return;
 			}
-			relogin();
-		}
-	}
 
-	/**
-	 * If you need to relogin, try immediately first. If that doesn't work, then start the retry
-	 * process.
-	 */
-	private void relogin()
-	{
-		AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-		boolean firstTry = false;
-		try
-		{
-			firstTry = new LoginAsync(Vars.uname, Vars.passwd, false).execute().get();
+			new LoginAsync(Vars.uname, Vars.passwd, Const.BROADCAST_LOGIN_BG).execute();
 		}
-		catch (Exception e)
+		else if(action.equals(Const.ALARM_ACTION_HEARTBEAT))
 		{
-			Utils.logcat(Const.LOGE, tag, "exception on first try of relogin");
-		}
+			Utils.logcat(Const.LOGD, tag, "received heart beat alarm");
+			if (!Utils.hasInternet())
+			{
+				Utils.logcat(Const.LOGW, tag, "no internet to try hearbeat on. SHOULD'VE EVEN BEEN TOLD TO DO SO");
 
-		if(!firstTry)
+				//no point of continuing the heart beat service if there is no internet
+				manager.cancel(Vars.pendingHeartbeat);
+				return;
+			}
+
+			//only send out a heartbeat if not in a call or waiting for one. don't want to send garbage on the media port
+			// when there might be call data. it will probably produce weird sound
+			if (Vars.state == CallState.NONE)
+			{
+				new HeartBeatAsync().execute();
+			}
+
+		}
+		else if (action.equals(Const.ALARM_ACTION_RETRY))
 		{
-			Utils.logcat(Const.LOGE, tag, "first try relogin failed (check if exception); using alarm retries");
-			manager.cancel(Vars.pendingRetries);
-			manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), Const.ONE_MIN, Vars.pendingRetries);
+			Utils.logcat(Const.LOGD, tag, "login retry received");
+
+			//no point of a retry if there is no internet to try on
+			if(!Utils.hasInternet())
+			{
+				Utils.logcat(Const.LOGD, tag, "no internet for sign in retry");
+				manager.cancel(Vars.pendingRetries);
+				return;
+			}
+
+			new LoginAsync(Vars.uname, Vars.passwd, Const.BROADCAST_LOGIN_BG).execute();
+
+		}
+		else if(action.equals(Const.BROADCAST_LOGIN_BG))
+		{
+			Utils.logcat(Const.LOGD, tag, "BackgroundManager initiated login process received a callback");
+			boolean ok = intent.getBooleanExtra(Const.BROADCAST_LOGIN_RESULT, false);
+			if(ok)
+			{
+				manager.cancel(Vars.pendingRetries);
+			}
+			//else keep the alarm should run again in the next 5 minutes
 		}
 	}
 }

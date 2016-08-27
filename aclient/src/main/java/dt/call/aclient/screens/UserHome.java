@@ -137,7 +137,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 						}
 					}
 				}
-				else if(intent.getAction().equals(Const.BROADCAST_LOGIN))
+				else if(intent.getAction().equals(Const.BROADCAST_LOGIN_FG))
 				{
 					boolean ok = intent.getBooleanExtra(Const.BROADCAST_LOGIN_RESULT, false);
 					if(loginProgress != null)
@@ -149,7 +149,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 					if(!ok)
 					{
 						Utils.logcat(Const.LOGW, tag, "received login failed");
-						if(!Vars.hasInternet)
+						if(!Utils.hasInternet())
 						{//if the reason is no internet, say it
 							Utils.showOk(UserHome.this, getString(R.string.alert_user_home_no_internet));
 						}
@@ -165,7 +165,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 						Utils.initAlarmVars(); //double check it's not null before usage
 						AlarmManager manager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 						manager.cancel(Vars.pendingRetries);
-						manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), Const.ONE_MIN, Vars.pendingRetries);
+						manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), Const.RETRY_FREQ, Vars.pendingRetries);
 					}
 				}
 			}
@@ -180,6 +180,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			PowerManager powerManager = (PowerManager)getSystemService(Context.POWER_SERVICE);
 			boolean screenOn = powerManager.isScreenOn();//no choice. targeting >=4.1
 			loginProgress = null;
+			String loginCallbackMode = null;
 
 			//for self restarts or call end --> home while screen is off, this will never go away if the screen is off when the progressdialog is launched
 			if(screenOn)
@@ -197,6 +198,8 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 						return false;
 					}
 				});
+
+				loginCallbackMode = Const.BROADCAST_LOGIN_FG;
 			}
 
 			SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
@@ -207,8 +210,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			Vars.mediaPort = Integer.valueOf(sharedPreferences.getString(Const.PREF_MEDIAPORT, ""));
 			Vars.expectedCertDump = sharedPreferences.getString(Const.PREF_CERT64, "");
 			Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, Vars.SHOUDLOG);
-
-			new LoginAsync(Vars.uname, Vars.passwd, screenOn).execute();
+			new LoginAsync(Vars.uname, Vars.passwd, loginCallbackMode).execute();
 		}
 	}
 
@@ -220,7 +222,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		//receiver must be reregistered when loading this screen from the back button
 		IntentFilter homeFilters = new IntentFilter();
 		homeFilters.addAction(Const.BROADCAST_HOME);
-		homeFilters.addAction(Const.BROADCAST_LOGIN);
+		homeFilters.addAction(Const.BROADCAST_LOGIN_FG);
 		registerReceiver(myReceiver, homeFilters);
 
 		//check to make sure mic permission is set... can't call without a mic

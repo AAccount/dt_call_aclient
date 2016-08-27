@@ -1,6 +1,9 @@
 package dt.call.aclient.screens;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
@@ -19,6 +22,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 	private static final String tag = "InitialUserInfo";
 	private EditText uname, passwd;
 	private FloatingActionButton next;
+	private BroadcastReceiver broadcastReceiver;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -45,6 +49,36 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 		{
 			passwd.setText(savedPasswd);
 		}
+
+		//login can take up to ??30?? seconds. NEVER let the ui thread stall even if you can't do anything while waiting
+		broadcastReceiver = new BroadcastReceiver()
+		{
+			@Override
+			public void onReceive(Context context, Intent intent)
+			{
+				if(intent.getAction().equals(Const.BROADCAST_LOGIN_FG))
+				{
+					final boolean ok = intent.getBooleanExtra(Const.BROADCAST_LOGIN_RESULT, false);
+					processLoginResult(ok);
+				}
+			}
+		};
+	}
+
+	@Override
+	public void onResume()
+	{
+		super.onResume();
+		IntentFilter initialUserFilter = new IntentFilter();
+		initialUserFilter.addAction(Const.BROADCAST_LOGIN_FG);
+		registerReceiver(broadcastReceiver, initialUserFilter);
+	}
+
+	@Override
+	protected void onStop()
+	{
+		super.onStop();
+		unregisterReceiver(broadcastReceiver);
 	}
 
 	@Override
@@ -62,36 +96,36 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 				return;
 			}
 
-			try
-			{
-				boolean loginOk = new LoginAsync(enteredUname, enteredPasswd, false).execute().get();
-				if(loginOk)
-				{
-					//because the login was successful, save the info
-					SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, MODE_PRIVATE);
-					SharedPreferences.Editor editor = sharedPreferences.edit();
-					editor.putString(Const.PREF_UNAME, enteredUname);
-					editor.putString(Const.PREF_PASSWD, enteredPasswd);
-					editor.apply();
+			new LoginAsync(enteredUname, enteredPasswd, Const.BROADCAST_LOGIN_FG).execute();
 
-					//save it to the session variables too, to avoid always doing a disk lookup with shared prefs
-					Vars.uname = enteredUname;
-					Vars.passwd = enteredPasswd;
+		}
+	}
 
-					//go to the user information screen
-					Intent go2Home = new Intent(InitialUserInfo.this, UserHome.class);
-					startActivity(go2Home);
-				}
-				else
-				{
-					Utils.showOk(this, getString(R.string.alert_login_failed));
-				}
-			}
-			catch (Exception e)
-			{
-				Utils.dumpException(tag, e);
-				Utils.showOk(this, getString(R.string.alert_login_failed));
-			}
+	private void processLoginResult(boolean ok)
+	{
+		if(ok)
+		{
+			String enteredUname = uname.getText().toString();
+			String enteredPasswd = passwd.getText().toString();
+
+			//because the login was successful, save the info
+			SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, MODE_PRIVATE);
+			SharedPreferences.Editor editor = sharedPreferences.edit();
+			editor.putString(Const.PREF_UNAME, enteredUname);
+			editor.putString(Const.PREF_PASSWD, enteredPasswd);
+			editor.apply();
+
+			//save it to the session variables too, to avoid always doing a disk lookup with shared prefs
+			Vars.uname = enteredUname;
+			Vars.passwd = enteredPasswd;
+
+			//go to the user information screen
+			Intent go2Home = new Intent(InitialUserInfo.this, UserHome.class);
+			startActivity(go2Home);
+		}
+		else
+		{
+			Utils.showOk(this, getString(R.string.alert_login_failed));
 		}
 	}
 }

@@ -11,6 +11,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.Process;
 import android.support.v4.content.ContextCompat;
@@ -33,7 +35,6 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
-import dt.call.aclient.background.AlarmReceiver;
 import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.background.async.KillSocketsAsync;
 import dt.call.aclient.screens.CallIncoming;
@@ -258,19 +259,22 @@ public class Utils
 		//setup the alarm intents and pending intents
 		if(Vars.retries == null || Vars.pendingRetries == null || Vars.heartbeat == null || Vars.pendingHeartbeat == null)
 		{
-			Vars.retries = new Intent(Vars.applicationContext, AlarmReceiver.class);
-			Vars.retries.putExtra(Const.ALARM_ACTION, Const.ALARM_ACTION_RETRY);
+			Vars.retries = new Intent(Vars.applicationContext, BackgroundManager.class);
+			Vars.retries.setAction(Const.ALARM_ACTION_RETRY);
 			Vars.pendingRetries = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_RETRY_ID, Vars.retries, PendingIntent.FLAG_UPDATE_CURRENT);
-			Vars.heartbeat = new Intent(Vars.applicationContext, AlarmReceiver.class);
-			Vars.heartbeat.putExtra(Const.ALARM_ACTION, Const.ALARM_ACTION_HEARTBEAT);
+			Vars.heartbeat = new Intent(Vars.applicationContext, BackgroundManager.class);
+			Vars.heartbeat.setAction(Const.ALARM_ACTION_HEARTBEAT);
 			Vars.pendingHeartbeat = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_HEARTBEAT_ID, Vars.heartbeat, PendingIntent.FLAG_UPDATE_CURRENT);
 		}
 	}
 
 	public static void quit()
 	{
-		//get rid of the status notification
-		Vars.notificationManager.cancelAll();
+		//get rid of the status notification if it's running
+		if(Vars.notificationManager != null)
+		{
+			Vars.notificationManager.cancelAll();
+		}
 
 		//Kill alarms
 		AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
@@ -292,5 +296,26 @@ public class Utils
 		Vars.applicationContext.startActivity(intent);
 		Process.killProcess(Process.myPid()); //using System.exit(0) produces weird crashes when restarting from java socket stupidities
 											//https://stackoverflow.com/questions/6609414/how-to-programatically-restart-android-app
+	}
+
+	public static boolean hasInternet()
+	{
+		//double check there is internet before restarting command listener
+		ConnectivityManager connectivityManager = (ConnectivityManager)Vars.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+		NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+
+		//print the network info or null if there isn't any for subway debugging
+		if(networkInfo!= null)
+		{
+			logcat(Const.LOGD, tag, networkInfo.toString());
+		}
+		else
+		{
+			logcat(Const.LOGD, tag, "networkInfo is NULL 0x0");
+		}
+
+		boolean result = (networkInfo != null) && (networkInfo.getDetailedState() == NetworkInfo.DetailedState.CONNECTED);
+		logcat(Const.LOGD, tag, "has internet result: " + result);
+		return result;
 	}
 }

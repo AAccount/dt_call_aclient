@@ -327,14 +327,11 @@ public class CmdListener extends IntentService
 
 	private void notifyDead()
 	{
-		Utils.logcat(Const.LOGE, tag, "broadcasting dead command listner");
-		if(Vars.dontRestart)
-		{
-			Utils.logcat(Const.LOGD, tag, "not restart command listener because dontRestart == true");
-			Vars.dontRestart = false;
-			return;
-		}
+		//only 1 case where you don't want to restart the command listener: quitting the app.
+		//the utils.quit function disables BackgroundManager first before killing the sockets
+		//that way when this dies, nobody will answer the command listener dead broadcast
 
+		Utils.logcat(Const.LOGE, tag, "broadcasting dead command listner");
 		try
 		{
 			Intent deadBroadcast = new Intent(Const.BROADCAST_BK_CMDDEAD);

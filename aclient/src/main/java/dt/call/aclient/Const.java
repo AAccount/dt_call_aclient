@@ -58,7 +58,8 @@ public class Const
 	public static final String BROADCAST_CALL_END = "end";
 
 	//broadcasting login result
-	public static final String BROADCAST_LOGIN = "broadcast_login";
+	public static final String BROADCAST_LOGIN_FG = "broadcast_login_foreground";
+	public static final String BROADCAST_LOGIN_BG = "broadcast_login_background";
 	public static final String BROADCAST_LOGIN_RESULT = "login_result";
 
 	//log related strings
@@ -73,10 +74,8 @@ public class Const
 	public static final String ALARM_ACTION = "alarm_action";
 	public static final String ALARM_ACTION_RETRY = "do_retries";
 	public static final String ALARM_ACTION_HEARTBEAT = "do_heartbeat";
-	public static final int ONE_MIN = 1*60*1000;
-	public static final int FIVE_MINS = 5*60*1000;
-	public static final int TEN_MINS = 10*60*1000;
-	public static final int HEARTBEAT_FREQ = TEN_MINS;
+	public static final int RETRY_FREQ = 5*60*1000;
+	public static final int HEARTBEAT_FREQ = 10*60*1000;
 
 	//timeout (IN SECONDS) before giving up on calling someone
 	public static final int CALL_TIMEOUT = 20;
