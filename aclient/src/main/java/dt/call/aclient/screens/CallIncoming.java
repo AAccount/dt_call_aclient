@@ -80,6 +80,12 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 					//call CALLINCOMING
 					goHome();
 				}
+				else if(response.equals(Const.BROADCAST_CALL_START))
+				{
+					Intent go2CallMain = new Intent(CallIncoming.this, CallMain.class);
+					go2CallMain.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+					startActivity(go2CallMain);
+				}
 			}
 		};
 
@@ -175,7 +181,7 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 	@Override
 	public void onClick(View v)
 	{
-		//the nly 2 buttons are accept and reject so no matter which button is clicked, it's safe to do
+		//the only 2 buttons are accept and reject so no matter which button is clicked, it's safe to do
 		//the reject and accept's common stuff no matter what. there will also every only be 1 click
 		//(can't reject and change your mind you actually wanted to accpet)
 		SQLiteDb sqLiteDb = SQLiteDb.getInstance(this);
@@ -190,9 +196,7 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 		if(v == accept)
 		{
 			new CallAcceptAsync().execute();
-			Intent go2CallMain = new Intent(this, CallMain.class);
-			go2CallMain.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-			startActivity(go2CallMain);
+			//need to wait for the server to say it's time to talk. don't assume it's immediately ready.
 		}
 		else if (v == reject)
 		{

@@ -17,7 +17,6 @@ import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
-import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -52,6 +51,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final int STREAMCALL = AudioManager.STREAM_VOICE_CALL;
 	private static final int WAVBUFFERSIZE = 160;
 	private static final int AMRBUFFERSIZE = 32;
+	private static final int bufferSize = AudioTrack.getMinBufferSize(SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT);
 
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
@@ -70,9 +70,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	//related to audio playback and recording
 	private AudioManager audioManager;
-	private AudioRecord wavRecorder;
-	private AudioTrack wavPlayer;
-	//the first time start encoding thread is called nothing would've set shouldEncode (mute button wouldn'tve been touched)
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -189,6 +186,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
 		audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
 		audioManager.setSpeakerphoneOn(false);
+		Utils.logcat(Const.LOGD, tag, "wave audio bufferSize for mono @ 8000sample/sec: " + bufferSize);
 
 		//now that the setup has been complete:
 		//set the ui to call mode: if you got to this screen after accepting an incoming call
@@ -333,13 +331,15 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	{
 		Thread recordThread = new Thread(new Runnable()
 		{
-			private static final String encTag = "EncodingThread";
+			private static final String tag = "EncodingThread";
 			private static final int CLUMPSIZE = 500;
+			private AudioRecord wavRecorder;
 
 			@Override
 			public void run()
 			{
-				Utils.logcat(Const.LOGD, encTag, "MediaCodec encoder thread has started");
+				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has started");
+
 				byte[] amrbuffer = new byte[AMRBUFFERSIZE];
 				short[] wavbuffer = new short[WAVBUFFERSIZE];
 				BufferedOutputStream bufferedOutputStream = null;
@@ -367,13 +367,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					}
 					catch (Exception e2)
 					{
-						Utils.logcat(Const.LOGE, encTag, "Trying to kill sockets because of an exception but got another exception in the process");
-						Utils.dumpException(encTag, e2);
+						Utils.logcat(Const.LOGE, tag, "Trying to kill sockets because of an exception but got another exception in the process");
+						Utils.dumpException(tag, e2);
 					}
 				}
 
 				//setup the wave audio recorder. since it is released and restarted, it needs to be setup here and not onCreate
-				wavRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLESAMR, AudioFormat.CHANNEL_IN_MONO, FORMAT, WAVBUFFERSIZE);
+				wavRecorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, SAMPLESAMR, AudioFormat.CHANNEL_IN_MONO, FORMAT, bufferSize);
 				wavRecorder.startRecording();
 
 				//my dying i9300 on CM12.1 sometimes can't get the audio record on its first try
@@ -384,7 +384,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					wavRecorder.release();
 					wavRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLESAMR, AudioFormat.CHANNEL_IN_MONO, FORMAT, WAVBUFFERSIZE);
 					wavRecorder.startRecording();
-					Utils.logcat(Const.LOGW, encTag, "audiorecord failed to initialized. retried");
+					Utils.logcat(Const.LOGW, tag, "audiorecord failed to initialized. retried");
 					recorderRetries--;
 				}
 
@@ -392,9 +392,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				//nothing i can do when the cell phone itself has problems
 				if(recorderRetries == 0)
 				{
-					Utils.logcat(Const.LOGE, encTag, "couldn't get the microphone from the cell phone. hanging up");
+					Utils.logcat(Const.LOGE, tag, "couldn't get the microphone from the cell phone. hanging up");
 					endThread();
-					return;
 				}
 
 				AmrEncoder.init(0);
@@ -418,7 +417,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 						int totalRead = 0, dataRead;
 						while (totalRead < WAVBUFFERSIZE)
-						{//although unlikely to be necessary, buffer the mic input
+						{//although unlikely to be necessary, bufferSize the mic input
 							dataRead = wavRecorder.read(wavbuffer, totalRead, WAVBUFFERSIZE - totalRead);
 							totalRead = totalRead + dataRead;
 						}
@@ -430,8 +429,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						}
 						catch (Exception e)
 						{
-							Utils.logcat(Const.LOGE, encTag, "Cannot send amr out the media socket");
-							Utils.dumpException(encTag, e);
+							Utils.logcat(Const.LOGE, tag, "Cannot send amr out the media socket");
+							Utils.dumpException(tag, e);
 
 							//if the socket died it's impossible to continue the call.
 							//the other person will get a dropped call and you can start the call again.
@@ -461,19 +460,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					}
 				}
 
-				//see media decoder thread for explanation of a try/catch here
 				AmrEncoder.exit();
-				try
-				{
-					wavRecorder.stop();
-					wavRecorder.release();
-				}
-				catch (NullPointerException n)
-				{
-					Utils.logcat(Const.LOGE, encTag, "Call Main ui exited before the encoder thread. Cleanup of AudioRecord wavRecorder will fail");
-					Utils.dumpException(encTag, n);
-				}
-				Utils.logcat(Const.LOGD, encTag, "MediaCodec encoder thread has stopped");
+				wavRecorder.stop();
+				wavRecorder.release();
+				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has stopped");
 			}
 
 			private void endThread()
@@ -488,8 +478,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				}
 				catch (Exception e2)
 				{
-					Utils.logcat(Const.LOGE, encTag, "Trying to kill sockets because of an exception but got another exception in the process");
-					Utils.dumpException(encTag, e2);
+					Utils.logcat(Const.LOGE, tag, "Trying to kill sockets because of an exception but got another exception in the process");
+					Utils.dumpException(tag, e2);
 				}
 			}
 		});
@@ -501,19 +491,18 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	{
 		Thread playbackThread = new Thread(new Runnable()
 		{
-			private static final String decTag = "DecodingThread";
+			private static final String tag = "DecodingThread";
+			private AudioTrack wavPlayer;
 
 			@Override
 			public void run()
 			{
-				Utils.logcat(Const.LOGD, decTag, "MediaCodec decoder thread has started");
+				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has started");
 				byte[] amrbuffer = new byte[AMRBUFFERSIZE];
 				short[] wavbuffer = new short[WAVBUFFERSIZE];
 
 				//setup the wave audio track
-				int buffer = AudioTrack.getMinBufferSize(SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT);
-				Utils.logcat(Const.LOGD, decTag, "wave audio buffer for mono @ 8000sample/sec: " + buffer);
-				wavPlayer = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, buffer, AudioTrack.MODE_STREAM);
+				wavPlayer = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, bufferSize, AudioTrack.MODE_STREAM);
 				wavPlayer.play();
 
 				/*
@@ -548,13 +537,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						}
 						else
 						{
-							Utils.logcat(Const.LOGD, decTag, "Detected rushing in of audio... probably from network lag. Discard to get to realtime position");
+							Utils.logcat(Const.LOGD, tag, "Detected rushing in of audio... probably from network lag. Discard to get to realtime position");
 						}
 					}
 					catch (Exception i) //io or null pointer depending on when the connection dies
 					{
-						Utils.logcat(Const.LOGE, decTag, "exception reading media: ");
-						Utils.dumpException(decTag, i);
+						Utils.logcat(Const.LOGE, tag, "exception reading media: ");
+						Utils.dumpException(tag, i);
 
 						//if the socket died it's impossible to continue the call.
 						//the other person will get a dropped call and you can start the call again.
@@ -569,30 +558,17 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						}
 						catch (Exception e)
 						{
-							Utils.logcat(Const.LOGE, decTag, "Trying to kill sockets because of an exception but got another exception in the process");
-							Utils.dumpException(decTag, e);
+							Utils.logcat(Const.LOGE, tag, "Trying to kill sockets because of an exception but got another exception in the process");
+							Utils.dumpException(tag, e);
 						}
 					}
 				}
 				AmrDecoder.exit(amrstate);
-
-				//if the call main ui exits first, then there is no way to stop the wavPlayer.
-				//it IS a race condition but not one that produces any bad results for the app.
-				//just catch the null and pretend like nothing happened. no point of making onStop wait
-				//for these 2 dec/enc threads to stop first. more complicated, doesn't add anything useful
-				try
-				{
-					wavPlayer.stop();
-					wavPlayer.flush(); //must flush after stop
-					wavPlayer.release(); //mandatory cleanup to prevent wavPlayer from outliving its usefulness
-					wavPlayer = null;
-				}
-				catch (NullPointerException n)
-				{
-					Utils.logcat(Const.LOGE, decTag, "CallMain is already gone. Cleanup of AudioTrack wavPlayer will fail.");
-					Utils.dumpException(decTag, n);
-				}
-				Utils.logcat(Const.LOGD, decTag, "MediaCodec decoder thread has stopped, state:" + Vars.state);
+				wavPlayer.stop();
+				wavPlayer.flush(); //must flush after stop
+				wavPlayer.release(); //mandatory cleanup to prevent wavPlayer from outliving its usefulness
+				wavPlayer = null;
+				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has stopped, state:" + Vars.state);
 			}
 		});
 		playbackThread.setName("Media_Decoder");
