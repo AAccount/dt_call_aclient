@@ -127,7 +127,7 @@ public class Utils
 	}
 
 	//for temporary spammy logging. don't junk up the db
-	public static void logcat(int type, String tag, String message, boolean nodb)
+	public static void logcat(int type, String tag, String message, boolean logToDb)
 	{
 		if(Vars.SHOUDLOG)
 		{
@@ -144,7 +144,7 @@ public class Utils
 				Log.w(tag, message);
 			}
 
-			if(!nodb)
+			if(logToDb)
 			{
 				SQLiteDb sqLiteDb = SQLiteDb.getInstance(Vars.applicationContext);
 				sqLiteDb.insertLog(new DBLog(tag, message));

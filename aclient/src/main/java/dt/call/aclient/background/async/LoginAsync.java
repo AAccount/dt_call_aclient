@@ -127,7 +127,6 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 				return false;
 			}
 			Vars.sessionid = Long.valueOf(respContents[3]);
-			Utils.logcat(Const.LOGD, tag, "Established command socket with sessionid: " + Vars.sessionid);
 
 			//establish media socket
 			Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);

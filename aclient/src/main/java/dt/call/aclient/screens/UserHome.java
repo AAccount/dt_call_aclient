@@ -93,7 +93,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			@Override
 			public void onReceive(Context context, Intent intent)
 			{
-				Utils.logcat(Const.LOGD, tag, "got a broadcasted intent");
 
 				if(intent.getAction().equals(Const.BROADCAST_HOME))
 				{
@@ -126,13 +125,11 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 						boolean canInit = intent.getBooleanExtra(Const.BROADCAST_HOME_INIT_CANINIT, false);
 						if (canInit)
 						{
-							Utils.logcat(Const.LOGD, tag, "Starting call with " + Vars.callWith);
 							Intent startCall = new Intent(UserHome.this, CallMain.class);
 							startActivity(startCall);
 						}
 						else
 						{
-							Utils.logcat(Const.LOGD, tag, "Can't start call");
 							Utils.showOk(UserHome.this, getString(R.string.alert_user_home_cant_dial));
 						}
 					}
@@ -148,7 +145,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 
 					if(!ok)
 					{
-						Utils.logcat(Const.LOGW, tag, "received login failed");
 						if(!Utils.hasInternet())
 						{//if the reason is no internet, say it
 							Utils.showOk(UserHome.this, getString(R.string.alert_user_home_no_internet));

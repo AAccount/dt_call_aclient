@@ -46,10 +46,10 @@ public class CmdListener extends IntentService
 	@Override
 	protected void onHandleIntent(Intent workIntent)
 	{
-		//TODO: look into why media socket dies after making a call, ending it, then turning off the screen
 		//	don't want this to catch the login resposne
 		Utils.logcat(Const.LOGD, tag, "command listener INTENT SERVICE started");
 
+		String logd = ""; //accumulate all the diagnostic message together to prevent multiple entries of diagnostics in log ui just for cmd listener
 		while(inputValid)
 		{
 			//responses from the server command connection will always be in text format
@@ -70,7 +70,7 @@ public class CmdListener extends IntentService
 
 				String fromServer = txtin.readLine();
 				String[] respContents = fromServer.split("\\|");
-				Utils.logcat(Const.LOGD, tag, "Server response raw: " + fromServer);
+				logd = logd +  "Server response raw: " + fromServer + "\n";
 
 				//check for properly formatted command
 				if(respContents.length != 4)
@@ -97,7 +97,7 @@ public class CmdListener extends IntentService
 					{
 						if(involved.equals(Vars.callWith.getName()))
 						{
-							Utils.logcat(Const.LOGD, tag, Vars.callWith + " isn't online to talk with right now");
+							logd = logd +   Vars.callWith + " isn't online to talk with right now\n";
 							Vars.state = CallState.NONE;
 							Vars.callWith = Const.nobody;
 							notifyCanInit(false);
@@ -112,7 +112,7 @@ public class CmdListener extends IntentService
 					{
 						if(involved.equals(Vars.callWith.getName()))
 						{
-							Utils.logcat(Const.LOGD, tag, Vars.callWith + " is online. Ringing him/her now");
+							logd = logd +  Vars.callWith + " is online. Ringing him/her now\n";
 							Vars.state = CallState.INIT;
 							notifyCanInit(true);
 							Utils.setNotification(R.string.state_popup_init, R.color.material_light_blue, Vars.go2CallMainPending);
@@ -125,7 +125,7 @@ public class CmdListener extends IntentService
 					}
 					else if(subCommand.equals("incoming"))
 					{
-						Utils.logcat(Const.LOGD, tag, "Incoming call from: " + involved);
+						logd = logd +  "Incoming call from: " + involved + "\n";
 						Vars.state = CallState.INIT;
 						Contact contact = new Contact(involved, Vars.contactTable.get(involved));
 						Vars.callWith = contact;
@@ -137,7 +137,7 @@ public class CmdListener extends IntentService
 					}
 					else if(subCommand.equals("busy"))
 					{
-						Utils.logcat(Const.LOGD, tag, involved + " is already in a call");
+						logd = logd +  involved + " is already in a call\n";
 						Vars.state = CallState.NONE;
 						Vars.callWith = Const.nobody;
 						notifyCanInit(false);
@@ -147,7 +147,7 @@ public class CmdListener extends IntentService
 					{
 						if(involved.equals(Vars.callWith.getName()))
 						{
-							Utils.logcat(Const.LOGD, tag, "60seconds is up to answer a call from " + Vars.callWith);
+							logd = logd +  "60seconds is up to answer a call from " + Vars.callWith + "\n";
 							Vars.state = CallState.NONE;
 							Vars.callWith = Const.nobody;
 							notifyCallStateChange(Const.BROADCAST_CALL_END);
@@ -171,7 +171,7 @@ public class CmdListener extends IntentService
 					{
 						if(involved.equals(Vars.callWith.getName()))
 						{
-							Utils.logcat(Const.LOGD, tag, Vars.callWith + " picked up. Start talking.");
+							logd = logd +  Vars.callWith + " picked up. Start talking.\n";
 							Vars.state = CallState.INCALL;
 							notifyCallStateChange(Const.BROADCAST_CALL_START);
 							Utils.setNotification(R.string.state_popup_incall, R.color.material_light_blue, Vars.go2CallMainPending);
@@ -185,7 +185,7 @@ public class CmdListener extends IntentService
 					{
 						if(involved.equals(Vars.callWith.getName()))
 						{
-							Utils.logcat(Const.LOGD, tag, Vars.callWith + " is ending the call.");
+							logd = logd +  Vars.callWith + " is ending the call.\n";
 							//don't change the call state and call with. those will be managed by the screens
 							Vars.state = CallState.NONE;
 							Vars.callWith = Const.nobody;
@@ -220,7 +220,7 @@ public class CmdListener extends IntentService
 						long servSession = Long.valueOf(respContents[3]);
 						if(servSession == Vars.sessionid)
 						{
-							Utils.logcat(Const.LOGD, tag, "Call with " + Vars.callWith + " was dropped");
+							logd = logd +  "Call with " + Vars.callWith + " was dropped\n";
 							Vars.state = CallState.NONE;
 							Vars.callWith = Const.nobody;
 							notifyCallStateChange(Const.BROADCAST_CALL_END);
@@ -244,14 +244,14 @@ public class CmdListener extends IntentService
 					}
 					else
 					{
-						Utils.logcat(Const.LOGD, tag, "Erroneous call command: " + fromServer);
+						Utils.logcat(Const.LOGW, tag, "Erroneous call command: " + fromServer);
 					}
 				}
 				else if(serverCommand.equals("lookup"))
 				{
 					String who = respContents[2];
 					String status = respContents[3];
-					Utils.logcat(Const.LOGD, tag, "Lookup of: " + who + " --> " + status);
+					logd = logd + "Lookup of: " + who + " --> " + status + "\n";
 
 					Intent lookupStatus = new Intent(Const.BROADCAST_HOME);
 					lookupStatus.putExtra(Const.BROADCAST_HOME_TYPE, Const.BROADCAST_HOME_TYPE_LOOKUP);
@@ -268,10 +268,12 @@ public class CmdListener extends IntentService
 					Utils.logcat(Const.LOGW, tag, "Unknown command/response: " + fromServer);
 				}
 
+				Utils.logcat(Const.LOGD, tag, logd);
 			}
 			catch (IOException e)
 			{
 				Utils.logcat(Const.LOGE, tag, "Command socket closed...");
+				Utils.dumpException(tag, e);
 				inputValid = false;
 			}
 			catch(NumberFormatException n)
@@ -280,7 +282,7 @@ public class CmdListener extends IntentService
 			}
 			catch(NullPointerException n)
 			{
-				Utils.logcat(Const.LOGE, tag, "Command socket terminated from the server");
+				Utils.logcat(Const.LOGE, tag, "Command socket null pointer exception");
 				inputValid = false;
 			}
 		}

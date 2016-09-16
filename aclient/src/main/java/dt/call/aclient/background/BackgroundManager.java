@@ -72,7 +72,7 @@ public class BackgroundManager extends BroadcastReceiver
 		}
 		else if (action.equals(Const.BROADCAST_BK_CMDDEAD))
 		{
-			Utils.logcat(Const.LOGD, tag, "command listener dead received");
+			String loge = "command listener dead received\n";
 
 			//set persistent notification as offline for now while reconnect is trying
 			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
@@ -90,15 +90,15 @@ public class BackgroundManager extends BroadcastReceiver
 			if(deadDiff < Const.QUICK_DEAD_THRESHOLD)
 			{
 				Vars.quickDeadCount++;
-				Utils.logcat(Const.LOGW, tag, "Another quick death (java socket stupidity) occured. Current count: " + Vars.quickDeadCount);
+				loge = loge + "Another quick death (java socket stupidity) occured. Current count: " + Vars.quickDeadCount + "\n";
 			}
 
 			//with the latest quick death, was it 1 too many? if so restart the app
 			//https://stackoverflow.com/questions/6609414/how-to-programatically-restart-android-app
 			if(Vars.quickDeadCount == Const.QUICK_DEAD_MAX)
 			{
-				Utils.logcat(Const.LOGE, tag, "Too many quick deaths (java socket stupidities). Restarting the app");
-
+				loge = loge + "Too many quick deaths (java socket stupidities). Restarting the app\n";
+				Utils.logcat(Const.LOGE, tag, loge);
 				//self restart, give it a 5 seconds to quit
 				Intent selfStart = new Intent(Vars.applicationContext, InitialServer.class);
 				int pendingSelfId = 999;
@@ -108,6 +108,10 @@ public class BackgroundManager extends BroadcastReceiver
 				//hopefully 5 seconds will be enough to get out
 				Utils.quit();
 				return;
+			}
+			else
+			{ //app does not need to restart. still record the accumulated error messages
+				Utils.logcat(Const.LOGE, tag, loge);
 			}
 
 			//if the network is dead then don't bother
@@ -156,7 +160,6 @@ public class BackgroundManager extends BroadcastReceiver
 		}
 		else if(action.equals(Const.BROADCAST_LOGIN_BG))
 		{
-			Utils.logcat(Const.LOGD, tag, "BackgroundManager initiated login process received a callback");
 			boolean ok = intent.getBooleanExtra(Const.BROADCAST_LOGIN_RESULT, false);
 
 			if(!ok)
