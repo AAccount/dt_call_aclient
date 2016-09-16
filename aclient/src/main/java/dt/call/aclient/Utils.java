@@ -303,19 +303,18 @@ public class Utils
 		//double check there is internet before restarting command listener
 		ConnectivityManager connectivityManager = (ConnectivityManager)Vars.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
 		NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+		boolean result = (networkInfo != null) && (networkInfo.getDetailedState() == NetworkInfo.DetailedState.CONNECTED);
 
 		//print the network info or null if there isn't any for subway debugging
 		if(networkInfo!= null)
 		{
-			logcat(Const.LOGD, tag, networkInfo.toString());
+			logcat(Const.LOGD, tag, "has internet: " + networkInfo.toString());
 		}
 		else
 		{
-			logcat(Const.LOGD, tag, "networkInfo is NULL 0x0");
+			logcat(Const.LOGD, tag, "DOESN'T have internet: " + "networkInfo is NULL 0x0");
 		}
 
-		boolean result = (networkInfo != null) && (networkInfo.getDetailedState() == NetworkInfo.DetailedState.CONNECTED);
-		logcat(Const.LOGD, tag, "has internet result: " + result);
 		return result;
 	}
 }
