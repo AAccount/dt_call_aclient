@@ -53,7 +53,6 @@ public class BackgroundManager extends BroadcastReceiver
 		String action = intent.getAction();
 		if(action.equals(ConnectivityManager.CONNECTIVITY_ACTION))
 		{
-			Utils.logcat(Const.LOGD, tag, "Got a connectivity event from android");
 			manager.cancel(Vars.pendingHeartbeat);
 			manager.cancel(Vars.pendingRetries);
 			new KillSocketsAsync().execute();
@@ -61,7 +60,7 @@ public class BackgroundManager extends BroadcastReceiver
 			if(Utils.hasInternet())
 			{
 				//internet reconnected case
-				Utils.logcat(Const.LOGD, tag, "Internet was reconnected");
+				Utils.logcat(Const.LOGD, tag, "internet was reconnected");
 				new LoginAsync(Vars.uname, Vars.passwd, Const.BROADCAST_LOGIN_BG).execute();
 			}
 			else
@@ -104,8 +103,7 @@ public class BackgroundManager extends BroadcastReceiver
 				Intent selfStart = new Intent(Vars.applicationContext, InitialServer.class);
 				int pendingSelfId = 999;
 				PendingIntent selfStartPending = PendingIntent.getActivity(Vars.applicationContext, pendingSelfId, selfStart, PendingIntent.FLAG_CANCEL_CURRENT);
-				AlarmManager alarmManager = (AlarmManager)Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
-				alarmManager.set(AlarmManager.RTC, System.currentTimeMillis()+Const.RESTART_DELAY, selfStartPending);
+				manager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis()+Const.RESTART_DELAY, selfStartPending);
 
 				//hopefully 5 seconds will be enough to get out
 				Utils.quit();
@@ -160,11 +158,11 @@ public class BackgroundManager extends BroadcastReceiver
 		{
 			Utils.logcat(Const.LOGD, tag, "BackgroundManager initiated login process received a callback");
 			boolean ok = intent.getBooleanExtra(Const.BROADCAST_LOGIN_RESULT, false);
-			if(ok)
+
+			if(!ok)
 			{
-				manager.cancel(Vars.pendingRetries);
+				manager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + Const.RETRY_FREQ, Vars.pendingRetries);
 			}
-			//else keep the alarm should run again in the next 5 minutes
 		}
 	}
 }

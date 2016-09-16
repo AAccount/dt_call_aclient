@@ -164,8 +164,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 						//	but don't want that to trigger the retries
 						Utils.initAlarmVars(); //double check it's not null before usage
 						AlarmManager manager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-						manager.cancel(Vars.pendingRetries);
-						manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), Const.RETRY_FREQ, Vars.pendingRetries);
+						manager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + Const.RETRY_FREQ, Vars.pendingRetries);
 					}
 				}
 			}

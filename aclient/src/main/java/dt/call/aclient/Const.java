@@ -71,11 +71,10 @@ public class Const
 	//related to alarm receiver and alarm stuff
 	public static final int ALARM_RETRY_ID = 1234;
 	public static final int ALARM_HEARTBEAT_ID = 999;
-	public static final String ALARM_ACTION = "alarm_action";
 	public static final String ALARM_ACTION_RETRY = "do_retries";
 	public static final String ALARM_ACTION_HEARTBEAT = "do_heartbeat";
 	public static final int RETRY_FREQ = 5*60*1000;
-	public static final int HEARTBEAT_FREQ = 10*60*1000;
+	public static final int HEARTBEAT_FREQ = 5*60*1000;
 
 	//timeout (IN SECONDS) before giving up on calling someone
 	public static final int CALL_TIMEOUT = 20;
