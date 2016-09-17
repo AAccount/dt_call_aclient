@@ -125,23 +125,15 @@ public class BackgroundManager extends BroadcastReceiver
 		}
 		else if(action.equals(Const.ALARM_ACTION_HEARTBEAT))
 		{
-			Utils.logcat(Const.LOGD, tag, "received heart beat alarm");
-			if (!Utils.hasInternet())
+			if (Vars.state == CallState.NONE && Utils.hasInternet()) //check call state first then hasInternet function. prevent log spam and unnecessary effort
 			{
-				Utils.logcat(Const.LOGW, tag, "no internet to try hearbeat on. SHOULD'VE EVEN BEEN TOLD TO DO SO");
-
-				//no point of continuing the heart beat service if there is no internet
-				manager.cancel(Vars.pendingHeartbeat);
-				return;
-			}
-
-			//only send out a heartbeat if not in a call or waiting for one. don't want to send garbage on the media port
-			// when there might be call data. it will probably produce weird sound
-			if (Vars.state == CallState.NONE)
-			{
+				Utils.logcat(Const.LOGD, tag, "sending heart beat");
 				new HeartBeatAsync().execute();
 			}
-
+			else if (!Utils.hasInternet())
+			{
+				Utils.logcat(Const.LOGW, tag, "no internet to send heart beat on");
+			}
 		}
 		else if (action.equals(Const.ALARM_ACTION_RETRY))
 		{
