@@ -58,6 +58,8 @@
     <string name="call_main_status_ringing">Ringing</string>
     <string name="call_main_status_incall">In Call</string>
     <string name="call_main_toast_micstatus">DOUBLE CHECK mic button icon. It can take up to 1 second to change mute/unmute.</string>
+    <string name="call_main_noise_reduction">Noise</string>
+    <string name="call_main_echo_cancel">Echo</string>
 
     <!-- Incoming call screen -->
     <string name="call_incoming_title">Incoming Call</string>
@@ -76,13 +78,16 @@
 
     <!-- About this app screen -->
     <string name="about_title">App Info</string>
-    <string name="about_desc">Android client for Daniel Tjandra call server. Forces TLS 1.2, trusting only the supplied certificate regardless of its ceritifcate chain. Uses amr narrow band @ 12.2kbit/s for voice.</string>
+    <string name="about_desc">Android client for Daniel Tjandra call server. Forces TLS 1.2, trusting only the supplied certificate regardless of its certificate chain. Uses amr narrow band @ 12.2kbit/s for voice.</string>
     <string name="about_compile_label">Git:</string>
-    <string name="about_compile_date">d718a77b105c30a3ff3bbd15701517a3e4afe4cc</string>
+    <string name="about_compile_revision">d718a77b105c30a3ff3bbd15701517a3e4afe4cc</string>
     <string name="about_version_label">Version:</string>
     <string name="about_version_number">0.91</string> <!-- do not translate. it's just a number -->
-    <string name="about_by_label">By:</string>
-    <string name="about_people">Daniel Tjandra</string>
+    <string name="about_by_label">Credits:</string>
+    <string name="about_people">
+        Daniel Tjandra (main)\n
+        https://github.com/kevinho/opencore-amr-android (amr narrow band library)\n
+    </string>
 
     <!-- For menu items that always show an icon, their text can be accessed by long pressing the item -->
     <!-- Menu items that don't have an icon -->

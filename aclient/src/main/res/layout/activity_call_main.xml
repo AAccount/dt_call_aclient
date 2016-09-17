@@ -82,4 +82,24 @@
         android:layout_alignTop="@+id/call_main_mic"
         android:layout_alignParentRight="true"
         android:layout_marginRight="@dimen/call_main_bottom_row_padding"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/call_main_echo_cancel"
+        android:id="@+id/call_main_echo_cancel"
+        android:layout_above="@+id/call_main_callerid"
+        android:layout_alignRight="@+id/call_main_time"
+        android:layout_alignEnd="@+id/call_main_time"
+        android:enabled="false"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/call_main_noise_reduction"
+        android:id="@+id/call_main_noise_reduction"
+        android:layout_alignTop="@+id/call_main_echo_cancel"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:enabled="false"/>
 </RelativeLayout>

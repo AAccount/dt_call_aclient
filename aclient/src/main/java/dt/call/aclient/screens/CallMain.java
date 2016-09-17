@@ -14,6 +14,8 @@ import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder;
+import android.media.audiofx.AcousticEchoCanceler;
+import android.media.audiofx.NoiseSuppressor;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -23,6 +25,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -55,6 +58,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
+	private Button noiseReduction, echoCancel;
 	private volatile boolean micMute = false;
 	private boolean micStatusNew = false;
 	private boolean onSpeaker = false;
@@ -70,6 +74,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	//related to audio playback and recording
 	private AudioManager audioManager;
+	private AudioRecord wavRecorder = null;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -90,6 +95,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		speaker = (FloatingActionButton)findViewById(R.id.call_main_spk);
 		speaker.setOnClickListener(this);
 		speaker.setEnabled(false);
+		noiseReduction = (Button)findViewById(R.id.call_main_noise_reduction);
+		noiseReduction.setOnClickListener(this);
+		echoCancel = (Button)findViewById(R.id.call_main_echo_cancel);
+		echoCancel.setOnClickListener(this);
 		status = (TextView)findViewById(R.id.call_main_status); //by default ringing. change it when in a call
 		callerid = (TextView)findViewById(R.id.call_main_callerid);
 		time = (TextView)findViewById(R.id.call_main_time);
@@ -154,7 +163,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			@Override
 			public void onReceive(Context context, Intent intent)
 			{
-				Utils.logcat(Const.LOGD, tag, "received a broadcast intent");
 				String response = intent.getStringExtra(Const.BROADCAST_CALL_RESP);
 				if(response.equals(Const.BROADCAST_CALL_START))
 				{
@@ -287,6 +295,32 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				audioManager.setSpeakerphoneOn(false);
 			}
 		}
+		else if (v == noiseReduction)
+		{
+			if(NoiseSuppressor.isAvailable())
+			{
+				NoiseSuppressor.create(wavRecorder.getAudioSessionId());
+				noiseReduction.setTextColor(ContextCompat.getColor(this, R.color.material_green));
+			}
+			else
+			{
+				noiseReduction.setTextColor(ContextCompat.getColor(this, R.color.material_red));
+			}
+			noiseReduction.setEnabled(false);
+		}
+		else if (v == echoCancel)
+		{
+			if(AcousticEchoCanceler.isAvailable())
+			{
+				AcousticEchoCanceler.create(wavRecorder.getAudioSessionId());
+				echoCancel.setTextColor(ContextCompat.getColor(this, R.color.material_green));
+			}
+			else
+			{
+				echoCancel.setTextColor(ContextCompat.getColor(this, R.color.material_red));
+			}
+			echoCancel.setEnabled(false);
+		}
 	}
 
 	private void updateTime()
@@ -325,6 +359,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		status.setText(getString(R.string.call_main_status_incall));
 		mic.setEnabled(true);
 		speaker.setEnabled(true);
+		noiseReduction.setEnabled(true);
+		echoCancel.setEnabled(true);
 	}
 
 	private void startMediaEncodeThread()
@@ -333,7 +369,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		{
 			private static final String tag = "EncodingThread";
 			private static final int CLUMPSIZE = 500;
-			private AudioRecord wavRecorder;
 
 			@Override
 			public void run()
@@ -501,7 +536,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				byte[] amrbuffer = new byte[AMRBUFFERSIZE];
 				short[] wavbuffer = new short[WAVBUFFERSIZE];
 
-				//setup the wave audio track
+				//setup the wave audio track with enhancements if available
 				wavPlayer = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, bufferSize, AudioTrack.MODE_STREAM);
 				wavPlayer.play();
 
