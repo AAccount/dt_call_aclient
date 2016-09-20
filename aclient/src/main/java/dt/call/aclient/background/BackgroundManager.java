@@ -61,7 +61,7 @@ public class BackgroundManager extends BroadcastReceiver
 			{
 				//internet reconnected case
 				Utils.logcat(Const.LOGD, tag, "internet was reconnected");
-				new LoginAsync(Vars.uname, Vars.passwd, Const.BROADCAST_LOGIN_BG).execute();
+				new LoginAsync(Vars.uname, Vars.passwd).execute();
 			}
 			else
 			{
@@ -121,7 +121,7 @@ public class BackgroundManager extends BroadcastReceiver
 				return;
 			}
 
-			new LoginAsync(Vars.uname, Vars.passwd, Const.BROADCAST_LOGIN_BG).execute();
+			new LoginAsync(Vars.uname, Vars.passwd).execute();
 		}
 		else if(action.equals(Const.ALARM_ACTION_HEARTBEAT))
 		{
@@ -147,14 +147,20 @@ public class BackgroundManager extends BroadcastReceiver
 				return;
 			}
 
-			new LoginAsync(Vars.uname, Vars.passwd, Const.BROADCAST_LOGIN_BG).execute();
+			new LoginAsync(Vars.uname, Vars.passwd).execute();
 
 		}
 		else if(action.equals(Const.BROADCAST_LOGIN_BG))
 		{
 			boolean ok = intent.getBooleanExtra(Const.BROADCAST_LOGIN_RESULT, false);
 
-			if(!ok)
+			if(ok)
+			{
+				Intent loginResult = new Intent(Const.BROADCAST_LOGIN_FG);
+				loginResult.putExtra(Const.BROADCAST_LOGIN_RESULT, ok);
+				context.sendBroadcast(loginResult);
+			}
+			else
 			{
 				manager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + Const.RETRY_FREQ, Vars.pendingRetries);
 			}

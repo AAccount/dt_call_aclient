@@ -205,7 +205,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			Vars.mediaPort = Integer.valueOf(sharedPreferences.getString(Const.PREF_MEDIAPORT, ""));
 			Vars.expectedCertDump = sharedPreferences.getString(Const.PREF_CERT64, "");
 			Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, Vars.SHOUDLOG);
-			new LoginAsync(Vars.uname, Vars.passwd, loginCallbackMode).execute();
+			new LoginAsync(Vars.uname, Vars.passwd).execute();
 		}
 	}
 

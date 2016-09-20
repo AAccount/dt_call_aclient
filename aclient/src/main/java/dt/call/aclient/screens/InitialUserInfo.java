@@ -96,7 +96,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 				return;
 			}
 
-			new LoginAsync(enteredUname, enteredPasswd, Const.BROADCAST_LOGIN_FG).execute();
+			new LoginAsync(enteredUname, enteredPasswd).execute();
 
 		}
 	}

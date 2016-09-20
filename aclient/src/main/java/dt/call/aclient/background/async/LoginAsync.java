@@ -31,7 +31,6 @@ import dt.call.aclient.background.CmdListener;
 public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 {
 	private String uname, passwd;
-	private String broadcastMode;
 
 	private static final String tag = "Login Async Task";
 	private static final Object loginLock = new Object();
@@ -41,13 +40,11 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 	/**
 	 *  @param cuname User name to login with
 	 * @param cpasswd Plain text password to login with
-	 * @param cbmode What action should be broadcasted for the login result?? null = no broadcast
 	 */
-	public LoginAsync(String cuname, String cpasswd, String cbmode)
+	public LoginAsync(String cuname, String cpasswd)
 	{
 		uname = cuname;
 		passwd = cpasswd;
-		broadcastMode = cbmode;
 	}
 
 	@Override
@@ -161,13 +158,12 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 	protected void onPostExecute(boolean result)
 	{
-		if(broadcastMode != null)
-		{
-			Intent loginResult = new Intent(broadcastMode);
-			loginResult.putExtra(Const.BROADCAST_LOGIN_RESULT, result);
-			Vars.applicationContext.sendBroadcast(loginResult);
-			Utils.logcat(Const.LOGD, tag, "Broadcasting as: " + broadcastMode + "; login result: " + result);
-		}
+
+		//broadcast to background manager first. that way it always knows what the current state of your login and if
+		//it needs to try again. background will rebroadcast to the ui. if no ui is listening no harm.
+		Intent loginResult = new Intent(Const.BROADCAST_LOGIN_BG);
+		loginResult.putExtra(Const.BROADCAST_LOGIN_RESULT, result);
+		Vars.applicationContext.sendBroadcast(loginResult);
 
 		//update the persistent notification with the login results
 		if(result)
