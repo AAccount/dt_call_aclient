@@ -8,7 +8,7 @@ android {
         applicationId "dt.call.aclient"
         minSdkVersion 16
         targetSdkVersion 23
-        versionCode 1
+        versionCode 3
         versionName "@string/about_version_number"
     }
     buildTypes {
