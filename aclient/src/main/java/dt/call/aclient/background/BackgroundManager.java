@@ -153,6 +153,7 @@ public class BackgroundManager extends BroadcastReceiver
 		else if(action.equals(Const.BROADCAST_LOGIN_BG))
 		{
 			boolean ok = intent.getBooleanExtra(Const.BROADCAST_LOGIN_RESULT, false);
+			Utils.logcat(Const.LOGD, tag, "got login result of: " + ok);
 
 			if(ok)
 			{
