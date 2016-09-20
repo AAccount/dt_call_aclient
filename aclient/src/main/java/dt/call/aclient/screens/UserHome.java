@@ -153,14 +153,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 						{
 							Utils.showOk(UserHome.this, getString(R.string.alert_login_failed));
 						}
-
-						//if you've made it to the home screen that means your user name and password are valid
-						//if you can't sign in, start the retry alarm
-						//don't want the retry alarm start in LoginAsync because an incorrect first login will fail
-						//	but don't want that to trigger the retries
-						Utils.initAlarmVars(); //double check it's not null before usage
-						AlarmManager manager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-						manager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + Const.RETRY_FREQ, Vars.pendingRetries);
 					}
 				}
 			}

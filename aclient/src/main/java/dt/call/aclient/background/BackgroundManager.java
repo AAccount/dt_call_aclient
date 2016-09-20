@@ -155,13 +155,11 @@ public class BackgroundManager extends BroadcastReceiver
 			boolean ok = intent.getBooleanExtra(Const.BROADCAST_LOGIN_RESULT, false);
 			Utils.logcat(Const.LOGD, tag, "got login result of: " + ok);
 
-			if(ok)
-			{
-				Intent loginResult = new Intent(Const.BROADCAST_LOGIN_FG);
-				loginResult.putExtra(Const.BROADCAST_LOGIN_RESULT, ok);
-				context.sendBroadcast(loginResult);
-			}
-			else
+			Intent loginResult = new Intent(Const.BROADCAST_LOGIN_FG);
+			loginResult.putExtra(Const.BROADCAST_LOGIN_RESULT, ok);
+			context.sendBroadcast(loginResult);
+
+			if(!ok)
 			{
 				manager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + Const.RETRY_FREQ, Vars.pendingRetries);
 			}
