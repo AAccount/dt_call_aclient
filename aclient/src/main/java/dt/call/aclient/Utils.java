@@ -317,4 +317,20 @@ public class Utils
 
 		return result;
 	}
+
+	//some cell phones are too aggressive with power saving and shut down the wifi when it looks like nothing is using it.
+	//this will kill the connection (sometimes silently) and cause calls not to come in but still make it look like you're signed on
+	//force the use of exact wakeup alarms to really check the connection regularly... and really schedule the next login when it says.
+	public static void setExactWakeup(long timeFromNow, PendingIntent operation)
+	{
+		AlarmManager alarmManager = (AlarmManager)Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+		if (Build.VERSION.SDK_INT >= 19)
+		{
+			alarmManager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + timeFromNow, operation);
+		}
+		else
+		{
+			alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + timeFromNow, operation);
+		}
+	}
 }

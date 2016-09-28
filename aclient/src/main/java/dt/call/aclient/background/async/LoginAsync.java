@@ -137,7 +137,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			Utils.initAlarmVars(); //double check it's not null before usage
 			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
 			manager.cancel(Vars.pendingHeartbeat);
-			manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), Const.HEARTBEAT_FREQ, Vars.pendingHeartbeat);
+			Utils.setExactWakeup(Const.HEARTBEAT_FREQ, Vars.pendingHeartbeat);
 
 			onPostExecute(true);
 			return true;

@@ -46,8 +46,7 @@ public class BackgroundManager extends BroadcastReceiver
 		{
 			//if the person hasn't logged in then there's no way to start the command listener
 			//	since you won't have a command socket to listen on
-			Utils.logcat(Const.LOGW, tag, "user name and password aren't available??, NOT CONTINUING");
-			return;
+			Utils.logcat(Const.LOGW, tag, "user name and password aren't available?");
 		}
 
 		String action = intent.getAction();
@@ -161,7 +160,7 @@ public class BackgroundManager extends BroadcastReceiver
 
 			if(!ok)
 			{
-				manager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + Const.RETRY_FREQ, Vars.pendingRetries);
+				Utils.setExactWakeup(Const.RETRY_FREQ, Vars.pendingRetries);
 			}
 		}
 	}

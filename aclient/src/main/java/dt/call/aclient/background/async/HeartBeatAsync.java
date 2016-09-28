@@ -24,6 +24,7 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 			Utils.logcat(Const.LOGD, tag, "trying to send heart beat");
 			Vars.commandSocket.getOutputStream().write(Const.JBYTE.getBytes());
 			Vars.mediaSocket.getOutputStream().write(Const.JBYTE.getBytes());
+			Utils.setExactWakeup(Const.HEARTBEAT_FREQ, Vars.pendingHeartbeat);
 			return true;
 		}
 		catch (Exception e)
