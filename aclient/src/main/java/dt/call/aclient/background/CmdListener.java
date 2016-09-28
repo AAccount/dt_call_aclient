@@ -49,7 +49,6 @@ public class CmdListener extends IntentService
 		//	don't want this to catch the login resposne
 		Utils.logcat(Const.LOGD, tag, "command listener INTENT SERVICE started");
 
-		String logd = ""; //accumulate all the diagnostic message together to prevent multiple entries of diagnostics in log ui just for cmd listener
 		while(inputValid)
 		{
 			//responses from the server command connection will always be in text format
@@ -65,6 +64,7 @@ public class CmdListener extends IntentService
 			//timestamp|call|end|by
 			//timestamp|call|drop|sessionid
 
+			String logd = ""; //accumulate all the diagnostic message together to prevent multiple entries of diagnostics in log ui just for cmd listener
 			try
 			{//the async magic here... it will patiently wait until something comes in
 
