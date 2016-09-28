@@ -4,6 +4,7 @@ import android.os.AsyncTask;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
+import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 
@@ -37,6 +38,8 @@ public class CallTimeoutAsync extends AsyncTask<String, String, Boolean>
 		//what could the server possibly say that would be meaningful...?? "no you can't reject"
 		Vars.callWith = Const.nobody;
 		Vars.state = CallState.NONE;
+
+		Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
 		return result;
 	}
 }
