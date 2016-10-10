@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import java.util.ArrayList;
 
+import dt.call.aclient.Const;
 import dt.call.aclient.Vars;
 
 /**
@@ -184,6 +185,18 @@ public class SQLiteDb extends SQLiteOpenHelper
 
 	public ArrayList<DBLog> getLogs()
 	{
+		//clear out old logs. unlikely to be viewed and just slow down the log ui viewer
+		final String idquery = "select " + colId + " from logs order by " + colId + " desc limit 1";
+		Cursor idcursor = appdb.rawQuery(idquery, null);
+		idcursor.moveToFirst();
+		long mostRecent = idcursor.getLong(0);
+		Long tooOld = mostRecent - Const.LOG_LIMIT;
+		if(tooOld > 0)
+		{
+			appdb.delete(tableLogs, colId+"<=?", new String[]{tooOld.toString()});
+		}
+
+		//now get the more recent logs
 		ArrayList<DBLog> result = new ArrayList<DBLog>();
 		final String query = "select * from logs order by " + colLogTs + " desc";
 		Cursor cursor = appdb.rawQuery(query, null);

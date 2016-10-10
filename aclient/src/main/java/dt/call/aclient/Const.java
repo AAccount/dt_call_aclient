@@ -39,6 +39,7 @@ public class Const
 	public static final int LOGE = 1;
 	public static final int LOGD = 2;
 	public static final int LOGW = 3;
+	public static final int LOG_LIMIT = 350;
 
 	//when cmd listener dies
 	public static final String BROADCAST_BK_CMDDEAD = "cmd_dead";
