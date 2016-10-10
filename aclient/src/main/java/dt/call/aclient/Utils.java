@@ -1,6 +1,5 @@
 package dt.call.aclient;
 
-import android.app.ActivityManager;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.Notification;
@@ -19,7 +18,6 @@ import android.support.v4.content.ContextCompat;
 import android.util.Base64;
 import android.util.Log;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.Socket;
@@ -27,7 +25,6 @@ import java.net.Socket;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.TimeZone;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
@@ -54,14 +51,14 @@ public class Utils
 
 	//Linux time(NULL) system call automatically calculates GMT-0/UTC time
 	//so does currentTimeMillis. No need to do timezone conversions
-	public static long generateServerTimestamp()
+	public static long currentTimeSeconds()
 	{
 		return System.currentTimeMillis()/1000L;
 	}
 
 	public static boolean validTS(long ts)
 	{
-		long now = generateServerTimestamp();
+		long now = currentTimeSeconds();
 		long fivemins = 60*5;
 		long diff = now-ts;
 
