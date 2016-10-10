@@ -52,15 +52,11 @@ public class Utils
 {
 	private static final String tag = "Utils";
 
-	//Make sure the timestamp sent to the server is relative to the server's timezone
-	//otherwise the server's +-5min window will fail
+	//Linux time(NULL) system call automatically calculates GMT-0/UTC time
+	//so does currentTimeMillis. No need to do timezone conversions
 	public static long generateServerTimestamp()
 	{
-		TimeZone localTZ = TimeZone.getDefault();
-		TimeZone eastern = TimeZone.getTimeZone("America/Toronto"); //change this to match your server's local time
-		long now = System.currentTimeMillis()/1000L;
-		int offset =  localTZ.getOffset(now) - eastern.getOffset(now);
-		return now - offset;
+		return System.currentTimeMillis()/1000L;
 	}
 
 	public static boolean validTS(long ts)
