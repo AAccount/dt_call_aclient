@@ -57,7 +57,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	private LinearLayout contactList;
 	private boolean inEdit = false;
 	private Contact contactInEdit; //whenever renaming a contact just change its nickname here and pass around this object
-	private SQLiteDb sqliteDb = dt.call.aclient.sqlite.SQLiteDb.getInstance(Vars.applicationContext);
+	private SQLiteDb sqliteDb;
 	private BroadcastReceiver myReceiver;
 	private ProgressDialog loginProgress = null;
 
@@ -72,6 +72,17 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		add = (FloatingActionButton)findViewById(R.id.user_home_add);
 		add.setOnClickListener(this);
 		contactList = (LinearLayout)findViewById(R.id.user_home_contact_list);
+
+		/*
+		sometimes the app gets randomly killed even after saying "ignore power savings optimization".
+		since the ongoing notification goes to this screen, make sure that when it comes back from the dead,
+		the annoying android context is available. be a good zombie coming back from the dead and not crash
+		*/
+		if(Vars.applicationContext == null)
+		{
+			Vars.applicationContext = getApplicationContext();
+		}
+		sqliteDb = SQLiteDb.getInstance(getApplicationContext());
 
 		//build the contacts list if it doesn't already exist
 		if(Vars.contactTable == null)
