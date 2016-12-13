@@ -58,7 +58,7 @@ public class SQLiteDb extends SQLiteOpenHelper
 	{//http://www.androiddesignpatterns.com/2012/05/correctly-managing-your-sqlite-database.html
 		if(SQLiteDb == null)
 		{
-			SQLiteDb = new SQLiteDb(c.getApplicationContext());
+			SQLiteDb = new SQLiteDb(c);
 		}
 		return SQLiteDb;
 	}

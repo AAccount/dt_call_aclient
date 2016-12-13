@@ -46,7 +46,7 @@ public class LogViewer extends AppCompatActivity implements View.OnClickListener
 		more = (Button)findViewById(R.id.log_viewer_more);
 		more.setOnClickListener(this);
 		logTable = (LinearLayout)findViewById(R.id.log_viewer_scroller_table);
-		sqliteDb = sqliteDb.getInstance(this);
+		sqliteDb = sqliteDb.getInstance(getApplicationContext());
 
 		if(Vars.SHOUDLOG)
 		{

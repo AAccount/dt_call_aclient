@@ -157,7 +157,6 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 	protected void onPostExecute(boolean result)
 	{
-
 		//broadcast to background manager first. that way it always knows what the current state of your login and if
 		//it needs to try again. background will rebroadcast to the ui. if no ui is listening no harm.
 		Intent loginResult = new Intent(Const.BROADCAST_LOGIN_BG);

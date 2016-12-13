@@ -184,7 +184,7 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 		//the only 2 buttons are accept and reject so no matter which button is clicked, it's safe to do
 		//the reject and accept's common stuff no matter what. there will also every only be 1 click
 		//(can't reject and change your mind you actually wanted to accpet)
-		SQLiteDb sqLiteDb = SQLiteDb.getInstance(this);
+		SQLiteDb sqLiteDb = SQLiteDb.getInstance(getApplicationContext());
 		sqLiteDb.insertHistory(new History(System.currentTimeMillis(), Vars.callWith, Const.CALLINCOMING));
 		if(counter != null)
 		{

@@ -43,7 +43,7 @@ public class HistoryUI extends AppCompatActivity implements View.OnClickListener
 		historyLayout = (LinearLayout)findViewById(R.id.history_table);
 		moreHistory = (Button)findViewById(R.id.history_more);
 
-		sqLiteDb = SQLiteDb.getInstance(this);
+		sqLiteDb = SQLiteDb.getInstance(getApplicationContext());
 		dbhistory = sqLiteDb.getCallHistory();
 		addEntries(20);
 	}
