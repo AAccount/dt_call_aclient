@@ -368,7 +368,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		Thread recordThread = new Thread(new Runnable()
 		{
 			private static final String tag = "EncodingThread";
-			private static final int CLUMPSIZE = 500;
 
 			@Override
 			public void run()
@@ -377,35 +376,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 				byte[] amrbuffer = new byte[AMRBUFFERSIZE];
 				short[] wavbuffer = new short[WAVBUFFERSIZE];
-				BufferedOutputStream bufferedOutputStream = null;
-
-				//https://stackoverflow.com/questions/1846077/size-of-empty-udp-and-tcp-packet
-				//https://en.wikipedia.org/wiki/Silly_window_syndrome#Send-side_silly_window_avoidance
-				//for each 32 bytes of voice, 40bytes of header will be written which means > 50% of data IO is
-				//headers (not useful)!!! a waste of ridiculously overpriced canadian lte
-				//use the wikipedia clumping strategy
-				try
-				{
-					bufferedOutputStream = new BufferedOutputStream(Vars.mediaSocket.getOutputStream(), CLUMPSIZE);
-				}
-				catch (Exception e)
-				{
-					//no point of doing the call if the clumping strategy can't be used.
-					//don't waste data falling back to sending 32bytes @ a time. hang up and try again
-					Vars.state = CallState.NONE;
-					try
-					{//must guarantee that the sockets are killed before going to the home screen. otherwise
-						//the userhome's crash recovery won't kick in. don't leave it to dumb luck (race condition)
-						new KillSocketsAsync().execute().get();
-						onStop(); //don't know whether encode or decode will call onStop() first. the second one will get a null exception
-						//because the main ui thead will be gone after the first onStop() is called. catch the exception
-					}
-					catch (Exception e2)
-					{
-						Utils.logcat(Const.LOGE, tag, "Trying to kill sockets because of an exception but got another exception in the process");
-						Utils.dumpException(tag, e2);
-					}
-				}
 
 				//setup the wave audio recorder. since it is released and restarted, it needs to be setup here and not onCreate
 				wavRecorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, SAMPLESAMR, AudioFormat.CHANNEL_IN_MONO, FORMAT, bufferSize);
@@ -460,7 +430,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						int encodeLength = AmrEncoder.encode(AmrEncoder.Mode.MR122.ordinal(), wavbuffer, amrbuffer);
 						try
 						{
-							bufferedOutputStream.write(amrbuffer, 0, encodeLength);
+							Vars.mediaSocket.getOutputStream().write(amrbuffer, 0, encodeLength);
 						}
 						catch (Exception e)
 						{
@@ -545,7 +515,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				 * and all the missing packets are flooding. This will create an audio backlog and delay the audio from the real conversation.
 				 * Discard the audio flood and just ask "what did you say. my connection was bad"
 				 */
-				long start, elapsed, minNanos = (long)(32/3700*1000000000); //~ (5629(avg)+1764(stddev))/2
+				long start, elapsed, minNanos = 30000;
 				long amrstate = AmrDecoder.init();
 				while(Vars.state == CallState.INCALL)
 				{
@@ -572,7 +542,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						}
 						else
 						{
-							Utils.logcat(Const.LOGD, tag, "Detected rushing in of audio... probably from network lag. Discard to get to realtime position");
+							Utils.logcat(Const.LOGD, tag, "Detected rushing in of audio... " + elapsed);
 						}
 					}
 					catch (Exception i) //io or null pointer depending on when the connection dies
