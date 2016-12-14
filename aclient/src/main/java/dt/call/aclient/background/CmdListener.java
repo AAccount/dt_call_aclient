@@ -200,7 +200,7 @@ public class CmdListener extends IntentService
 								try
 								{
 									Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);
-									String associateMedia = Const.JBYTE + Utils.currentTimeSeconds() + "|" + Vars.sessionid;
+									String associateMedia = Utils.currentTimeSeconds() + "|" + Vars.sessionid;
 									Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
 								}
 								catch (CertificateException c)
@@ -232,7 +232,7 @@ public class CmdListener extends IntentService
 							try
 							{
 								Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);
-								String associateMedia = Const.JBYTE + Utils.currentTimeSeconds() + "|" + Vars.sessionid;
+								String associateMedia = Utils.currentTimeSeconds() + "|" + Vars.sessionid;
 								Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
 							}
 							catch (CertificateException c)

@@ -92,7 +92,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			//send login command
 			Vars.commandSocket = Utils.mkSocket(Vars.serverAddress, Vars.commandPort, Vars.expectedCertDump);
-			String login = Const.JBYTE + Utils.currentTimeSeconds() + "|login|" + uname + "|" + passwd;
+			String login = Utils.currentTimeSeconds() + "|login|" + uname + "|" + passwd;
 			Vars.commandSocket.getOutputStream().write(login.getBytes());
 
 			//read response
@@ -126,7 +126,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			//establish media socket
 			Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);
-			String associateMedia = Const.JBYTE + Utils.currentTimeSeconds() + "|" + Vars.sessionid;
+			String associateMedia = Utils.currentTimeSeconds() + "|" + Vars.sessionid;
 			Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
 			Vars.mediaSocket.getOutputStream().write("testing testing 1 2 3".getBytes()); //sometimes java socket craps out
 

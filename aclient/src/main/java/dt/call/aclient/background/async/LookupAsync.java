@@ -18,7 +18,7 @@ public class LookupAsync extends AsyncTask<Contact, String, Object>
 	protected Object doInBackground(Contact... params)
 	{
 		Contact lookupUser = params[0];
-		String request = Const.JBYTE + Utils.currentTimeSeconds() + "|lookup|" + lookupUser.getName() + "|" + Vars.sessionid;
+		String request = Utils.currentTimeSeconds() + "|lookup|" + lookupUser.getName() + "|" + Vars.sessionid;
 		Utils.logcat(Const.LOGD, tag, "Lookup request: " + request);
 		try
 		{

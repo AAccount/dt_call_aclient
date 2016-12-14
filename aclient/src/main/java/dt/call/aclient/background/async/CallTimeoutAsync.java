@@ -24,7 +24,7 @@ public class CallTimeoutAsync extends AsyncTask<String, String, Boolean>
 		try
 		{
 			String involved = Vars.callWith.getName();
-			String timeoutResp = Const.JBYTE + Utils.currentTimeSeconds() + "|timeout|" + involved + "|" + Vars.sessionid;
+			String timeoutResp = Utils.currentTimeSeconds() + "|timeout|" + involved + "|" + Vars.sessionid;
 			Vars.commandSocket.getOutputStream().write(timeoutResp.getBytes());
 			result = true;
 		}
