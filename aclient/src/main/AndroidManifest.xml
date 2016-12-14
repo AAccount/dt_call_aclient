@@ -130,9 +130,9 @@
                 android:value="dt.call.aclient.screens.UserHome"/>
         </activity>
 
-        <!-- Settings screen -->
+        <!-- DTSettings screen -->
         <activity
-            android:name=".screens.Settings"
+            android:name=".screens.DTSettings"
             android:label="@string/title_activity_settings"
             android:parentActivityName=".screens.UserHome">
             <meta-data

@@ -25,7 +25,7 @@ import dt.call.aclient.Vars;
 /**
  * Created by Daniel on 07/08/2016
  */
-public class Settings extends AppCompatActivity
+public class DTSettings extends AppCompatActivity
 {
 
 	@Override

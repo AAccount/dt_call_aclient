@@ -1,11 +1,7 @@
 package dt.call.aclient.screens;
 
 import android.Manifest;
-import android.app.AlarmManager;
 import android.app.AlertDialog;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -15,8 +11,11 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.ColorDrawable;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
+import android.provider.Settings;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -387,7 +386,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				reallyQuit.show();
 				return true;
 			case R.id.menu_main_settings:
-				startActivity(new Intent(this, Settings.class));
+				startActivity(new Intent(this, DTSettings.class));
 				return true;
 			case R.id.menu_main_about:
 				startActivity(new Intent(this, About.class));
