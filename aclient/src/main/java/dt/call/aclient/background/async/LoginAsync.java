@@ -5,9 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.security.cert.CertificateException;
@@ -96,9 +93,19 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			Vars.commandSocket.getOutputStream().write(login.getBytes());
 
 			//read response
-			InputStream cmdin = Vars.commandSocket.getInputStream();
-			BufferedReader cmdTxtIn = new BufferedReader(new InputStreamReader(cmdin));
-			String loginresp = cmdTxtIn.readLine();
+			byte[] responseRaw = new byte[Const.BUFFERSIZE];
+			int length = Vars.commandSocket.getInputStream().read(responseRaw);
+
+			//on the off chance the socket crapped out right from the get go, now you'll know
+			if(length < 0)
+			{
+				Utils.logcat(Const.LOGE, tag, "Socket closed before a response could be read");
+				onPostExecute(false);
+				return false;
+			}
+
+			//there's actual stuff to process, process it!
+			String loginresp = new String(responseRaw, 0, length);
 			Utils.logcat(Const.LOGD, tag, loginresp);
 
 			//process login response
@@ -128,7 +135,6 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);
 			String associateMedia = Utils.currentTimeSeconds() + "|" + Vars.sessionid;
 			Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
-			Vars.mediaSocket.getOutputStream().write("testing testing 1 2 3".getBytes()); //sometimes java socket craps out
 
 			Intent cmdListenerIntent = new Intent(Vars.applicationContext, CmdListener.class);
 			Vars.applicationContext.startService(cmdListenerIntent);

@@ -3,9 +3,7 @@ package dt.call.aclient.background;
 import android.app.IntentService;
 import android.content.Intent;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.security.cert.CertificateException;
 
 import dt.call.aclient.CallState;
@@ -25,22 +23,11 @@ public class CmdListener extends IntentService
 	private static final String tag = "CmdListener";
 
 	//copied over from jclient
-	private boolean inputValid = false; //causes the thread to stop whether for technical or paranoia
-	private BufferedReader txtin;
+	private boolean inputValid = true; //causes the thread to stop whether for technical or paranoia
 
 	public CmdListener()
 	{
 		super(tag);
-		try
-		{
-			txtin = new BufferedReader(new InputStreamReader(Vars.commandSocket.getInputStream()));
-			inputValid = true;
-		}
-		catch (Exception e)
-		{
-			Utils.dumpException(tag, e);
-			notifyDead();
-		}
 	}
 
 	@Override
@@ -68,7 +55,13 @@ public class CmdListener extends IntentService
 			try
 			{//the async magic here... it will patiently wait until something comes in
 
-				String fromServer = txtin.readLine();
+				byte[] rawString = new byte[Const.BUFFERSIZE];
+				int length = Vars.commandSocket.getInputStream().read(rawString);
+				if(length < 0)
+				{
+					throw new Exception("input stream read failed");
+				}
+				String fromServer = new String(rawString, 0, length);
 				String[] respContents = fromServer.split("\\|");
 				logd = logd +  "Server response raw: " + fromServer + "\n";
 
@@ -283,6 +276,11 @@ public class CmdListener extends IntentService
 			catch(NullPointerException n)
 			{
 				Utils.logcat(Const.LOGE, tag, "Command socket null pointer exception");
+				inputValid = false;
+			}
+			catch(Exception e)
+			{
+				Utils.logcat(Const.LOGE, tag, "Other exception");
 				inputValid = false;
 			}
 		}
