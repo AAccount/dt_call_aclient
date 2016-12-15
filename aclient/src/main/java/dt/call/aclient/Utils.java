@@ -109,7 +109,6 @@ public class Utils
 			context.init(new KeyManager[0], trustOnlyServerCert, new SecureRandom());
 			SSLSocketFactory mkssl = context.getSocketFactory();
 			Socket socket = mkssl.createSocket(host, port);
-			socket.setKeepAlive(true);
 			return socket;
 		}
 		catch (Exception e)

@@ -60,25 +60,6 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 				tryingLogin = true;
 			}
 
-			//cleanup the old stuff to make sure it's dead???
-			try
-			{
-				if(Vars.commandSocket != null)
-				{
-					Vars.commandSocket.close();
-					Vars.commandSocket = null;
-				}
-				if(Vars.mediaSocket != null)
-				{
-					Vars.mediaSocket.close();
-					Vars.mediaSocket = null;
-				}
-			}
-			catch (Exception e)
-			{
-				Utils.logcat(Const.LOGE, tag, "problems closing open sockets before attempting login: ");
-				Utils.dumpException(tag, e);
-			}
 
 			//http://stackoverflow.com/a/34228756
 			//check if server is available first before committing to anything
@@ -118,7 +99,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			}
 			if(!(respContents[1].equals("resp") && respContents[2].equals("login")))
 			{
-				Utils.logcat(Const.LOGW, tag, "Server response CONTENTS imporperly formateed");
+				Utils.logcat(Const.LOGW, tag, "Server response CONTENTS imporperly formated");
 				onPostExecute(false); //server response doesn't make sense
 				return false;
 			}
