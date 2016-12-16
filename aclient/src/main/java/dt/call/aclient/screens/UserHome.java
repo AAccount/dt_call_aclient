@@ -77,10 +77,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		since the ongoing notification goes to this screen, make sure that when it comes back from the dead,
 		the annoying android context is available. be a good zombie coming back from the dead and not crash
 		*/
-		if(Vars.applicationContext == null)
-		{
-			Vars.applicationContext = getApplicationContext();
-		}
+		Vars.applicationContext = getApplicationContext();
 		sqliteDb = SQLiteDb.getInstance(getApplicationContext());
 
 		//build the contacts list if it doesn't already exist
