@@ -60,14 +60,6 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 				tryingLogin = true;
 			}
 
-
-			//http://stackoverflow.com/a/34228756
-			//check if server is available first before committing to anything
-			//	otherwise this process will stall. host not available trips timeout exception
-			Socket diag = new Socket();
-			diag.connect(new InetSocketAddress(Vars.serverAddress, Vars.commandPort), TIMEOUT);
-			diag.close();
-
 			//send login command
 			Vars.commandSocket = Utils.mkSocket(Vars.serverAddress, Vars.commandPort, Vars.expectedCertDump);
 			String login = Utils.currentTimeSeconds() + "|login|" + uname + "|" + passwd;
