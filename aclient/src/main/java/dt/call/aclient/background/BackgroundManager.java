@@ -49,18 +49,31 @@ public class BackgroundManager extends BroadcastReceiver
 		String action = intent.getAction();
 		if(action.equals(ConnectivityManager.CONNECTIVITY_ACTION))
 		{
-			manager.cancel(Vars.pendingHeartbeat);
-			manager.cancel(Vars.pendingRetries);
-
 			if(Utils.hasInternet())
 			{
 				//internet reconnected case
-				Utils.logcat(Const.LOGD, tag, "internet was reconnected");
-				new LoginAsync(Vars.uname, Vars.passwd).execute();
+				if(Vars.commandSocket == null)
+				{
+					/* For the Moto G3 on CM13.1 sometimes the cell signal dies momentarily (tower switch?) while driving
+					 * and then comes back. It only announces a connectivity action when it reconnects (not when it dies).
+					 * It appears the connection is still good. Don't try to relogin unless going from real no internet --> internet.
+					 *
+					 * Relogging in while the connections are still good and command lister is active causes undefined weird behavior.
+					 * Command listenter reliably dies when there is no internet. Null command socket should be a good indicator if this
+					 * is really the case of no internet --> internet.
+					 */
+					manager.cancel(Vars.pendingHeartbeat);
+					manager.cancel(Vars.pendingRetries);
+
+					Utils.logcat(Const.LOGD, tag, "internet was reconnected");
+					new LoginAsync(Vars.uname, Vars.passwd).execute();
+				}
 			}
 			else
 			{
 				Utils.logcat(Const.LOGD, tag, "android detected internet loss");
+				manager.cancel(Vars.pendingHeartbeat);
+				manager.cancel(Vars.pendingRetries);
 			}
 			//command listener does a better of job of figuring when the internet died than android's connectivity manager.
 			//android's connectivity manager doesn't always react to subway internet loss
