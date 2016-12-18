@@ -297,15 +297,17 @@ public class Utils
 		boolean result = (networkInfo != null) && (networkInfo.getDetailedState() == NetworkInfo.DetailedState.CONNECTED);
 
 		//print the network info or null if there isn't any for subway debugging
-		if(networkInfo!= null)
+		if(!result)
 		{
-			logcat(Const.LOGD, tag, "has internet: " + networkInfo.toString());
+			if (networkInfo != null)
+			{
+				logcat(Const.LOGD, tag, "network info: " + networkInfo.toString());
+			}
+			else
+			{
+				logcat(Const.LOGD, tag, "networkInfo is NULL 0x0");
+			}
 		}
-		else
-		{
-			logcat(Const.LOGD, tag, "DOESN'T have internet: " + "networkInfo is NULL 0x0");
-		}
-
 		return result;
 	}
 
