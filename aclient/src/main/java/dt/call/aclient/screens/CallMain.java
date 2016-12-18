@@ -29,7 +29,6 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -41,7 +40,6 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.CallEndAsync;
 import dt.call.aclient.background.async.CallTimeoutAsync;
-import dt.call.aclient.background.async.KillSocketsAsync;
 import io.kvh.media.amr.AmrDecoder;
 import io.kvh.media.amr.AmrEncoder;
 
@@ -474,17 +472,18 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			private void endThread()
 			{
 				Vars.state = CallState.NONE;
+				//must guarantee that the sockets are killed before going to the home screen. otherwise
+				//the userhome's crash recovery won't kick in. don't leave it to dumb luck (race condition)
+				Utils.killSockets();
+
 				try
-				{//must guarantee that the sockets are killed before going to the home screen. otherwise
-					//the userhome's crash recovery won't kick in. don't leave it to dumb luck (race condition)
-					new KillSocketsAsync().execute().get();
-					onStop(); //don't know whether encode or decode will call onStop() first. the second one will get a null exception
-					//because the main ui thead will be gone after the first onStop() is called. catch the exception
-				}
-				catch (Exception e2)
 				{
-					Utils.logcat(Const.LOGE, tag, "Trying to kill sockets because of an exception but got another exception in the process");
-					Utils.dumpException(tag, e2);
+					onStop();
+				}
+				catch (Exception e)
+				{
+					//don't know whether encode or decode will call onStop() first. the second one will get a null exception
+					//because the main ui thead will be gone after the first onStop() is called. catch the exception
 				}
 			}
 		});
@@ -555,16 +554,17 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						//
 						//kill the sockets so that UserHome's crash recovery will reinitialize them
 						Vars.state = CallState.NONE;
+						//must guarantee that the sockets are killed before going to the home screen. otherwise
+						//the userhome's crash recovery won't kick in. don't leave it to dumb luck (race condition)
+						Utils.killSockets();
+
 						try
-						{//must guarantee that the sockets are killed before going to the home screen. otherwise
-							//the userhome's crash recovery won't kick in. don't leave it to dumb luck (race condition)
-							new KillSocketsAsync().execute().get();
-							onStop(); //see encoder thread for why onStop() is called in a try
+						{
+							onStop();
 						}
 						catch (Exception e)
 						{
-							Utils.logcat(Const.LOGE, tag, "Trying to kill sockets because of an exception but got another exception in the process");
-							Utils.dumpException(tag, e);
+							//see encoder thread for why onStop() is called in a try
 						}
 					}
 				}

@@ -33,7 +33,6 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 import dt.call.aclient.background.BackgroundManager;
-import dt.call.aclient.background.async.KillSocketsAsync;
 import dt.call.aclient.screens.CallIncoming;
 import dt.call.aclient.screens.CallMain;
 import dt.call.aclient.screens.UserHome;
@@ -278,7 +277,7 @@ public class Utils
 		Vars.applicationContext.getPackageManager().setComponentEnabledSetting(backgroundManager, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
 
 		//get rid of the sockets
-		new KillSocketsAsync().execute();
+		killSockets();
 
 		//https://stackoverflow.com/questions/3226495/android-exit-application-code
 		//basically a way to get out of aclient
@@ -323,6 +322,27 @@ public class Utils
 		else
 		{
 			alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + timeFromNow, operation);
+		}
+	}
+
+	public static void killSockets()
+	{
+		try
+		{//kill both connections to force stop threads listening/using into an exception
+			if(Vars.commandSocket != null)
+			{
+				Vars.commandSocket.close();
+			}
+			if(Vars.mediaSocket != null)
+			{
+				Vars.mediaSocket.close();
+			}
+			Vars.commandSocket = null;
+			Vars.mediaSocket = null;
+		}
+		catch (Exception e)
+		{
+			dumpException(tag, e);
 		}
 	}
 }

@@ -25,8 +25,8 @@ public class Vars
 	public static long sessionid = -1;
 
 	//2 sockets
-	public static Socket commandSocket;
-	public static Socket mediaSocket;
+	public static Socket commandSocket = null;
+	public static Socket mediaSocket = null;
 
 	//call related information
 	public volatile static CallState state = CallState.NONE;

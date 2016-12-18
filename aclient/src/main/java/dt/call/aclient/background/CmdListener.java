@@ -284,7 +284,26 @@ public class CmdListener extends IntentService
 				inputValid = false;
 			}
 		}
-		notifyDead();
+
+		//only 1 case where you don't want to restart the command listener: quitting the app.
+		//the utils.quit function disables BackgroundManager first before killing the sockets
+		//that way when this dies, nobody will answer the command listener dead broadcast
+		Utils.logcat(Const.LOGE, tag, "broadcasting dead command listner");
+		try
+		{
+			//must close sockets ASAP
+			Vars.mediaSocket.close();
+			Vars.commandSocket.close();
+			Vars.mediaSocket = null;
+			Vars.commandSocket = null;
+			Intent deadBroadcast = new Intent(Const.BROADCAST_BK_CMDDEAD);
+			sendBroadcast(deadBroadcast);
+		}
+		catch (Exception e)
+		{
+			Utils.logcat(Const.LOGE, tag, "couldn't broadcast dead command listener... leftover broadacast from java socket stupidities?");
+			Utils.dumpException(tag, e);
+		}
 	}
 
 	/**
@@ -323,24 +342,5 @@ public class CmdListener extends IntentService
 			return;
 		}
 		sendBroadcast(stateChange);
-	}
-
-	private void notifyDead()
-	{
-		//only 1 case where you don't want to restart the command listener: quitting the app.
-		//the utils.quit function disables BackgroundManager first before killing the sockets
-		//that way when this dies, nobody will answer the command listener dead broadcast
-
-		Utils.logcat(Const.LOGE, tag, "broadcasting dead command listner");
-		try
-		{
-			Intent deadBroadcast = new Intent(Const.BROADCAST_BK_CMDDEAD);
-			sendBroadcast(deadBroadcast);
-		}
-		catch (Exception e)
-		{
-			Utils.logcat(Const.LOGE, tag, "couldn't broadcast dead command listener... leftover broadacast from java socket stupidities?");
-			Utils.dumpException(tag, e);
-		}
 	}
 }

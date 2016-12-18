@@ -72,6 +72,8 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			//on the off chance the socket crapped out right from the get go, now you'll know
 			if(length < 0)
 			{
+				Vars.commandSocket.close();
+				Vars.commandSocket = null;
 				Utils.logcat(Const.LOGE, tag, "Socket closed before a response could be read");
 				onPostExecute(false);
 				return false;

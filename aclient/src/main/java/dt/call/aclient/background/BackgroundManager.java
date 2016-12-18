@@ -6,8 +6,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.os.Bundle;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
@@ -15,7 +13,6 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.HeartBeatAsync;
-import dt.call.aclient.background.async.KillSocketsAsync;
 import dt.call.aclient.background.async.LoginAsync;
 import dt.call.aclient.screens.InitialServer;
 
@@ -54,7 +51,6 @@ public class BackgroundManager extends BroadcastReceiver
 		{
 			manager.cancel(Vars.pendingHeartbeat);
 			manager.cancel(Vars.pendingRetries);
-			new KillSocketsAsync().execute();
 
 			if(Utils.hasInternet())
 			{
@@ -67,7 +63,7 @@ public class BackgroundManager extends BroadcastReceiver
 				Utils.logcat(Const.LOGD, tag, "android detected internet loss");
 			}
 			//command listener does a better of job of figuring when the internet died than android's connectivity manager.
-			//android's connectivity manager doesn't always get subway internet loss
+			//android's connectivity manager doesn't always react to subway internet loss
 		}
 		else if (action.equals(Const.BROADCAST_BK_CMDDEAD))
 		{
@@ -76,20 +72,23 @@ public class BackgroundManager extends BroadcastReceiver
 			//set persistent notification as offline for now while reconnect is trying
 			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
 
-			//cleanup the pending intents and make sure the old sockets are gone before making new ones
+			//cleanup the pending intents
 			manager.cancel(Vars.pendingHeartbeat);
 			manager.cancel(Vars.pendingRetries);
-			new KillSocketsAsync().execute(); //make sure everything is good and dead
 
 			//all of this just to address the stupid java socket issue where it might just endlessly die/reconnect
 			//initialize the quick dead count and timestamp if this is the first time
 			long now = System.currentTimeMillis();
 			long deadDiff =  now - Vars.lastDead;
 			Vars.lastDead = now;
-			if(deadDiff < Const.QUICK_DEAD_THRESHOLD)
+			if(deadDiff <= Const.QUICK_DEAD_THRESHOLD)
 			{
 				Vars.quickDeadCount++;
 				loge = loge + "Another quick death (java socket stupidity) occured. Current count: " + Vars.quickDeadCount + "\n";
+			}
+			else
+			{
+				Vars.quickDeadCount = 0;
 			}
 
 			//with the latest quick death, was it 1 too many? if so restart the app
