@@ -277,7 +277,16 @@ public class Utils
 		Vars.applicationContext.getPackageManager().setComponentEnabledSetting(backgroundManager, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
 
 		//get rid of the sockets
-		killSockets();
+		Thread killSockets = new Thread(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				killSockets();
+			}
+		});
+		killSockets.setName("Utils.quit.killSockets");
+		killSockets.start();
 
 		//https://stackoverflow.com/questions/3226495/android-exit-application-code
 		//basically a way to get out of aclient
