@@ -85,9 +85,8 @@ public class BackgroundManager extends BroadcastReceiver
 			//set persistent notification as offline for now while reconnect is trying
 			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
 
-			//cleanup the pending intents
-			manager.cancel(Vars.pendingHeartbeat);
-			manager.cancel(Vars.pendingRetries);
+			//pending intents cancelled by command listener to prevent a timing problem where sockets are closed at the same
+			//time a heart beat pending intent is fired.
 
 			//all of this just to address the stupid java socket issue where it might just endlessly die/reconnect
 			//initialize the quick dead count and timestamp if this is the first time

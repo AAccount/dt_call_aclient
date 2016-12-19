@@ -1,6 +1,8 @@
 package dt.call.aclient.background;
 
+import android.app.AlarmManager;
 import android.app.IntentService;
+import android.content.Context;
 import android.content.Intent;
 
 import java.io.IOException;
@@ -291,6 +293,12 @@ public class CmdListener extends IntentService
 		Utils.logcat(Const.LOGE, tag, "broadcasting dead command listner");
 		try
 		{
+			//cleanup the pending intents now that the sockets are unsable. also must do asap to prevent
+			//timing problems where socket close and pending intent happen at the same time.
+			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+			manager.cancel(Vars.pendingHeartbeat);
+			manager.cancel(Vars.pendingRetries);
+
 			//must close sockets ASAP
 			Vars.mediaSocket.close();
 			Vars.commandSocket.close();
