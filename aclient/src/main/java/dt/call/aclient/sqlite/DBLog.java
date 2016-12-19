@@ -15,7 +15,7 @@ public class DBLog implements Serializable
 	private String tag;
 	private SimpleDateFormat dateOnlyFormat = new SimpleDateFormat("EEEE MMMM dd, yyyy", Locale.US);
 	private SimpleDateFormat timeOnlyFormat = new SimpleDateFormat("HH:mm:ss ZZZZ", Locale.US);
-	private SimpleDateFormat shortFormat = new SimpleDateFormat("MMM dd @ HH:mm", Locale.US);
+	private SimpleDateFormat shortFormat = new SimpleDateFormat("MMM dd @ HH:mm:ss", Locale.US);
 
 	public DBLog(String ctag, String cmsg)
 	{
