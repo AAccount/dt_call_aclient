@@ -1,5 +1,7 @@
 package dt.call.aclient;
 
+import android.os.Build;
+
 import dt.call.aclient.sqlite.Contact;
 
 /**
@@ -9,6 +11,8 @@ import dt.call.aclient.sqlite.Contact;
  */
 public class Const
 {
+	public static final String PACKAGE_NAME = "dt.call.aclient";
+
 	//shared preference keys
 	public static final String PREFSFILE = "call_prefs"; //file name of the shared preferences
 	public static final String PREF_ADDR = "server_address";
@@ -43,7 +47,7 @@ public class Const
 	public static final int LOG_LIMIT = 350;
 
 	//when cmd listener dies
-	public static final String BROADCAST_BK_CMDDEAD = "cmd_dead";
+	public static final String BROADCAST_BK_CMDDEAD = "dt.call.aclient.cmd_dead";
 
 	//call history types
 	public static final int CALLOUTGOING = 1;
@@ -54,15 +58,19 @@ public class Const
 	//both need the call end signal
 	// (either the person hung or changed his mind and cancelled before you answered)
 	//only call main responds to call accept
-	public static final String BROADCAST_CALL = "notify_call_info";
+	public static final String BROADCAST_CALL = "dt.call.aclient.notify_call_info";
 	public static final String BROADCAST_CALL_RESP = "call_response";
 	public static final String BROADCAST_CALL_START = "start";
 	public static final String BROADCAST_CALL_END = "end";
 
 	//broadcasting login result
-	public static final String BROADCAST_LOGIN_FG = "broadcast_login_foreground";
-	public static final String BROADCAST_LOGIN_BG = "broadcast_login_background";
+	public static final String BROADCAST_LOGIN_FG = "dt.call.aclient.broadcast_login_foreground";
+	public static final String BROADCAST_LOGIN_BG = "dt.call.aclient.broadcast_login_background";
 	public static final String BROADCAST_LOGIN_RESULT = "login_result";
+
+	//app specific broadcast of internet reconnected
+	public static final String BROADCAST_HAS_INTERNET = "dt.call.aclient.HAS_INTERNET";
+	public static final int MINVER_MANUAL_HAS_INTERNET = Build.VERSION_CODES.M;
 
 	//log related strings
 	public static final String EXTRA_LOG = "log_obj";

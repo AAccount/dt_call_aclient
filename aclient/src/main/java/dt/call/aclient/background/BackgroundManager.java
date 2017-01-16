@@ -2,10 +2,14 @@ package dt.call.aclient.background;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
+import android.os.Build;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
@@ -47,7 +51,20 @@ public class BackgroundManager extends BroadcastReceiver
 		}
 
 		String action = intent.getAction();
-		if(action.equals(ConnectivityManager.CONNECTIVITY_ACTION))
+
+		//to prevent timing problems, if android's connectivity_action AND workaround HAS_INTERNET broadcast are available
+		//to signal return of internet connectivity, only listen for one of them.
+		String connectivity;
+		if(Build.VERSION.SDK_INT >= Const.MINVER_MANUAL_HAS_INTERNET)
+		{
+			connectivity = Const.BROADCAST_HAS_INTERNET;
+		}
+		else
+		{
+			connectivity = ConnectivityManager.CONNECTIVITY_ACTION;
+		}
+
+		if(action.equals(connectivity))
 		{
 			if(Utils.hasInternet())
 			{
@@ -65,7 +82,7 @@ public class BackgroundManager extends BroadcastReceiver
 					manager.cancel(Vars.pendingHeartbeat);
 					manager.cancel(Vars.pendingRetries);
 
-					Utils.logcat(Const.LOGD, tag, "internet was reconnected");
+					Utils.logcat(Const.LOGD, tag, "internet was reconnected by broadcast: " + connectivity);
 					new LoginAsync(Vars.uname, Vars.passwd).execute();
 				}
 			}
@@ -128,6 +145,16 @@ public class BackgroundManager extends BroadcastReceiver
 			if(!Utils.hasInternet())
 			{
 				Utils.logcat(Const.LOGD, tag, "No internet detected from commnad listener dead");
+
+				//for android 7.0+ manually trigger a "connectivity action" when the internet comes back to sign on again
+				if(Build.VERSION.SDK_INT >= Const.MINVER_MANUAL_HAS_INTERNET)
+				{
+					ComponentName jobServiceReceiver = new ComponentName(Const.PACKAGE_NAME, JobServiceReceiver.class.getName());
+					JobInfo.Builder builder = new JobInfo.Builder(1, jobServiceReceiver).setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
+					builder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
+					JobScheduler jobScheduler = (JobScheduler)Vars.applicationContext.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+					jobScheduler.schedule(builder.build());
+				}
 				return;
 			}
 

@@ -29,8 +29,9 @@
         <receiver android:name=".background.BackgroundManager">
             <intent-filter>
                 <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
-                <action android:name="cmd_dead"/>
-                <action android:name="broadcast_login_background"/>
+                <action android:name="dt.call.aclient.cmd_dead"/>
+                <action android:name="dt.call.aclient.broadcast_login_background"/>
+                <action android:name="dt.call.aclient.HAS_INTERNET"/>
             </intent-filter>
         </receiver>
 
@@ -38,6 +39,12 @@
         <service
             android:name=".background.CmdListener"
             android:exported="false"/>
+
+        <!-- Manual workaround for CONNECTIVITY_CHANGE disappearing in android 7.0+ -->
+        <service
+            android:name=".background.JobServiceReceiver"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            />
 
         <!-- First run server information screen -->
         <activity
