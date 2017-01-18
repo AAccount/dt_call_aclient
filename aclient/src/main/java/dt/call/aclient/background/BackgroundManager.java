@@ -91,6 +91,11 @@ public class BackgroundManager extends BroadcastReceiver
 				Utils.logcat(Const.LOGD, tag, "android detected internet loss");
 				manager.cancel(Vars.pendingHeartbeat);
 				manager.cancel(Vars.pendingRetries);
+
+				//for newer android versions if has_internet was broadcasted but upon checking there is actually no internet
+				//that means the connection came back very momentarily (random part of a subway tunnel, typical crappy University
+				// of Toronto CS building wifi). In this case, setup a manual has_internet again for when the connection comes back.
+				maybeSetupManualHasInternet();
 			}
 			//command listener does a better of job of figuring when the internet died than android's connectivity manager.
 			//android's connectivity manager doesn't always react to subway internet loss
@@ -105,6 +110,7 @@ public class BackgroundManager extends BroadcastReceiver
 			//pending intents cancelled by command listener to prevent a timing problem where sockets are closed at the same
 			//time a heart beat pending intent is fired.
 
+			/****************************************************************************************************************/
 			//all of this just to address the stupid java socket issue where it might just endlessly die/reconnect
 			//initialize the quick dead count and timestamp if this is the first time
 			long now = System.currentTimeMillis();
@@ -140,21 +146,16 @@ public class BackgroundManager extends BroadcastReceiver
 			{ //app does not need to restart. still record the accumulated error messages
 				Utils.logcat(Const.LOGE, tag, loge);
 			}
+			/****************************************************************************************************************/
 
 			//if the network is dead then don't bother
 			if(!Utils.hasInternet())
 			{
 				Utils.logcat(Const.LOGD, tag, "No internet detected from commnad listener dead");
 
-				//for android 7.0+ manually trigger a "connectivity action" when the internet comes back to sign on again
-				if(Build.VERSION.SDK_INT >= Const.MINVER_MANUAL_HAS_INTERNET)
-				{
-					ComponentName jobServiceReceiver = new ComponentName(Const.PACKAGE_NAME, JobServiceReceiver.class.getName());
-					JobInfo.Builder builder = new JobInfo.Builder(1, jobServiceReceiver).setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
-					builder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
-					JobScheduler jobScheduler = (JobScheduler)Vars.applicationContext.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-					jobScheduler.schedule(builder.build());
-				}
+				//Command listener is dead and there is no internet to restart it. For newer android versions
+				//setup a job to notify the app when internet does come back to try and sign in again.
+				maybeSetupManualHasInternet();
 				return;
 			}
 
@@ -200,6 +201,20 @@ public class BackgroundManager extends BroadcastReceiver
 			{
 				Utils.setExactWakeup(Const.RETRY_FREQ, Vars.pendingRetries);
 			}
+		}
+	}
+
+	//for android 7.0+ manually trigger a "connectivity action" when the internet comes back to sign on again
+	private void maybeSetupManualHasInternet()
+	{
+		if(Build.VERSION.SDK_INT >= Const.MINVER_MANUAL_HAS_INTERNET)
+		{
+			ComponentName jobServiceReceiver = new ComponentName(Const.PACKAGE_NAME, JobServiceReceiver.class.getName());
+			JobInfo.Builder builder = new JobInfo.Builder(1, jobServiceReceiver).setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
+			builder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
+			JobScheduler jobScheduler = (JobScheduler)Vars.applicationContext.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+			int result = jobScheduler.schedule(builder.build());
+			Utils.logcat(Const.LOGD, tag, "putting in a new job with status: " + result);
 		}
 	}
 }

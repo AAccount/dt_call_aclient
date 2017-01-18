@@ -5,6 +5,7 @@ import android.app.job.JobService;
 import android.content.Intent;
 
 import dt.call.aclient.Const;
+import dt.call.aclient.Utils;
 
 /**
  * Created by Daniel on 1/15/17.
@@ -16,9 +17,12 @@ import dt.call.aclient.Const;
 
 public class JobServiceReceiver extends JobService
 {
+	public static final String tag = "JobServiceReceiver";
+
 	@Override
 	public boolean onStartJob(JobParameters params)
 	{
+		Utils.logcat(Const.LOGD, tag, "received job");
 		Intent hasInternet = new Intent(Const.BROADCAST_HAS_INTERNET);
 		sendBroadcast(hasInternet);
 		return false;
