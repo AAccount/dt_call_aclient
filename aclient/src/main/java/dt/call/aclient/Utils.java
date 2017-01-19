@@ -339,21 +339,29 @@ public class Utils
 	public static void killSockets()
 	{
 		try
-		{//kill both connections to force stop threads listening/using into an exception
+		{
 			if(Vars.commandSocket != null)
 			{
 				Vars.commandSocket.close();
 			}
-			if(Vars.mediaSocket != null)
-			{
-				Vars.mediaSocket.close();
-			}
-			Vars.commandSocket = null;
-			Vars.mediaSocket = null;
 		}
 		catch (Exception e)
 		{
 			dumpException(tag, e);
 		}
+		Vars.commandSocket = null;
+
+		try
+		{
+			if(Vars.mediaSocket != null)
+			{
+				Vars.mediaSocket.close();
+			}
+		}
+		catch (Exception e)
+		{
+			dumpException(tag, e);
+		}
+		Vars.mediaSocket = null;
 	}
 }

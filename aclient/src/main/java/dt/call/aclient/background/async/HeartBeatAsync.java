@@ -36,23 +36,32 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 
 			//KillSocketsAsync
 			try
-			{//kill both connections to force stop threads listening/using into an exception
+			{
 				if(Vars.commandSocket != null)
 				{
 					Vars.commandSocket.close();
 				}
-				if(Vars.mediaSocket != null)
-				{
-					Vars.mediaSocket.close();
-				}
-				Vars.commandSocket = null;
-				Vars.mediaSocket = null;
 			}
 			catch (Exception e2)
 			{
 				Utils.logcat(Const.LOGE, tag, "inner exception problem");
 				Utils.dumpException(tag, e2);
 			}
+			Vars.commandSocket = null;
+
+			try
+			{
+				if(Vars.mediaSocket != null)
+				{
+					Vars.mediaSocket.close();
+				}
+			}
+			catch (Exception e3)
+			{
+				Utils.logcat(Const.LOGE, tag, "inner exception problem");
+				Utils.dumpException(tag, e3);
+			}
+			Vars.mediaSocket = null;
 			return false;
 		}
 	}
