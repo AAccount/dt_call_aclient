@@ -291,27 +291,42 @@ public class CmdListener extends IntentService
 		//the utils.quit function disables BackgroundManager first before killing the sockets
 		//that way when this dies, nobody will answer the command listener dead broadcast
 		Utils.logcat(Const.LOGE, tag, "broadcasting dead command listner");
+
+		//cleanup the pending intents now that the sockets are unsable. also must do asap to prevent
+		//timing problems where socket close and pending intent happen at the same time.
+		AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+		manager.cancel(Vars.pendingHeartbeat);
+		manager.cancel(Vars.pendingRetries);
+
 		try
 		{
-			//cleanup the pending intents now that the sockets are unsable. also must do asap to prevent
-			//timing problems where socket close and pending intent happen at the same time.
-			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
-			manager.cancel(Vars.pendingHeartbeat);
-			manager.cancel(Vars.pendingRetries);
-
-			//must close sockets ASAP
-			Vars.mediaSocket.close();
-			Vars.commandSocket.close();
-			Vars.mediaSocket = null;
-			Vars.commandSocket = null;
-			Intent deadBroadcast = new Intent(Const.BROADCAST_BK_CMDDEAD);
-			sendBroadcast(deadBroadcast);
+			if(Vars.commandSocket != null)
+			{
+				Vars.commandSocket.close();
+			}
 		}
-		catch (Exception e)
+		catch (Exception e2)
 		{
-			Utils.logcat(Const.LOGE, tag, "couldn't broadcast dead command listener... leftover broadacast from java socket stupidities?");
-			Utils.dumpException(tag, e);
+			Utils.logcat(Const.LOGE, tag, "problem closing command socket from dead command listener");
+			Utils.dumpException(tag, e2);
 		}
+		Vars.commandSocket = null;
+
+		try
+		{
+			if(Vars.mediaSocket != null)
+			{
+				Vars.mediaSocket.close();
+			}
+		}
+		catch (Exception e3)
+		{
+			Utils.logcat(Const.LOGE, tag, "problem closing associated media socket from dead command listener");
+			Utils.dumpException(tag, e3);
+		}
+
+		Intent deadBroadcast = new Intent(Const.BROADCAST_BK_CMDDEAD);
+		sendBroadcast(deadBroadcast);
 	}
 
 	/**
