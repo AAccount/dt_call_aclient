@@ -89,13 +89,7 @@ public class BackgroundManager extends BroadcastReceiver
 			else
 			{
 				Utils.logcat(Const.LOGD, tag, "android detected internet loss");
-				manager.cancel(Vars.pendingHeartbeat);
-				manager.cancel(Vars.pendingRetries);
-
-				//for newer android versions if has_internet was broadcasted but upon checking there is actually no internet
-				//that means the connection came back very momentarily (random part of a subway tunnel, typical crappy University
-				// of Toronto CS building wifi). In this case, setup a manual has_internet again for when the connection comes back.
-				maybeSetupManualHasInternet();
+				handleNoInternet();
 			}
 			//command listener does a better of job of figuring when the internet died than android's connectivity manager.
 			//android's connectivity manager doesn't always react to subway internet loss
@@ -152,10 +146,7 @@ public class BackgroundManager extends BroadcastReceiver
 			if(!Utils.hasInternet())
 			{
 				Utils.logcat(Const.LOGD, tag, "No internet detected from commnad listener dead");
-
-				//Command listener is dead and there is no internet to restart it. For newer android versions
-				//setup a job to notify the app when internet does come back to try and sign in again.
-				maybeSetupManualHasInternet();
+				handleNoInternet();
 				return;
 			}
 
@@ -171,6 +162,19 @@ public class BackgroundManager extends BroadcastReceiver
 			else if (!Utils.hasInternet())
 			{
 				Utils.logcat(Const.LOGW, tag, "no internet to send heart beat on");
+
+				//heart beat is the ONLY action where the sockets could be live. get rid of them if there is no internet
+				// command listener dead (dead by definition), login retry (login failed, no sockets)
+				// login bg (failure will issue a retry, success means everything is ok) has_internet(coming from previously dead)
+				new Thread(new Runnable()
+				{
+					@Override
+					public void run()
+					{
+						Utils.killSockets();
+					}
+				}).start();
+				handleNoInternet();
 			}
 		}
 		else if (action.equals(Const.ALARM_ACTION_RETRY))
@@ -181,7 +185,7 @@ public class BackgroundManager extends BroadcastReceiver
 			if(!Utils.hasInternet())
 			{
 				Utils.logcat(Const.LOGD, tag, "no internet for sign in retry");
-				manager.cancel(Vars.pendingRetries);
+				handleNoInternet();
 				return;
 			}
 
@@ -204,9 +208,13 @@ public class BackgroundManager extends BroadcastReceiver
 		}
 	}
 
-	//for android 7.0+ manually trigger a "connectivity action" when the internet comes back to sign on again
-	private void maybeSetupManualHasInternet()
+	private void handleNoInternet()
 	{
+		AlarmManager manager = (AlarmManager)Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+		manager.cancel(Vars.pendingHeartbeat);
+		manager.cancel(Vars.pendingRetries);
+
+		//for android 7.0+ manually trigger a "connectivity action" when the internet comes back to sign on again
 		if(Build.VERSION.SDK_INT >= Const.MINVER_MANUAL_HAS_INTERNET)
 		{
 			ComponentName jobServiceReceiver = new ComponentName(Const.PACKAGE_NAME, JobServiceReceiver.class.getName());
