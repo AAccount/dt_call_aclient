@@ -89,7 +89,7 @@ public class BackgroundManager extends BroadcastReceiver
 			else
 			{
 				Utils.logcat(Const.LOGD, tag, "android detected internet loss");
-				handleNoInternet();
+				handleNoInternet(context);
 			}
 			//command listener does a better of job of figuring when the internet died than android's connectivity manager.
 			//android's connectivity manager doesn't always react to subway internet loss
@@ -146,7 +146,7 @@ public class BackgroundManager extends BroadcastReceiver
 			if(!Utils.hasInternet())
 			{
 				Utils.logcat(Const.LOGD, tag, "No internet detected from commnad listener dead");
-				handleNoInternet();
+				handleNoInternet(context);
 				return;
 			}
 
@@ -174,7 +174,7 @@ public class BackgroundManager extends BroadcastReceiver
 						Utils.killSockets();
 					}
 				}).start();
-				handleNoInternet();
+				handleNoInternet(context);
 			}
 		}
 		else if (action.equals(Const.ALARM_ACTION_RETRY))
@@ -185,7 +185,7 @@ public class BackgroundManager extends BroadcastReceiver
 			if(!Utils.hasInternet())
 			{
 				Utils.logcat(Const.LOGD, tag, "no internet for sign in retry");
-				handleNoInternet();
+				handleNoInternet(context);
 				return;
 			}
 
@@ -208,9 +208,9 @@ public class BackgroundManager extends BroadcastReceiver
 		}
 	}
 
-	private void handleNoInternet()
+	private void handleNoInternet(Context mainContext)
 	{
-		AlarmManager manager = (AlarmManager)Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+		AlarmManager manager = (AlarmManager)mainContext.getSystemService(Context.ALARM_SERVICE);
 		manager.cancel(Vars.pendingHeartbeat);
 		manager.cancel(Vars.pendingRetries);
 
@@ -220,7 +220,7 @@ public class BackgroundManager extends BroadcastReceiver
 			ComponentName jobServiceReceiver = new ComponentName(Const.PACKAGE_NAME, JobServiceReceiver.class.getName());
 			JobInfo.Builder builder = new JobInfo.Builder(1, jobServiceReceiver).setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
 			builder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
-			JobScheduler jobScheduler = (JobScheduler)Vars.applicationContext.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+			JobScheduler jobScheduler = (JobScheduler)mainContext.getSystemService(Context.JOB_SCHEDULER_SERVICE);
 			int result = jobScheduler.schedule(builder.build());
 			Utils.logcat(Const.LOGD, tag, "putting in a new job with status: " + result);
 		}
