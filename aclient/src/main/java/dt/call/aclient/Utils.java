@@ -268,9 +268,12 @@ public class Utils
 		}
 
 		//Kill alarms
-		AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
-		manager.cancel(Vars.pendingHeartbeat);
-		manager.cancel(Vars.pendingRetries);
+		if(Vars.pendingHeartbeat != null && Vars.pendingRetries != null)
+		{
+			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+			manager.cancel(Vars.pendingHeartbeat);
+			manager.cancel(Vars.pendingRetries);
+		}
 
 		//prevent background manager from restarting command listener when sockets kill async is called
 		ComponentName backgroundManager = new ComponentName(Vars.applicationContext, BackgroundManager.class);
