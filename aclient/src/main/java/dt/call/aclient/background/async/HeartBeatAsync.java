@@ -21,10 +21,10 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 	{
 		try
 		{
-			Utils.logcat(Const.LOGD, tag, "trying to send heart beat");
 			Vars.commandSocket.getOutputStream().write(Const.JBYTE.getBytes());
 			Vars.mediaSocket.getOutputStream().write(Const.JBYTE.getBytes());
 			Utils.setExactWakeup(Const.HEARTBEAT_FREQ, Vars.pendingHeartbeat);
+			Utils.logcat(Const.LOGD, tag, "heart beat sent and ok");
 			return true;
 		}
 		catch (Exception e)
