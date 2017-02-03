@@ -60,8 +60,10 @@ public class Vars
 	//http://javatechig.com/android/repeat-alarm-example-in-android
 	public static Intent retries = null;
 	public static PendingIntent pendingRetries = null;
+	public static PendingIntent pendingRetries2ndary = null;
 	public static Intent heartbeat = null;
 	public static PendingIntent pendingHeartbeat = null;
+	public static PendingIntent pendingHeartbeat2ndary = null;
 
 	//for keeping track of when the last cmd listener dead happened. allows the app to detect the stupid java socket connect/die quick cycle
 	public static long lastDead = 0;

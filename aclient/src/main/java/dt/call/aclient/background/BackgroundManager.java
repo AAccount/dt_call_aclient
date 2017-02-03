@@ -80,7 +80,9 @@ public class BackgroundManager extends BroadcastReceiver
 					 * is really the case of no internet --> internet.
 					 */
 					manager.cancel(Vars.pendingHeartbeat);
+					manager.cancel(Vars.pendingHeartbeat2ndary);
 					manager.cancel(Vars.pendingRetries);
+					manager.cancel(Vars.pendingRetries2ndary);
 
 					Utils.logcat(Const.LOGD, tag, "internet was reconnected by broadcast: " + connectivity);
 					new LoginAsync(Vars.uname, Vars.passwd).execute();
@@ -203,7 +205,7 @@ public class BackgroundManager extends BroadcastReceiver
 
 			if(!ok)
 			{
-				Utils.setExactWakeup(Const.RETRY_FREQ, Vars.pendingRetries);
+				Utils.setExactWakeup(Const.RETRY_FREQ, Vars.pendingRetries, Vars.pendingRetries2ndary);
 			}
 		}
 	}
@@ -212,7 +214,9 @@ public class BackgroundManager extends BroadcastReceiver
 	{
 		AlarmManager manager = (AlarmManager)mainContext.getSystemService(Context.ALARM_SERVICE);
 		manager.cancel(Vars.pendingHeartbeat);
+		manager.cancel(Vars.pendingHeartbeat2ndary);
 		manager.cancel(Vars.pendingRetries);
+		manager.cancel(Vars.pendingRetries2ndary);
 
 		//for android 7.0+ manually trigger a "connectivity action" when the internet comes back to sign on again
 		if(Build.VERSION.SDK_INT >= Const.MINVER_MANUAL_HAS_INTERNET)

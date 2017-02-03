@@ -296,7 +296,9 @@ public class CmdListener extends IntentService
 		//timing problems where socket close and pending intent happen at the same time.
 		AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
 		manager.cancel(Vars.pendingHeartbeat);
+		manager.cancel(Vars.pendingHeartbeat2ndary);
 		manager.cancel(Vars.pendingRetries);
+		manager.cancel(Vars.pendingHeartbeat2ndary);
 
 		try
 		{

@@ -48,6 +48,11 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 	{
 		try
 		{
+			Utils.initAlarmVars(); //double check it's not null before usage
+			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+			manager.cancel(Vars.pendingRetries);
+			manager.cancel(Vars.pendingRetries2ndary);
+
 			//only handle 1 login request at a time
 			synchronized(loginLock)
 			{
@@ -114,10 +119,9 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			Intent cmdListenerIntent = new Intent(Vars.applicationContext, CmdListener.class);
 			Vars.applicationContext.startService(cmdListenerIntent);
 
-			Utils.initAlarmVars(); //double check it's not null before usage
-			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
 			manager.cancel(Vars.pendingHeartbeat);
-			Utils.setExactWakeup(Const.HEARTBEAT_FREQ, Vars.pendingHeartbeat);
+			manager.cancel(Vars.pendingHeartbeat2ndary);
+			Utils.setExactWakeup(Const.HEARTBEAT_FREQ, Vars.pendingHeartbeat, Vars.pendingHeartbeat2ndary);
 
 			onPostExecute(true);
 			return true;

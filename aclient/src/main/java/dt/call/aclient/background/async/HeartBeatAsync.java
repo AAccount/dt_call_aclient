@@ -19,11 +19,15 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 	@Override
 	protected Boolean doInBackground(String... params)
 	{
+		AlarmManager manager = (AlarmManager)Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+		manager.cancel(Vars.pendingHeartbeat); //login will reestablish this
+		manager.cancel(Vars.pendingHeartbeat2ndary);
+
 		try
 		{
 			Vars.commandSocket.getOutputStream().write(Const.JBYTE.getBytes());
 			Vars.mediaSocket.getOutputStream().write(Const.JBYTE.getBytes());
-			Utils.setExactWakeup(Const.HEARTBEAT_FREQ, Vars.pendingHeartbeat);
+			Utils.setExactWakeup(Const.HEARTBEAT_FREQ, Vars.pendingHeartbeat, Vars.pendingHeartbeat2ndary);
 			Utils.logcat(Const.LOGD, tag, "heart beat sent and ok");
 			return true;
 		}
@@ -31,8 +35,6 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 		{
 			Utils.logcat(Const.LOGE, tag, "heart beat failed");
 			Utils.dumpException(tag, e);
-			AlarmManager manager = (AlarmManager)Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
-			manager.cancel(Vars.pendingHeartbeat); //login will reestablish this
 
 			//KillSocketsAsync
 			try
