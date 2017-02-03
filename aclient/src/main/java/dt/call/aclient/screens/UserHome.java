@@ -174,7 +174,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			PowerManager powerManager = (PowerManager)getSystemService(Context.POWER_SERVICE);
 			boolean screenOn = powerManager.isScreenOn();//no choice. targeting >=4.1
 			loginProgress = null;
-			String loginCallbackMode = null;
 
 			//for self restarts or call end --> home while screen is off, this will never go away if the screen is off when the progressdialog is launched
 			if(screenOn)
@@ -192,8 +191,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 						return false;
 					}
 				});
-
-				loginCallbackMode = Const.BROADCAST_LOGIN_FG;
 			}
 
 			SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
