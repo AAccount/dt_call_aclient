@@ -252,7 +252,7 @@ public class Utils
 				||Vars.pendingHeartbeat2ndary == null || Vars.pendingRetries2ndary == null)
 		{
 			Vars.retries = new Intent(Vars.applicationContext, BackgroundManager.class);
-			Vars.retries.setAction(Const.ALARM_ACTION_RETRY);
+			Vars.retries.setAction(Const.BROADCAST_RELOGIN);
 			Vars.pendingRetries = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_RETRY_ID, Vars.retries, PendingIntent.FLAG_UPDATE_CURRENT);
 			Vars.pendingRetries2ndary = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_RETRY_ID, Vars.retries, PendingIntent.FLAG_UPDATE_CURRENT);
 

@@ -300,34 +300,9 @@ public class CmdListener extends IntentService
 		manager.cancel(Vars.pendingRetries);
 		manager.cancel(Vars.pendingHeartbeat2ndary);
 
-		try
-		{
-			if(Vars.commandSocket != null)
-			{
-				Vars.commandSocket.close();
-			}
-		}
-		catch (Exception e2)
-		{
-			Utils.logcat(Const.LOGE, tag, "problem closing command socket from dead command listener");
-			Utils.dumpException(tag, e2);
-		}
-		Vars.commandSocket = null;
+		Utils.killSockets();
 
-		try
-		{
-			if(Vars.mediaSocket != null)
-			{
-				Vars.mediaSocket.close();
-			}
-		}
-		catch (Exception e3)
-		{
-			Utils.logcat(Const.LOGE, tag, "problem closing associated media socket from dead command listener");
-			Utils.dumpException(tag, e3);
-		}
-
-		Intent deadBroadcast = new Intent(Const.BROADCAST_BK_CMDDEAD);
+		Intent deadBroadcast = new Intent(Const.BROADCAST_RELOGIN);
 		sendBroadcast(deadBroadcast);
 	}
 

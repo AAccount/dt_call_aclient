@@ -1,7 +1,6 @@
 package dt.call.aclient.background;
 
 import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.content.BroadcastReceiver;
@@ -18,7 +17,6 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.HeartBeatAsync;
 import dt.call.aclient.background.async.LoginAsync;
-import dt.call.aclient.screens.InitialServer;
 
 /**
  * Created by Daniel on 1/22/16.
@@ -35,9 +33,10 @@ public class BackgroundManager extends BroadcastReceiver
 	{
 		if(Vars.applicationContext == null)
 		{
-			//sometimes intents come in when the app is in the process of shutting down so all the contexts won't work.
-			//it's shutting down anyways. no point of starting something
-			return;
+			//after idling for a long time, Vars.applicationContext goes null sometimes
+			//the show must go on
+			Vars.applicationContext = context.getApplicationContext();
+			Utils.logcat(Const.LOGW, tag, "Vars.applicationContext == null, reinitializing.");
 		}
 
 		Utils.initAlarmVars(); //double check to make sure these things are setup
@@ -96,7 +95,7 @@ public class BackgroundManager extends BroadcastReceiver
 			//command listener does a better of job of figuring when the internet died than android's connectivity manager.
 			//android's connectivity manager doesn't always react to subway internet loss
 		}
-		else if (action.equals(Const.BROADCAST_BK_CMDDEAD))
+		else if (action.equals(Const.BROADCAST_RELOGIN))
 		{
 			String loge = "command listener dead received\n";
 
@@ -111,6 +110,16 @@ public class BackgroundManager extends BroadcastReceiver
 			{
 				Utils.logcat(Const.LOGD, tag, "No internet detected from commnad listener dead");
 				handleNoInternet(context);
+				return;
+			}
+
+			//originally expected that when heartbeat detects dead sockets and closes them, it will trigger
+			// command listener to die and issue a "command listener dead". assumption is wrong if idling for
+			// a long time. both command listener and heart beat broadcast a relogin when needed. to prevent double
+			// logins when both send, only relogin if you have to. if it fails it will issue another relogin(retry) in 5 mins
+			if(Vars.commandSocket != null || Vars.mediaSocket != null)
+			{
+				Utils.logcat(Const.LOGW, tag, "got sockets aren't null;");
 				return;
 			}
 
@@ -140,21 +149,6 @@ public class BackgroundManager extends BroadcastReceiver
 				}).start();
 				handleNoInternet(context);
 			}
-		}
-		else if (action.equals(Const.ALARM_ACTION_RETRY))
-		{
-			Utils.logcat(Const.LOGD, tag, "login retry received");
-
-			//no point of a retry if there is no internet to try on
-			if(!Utils.hasInternet())
-			{
-				Utils.logcat(Const.LOGD, tag, "no internet for sign in retry");
-				handleNoInternet(context);
-				return;
-			}
-
-			new LoginAsync(Vars.uname, Vars.passwd).execute();
-
 		}
 		else if(action.equals(Const.BROADCAST_LOGIN_BG))
 		{

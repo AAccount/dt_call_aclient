@@ -2,6 +2,7 @@ package dt.call.aclient.background.async;
 
 import android.app.AlarmManager;
 import android.content.Context;
+import android.content.Intent;
 import android.os.AsyncTask;
 
 import dt.call.aclient.Const;
@@ -36,34 +37,12 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 			Utils.logcat(Const.LOGE, tag, "heart beat failed");
 			Utils.dumpException(tag, e);
 
-			//KillSocketsAsync
-			try
-			{
-				if(Vars.commandSocket != null)
-				{
-					Vars.commandSocket.close();
-				}
-			}
-			catch (Exception e2)
-			{
-				Utils.logcat(Const.LOGE, tag, "inner exception problem");
-				Utils.dumpException(tag, e2);
-			}
-			Vars.commandSocket = null;
+			Utils.killSockets();
 
-			try
-			{
-				if(Vars.mediaSocket != null)
-				{
-					Vars.mediaSocket.close();
-				}
-			}
-			catch (Exception e3)
-			{
-				Utils.logcat(Const.LOGE, tag, "inner exception problem");
-				Utils.dumpException(tag, e3);
-			}
-			Vars.mediaSocket = null;
+			//if idling for a long time, killing sockets will not trigger command listener to broadcast a (formerly) command listener dead
+			// (now called relogin). do it here too.
+			Intent relogin = new Intent(Const.BROADCAST_RELOGIN);
+			Vars.applicationContext.sendBroadcast(relogin);
 			return false;
 		}
 	}

@@ -47,7 +47,7 @@ public class Const
 	public static final int LOG_LIMIT = 350;
 
 	//when cmd listener dies
-	public static final String BROADCAST_BK_CMDDEAD = "dt.call.aclient.cmd_dead";
+	public static final String BROADCAST_RELOGIN = "dt.call.aclient.relogin";
 
 	//call history types
 	public static final int CALLOUTGOING = 1;
@@ -81,7 +81,7 @@ public class Const
 	//related to alarm receiver and alarm stuff
 	public static final int ALARM_RETRY_ID = 1234;
 	public static final int ALARM_HEARTBEAT_ID = 999;
-	public static final String ALARM_ACTION_RETRY = "do_retries";
+	//alarm broadcast fore retry shared with broadcast for dead command listener BROADCAST_RELOGIN
 	public static final String ALARM_ACTION_HEARTBEAT = "do_heartbeat";
 	public static final int RETRY_FREQ = 5*60*1000;
 	public static final int HEARTBEAT_FREQ = 5*60*1000;
