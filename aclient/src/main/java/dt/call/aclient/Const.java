@@ -88,9 +88,4 @@ public class Const
 
 	//timeout (IN SECONDS) before giving up on calling someone
 	public static final int CALL_TIMEOUT = 20;
-
-	//for keeping track of when the last cmd listener dead happened. allows the app to detect the stupid java socket connect/die quick cycle
-	public static final int QUICK_DEAD_MAX = 20;
-	public static final long QUICK_DEAD_THRESHOLD = 10000;
-	public static final int RESTART_DELAY = 5000; //5 seconds delay for time to quit before restarting
 }

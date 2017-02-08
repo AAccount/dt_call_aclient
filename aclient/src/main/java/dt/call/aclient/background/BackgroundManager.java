@@ -106,44 +106,6 @@ public class BackgroundManager extends BroadcastReceiver
 			//pending intents cancelled by command listener to prevent a timing problem where sockets are closed at the same
 			//time a heart beat pending intent is fired.
 
-			/****************************************************************************************************************/
-			//all of this just to address the stupid java socket issue where it might just endlessly die/reconnect
-			//initialize the quick dead count and timestamp if this is the first time
-			long now = System.currentTimeMillis();
-			long deadDiff =  now - Vars.lastDead;
-			Vars.lastDead = now;
-			if(deadDiff <= Const.QUICK_DEAD_THRESHOLD)
-			{
-				Vars.quickDeadCount++;
-				loge = loge + "Another quick death (java socket stupidity) occured. Current count: " + Vars.quickDeadCount + "\n";
-			}
-			else
-			{
-				Vars.quickDeadCount = 0;
-			}
-
-			//with the latest quick death, was it 1 too many? if so restart the app
-			//https://stackoverflow.com/questions/6609414/how-to-programatically-restart-android-app
-			if(Vars.quickDeadCount == Const.QUICK_DEAD_MAX)
-			{
-				loge = loge + "Too many quick deaths (java socket stupidities). Restarting the app\n";
-				Utils.logcat(Const.LOGE, tag, loge);
-				//self restart, give it a 5 seconds to quit
-				Intent selfStart = new Intent(Vars.applicationContext, InitialServer.class);
-				int pendingSelfId = 999;
-				PendingIntent selfStartPending = PendingIntent.getActivity(Vars.applicationContext, pendingSelfId, selfStart, PendingIntent.FLAG_CANCEL_CURRENT);
-				manager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis()+Const.RESTART_DELAY, selfStartPending);
-
-				//hopefully 5 seconds will be enough to get out
-				Utils.quit();
-				return;
-			}
-			else
-			{ //app does not need to restart. still record the accumulated error messages
-				Utils.logcat(Const.LOGE, tag, loge);
-			}
-			/****************************************************************************************************************/
-
 			//if the network is dead then don't bother
 			if(!Utils.hasInternet())
 			{
