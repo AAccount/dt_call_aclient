@@ -121,7 +121,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			manager.cancel(Vars.pendingHeartbeat);
 			manager.cancel(Vars.pendingHeartbeat2ndary);
-			Utils.setExactWakeup(Const.HEARTBEAT_FREQ, Vars.pendingHeartbeat, Vars.pendingHeartbeat2ndary);
+			Utils.setExactWakeup(Const.STD_TIMEOUT, Vars.pendingHeartbeat, Vars.pendingHeartbeat2ndary);
 
 			onPostExecute(true);
 			return true;
@@ -144,7 +144,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 	{
 		//broadcast to background manager first. that way it always knows what the current state of your login and if
 		//it needs to try again. background will rebroadcast to the ui. if no ui is listening no harm.
-		Intent loginResult = new Intent(Const.BROADCAST_LOGIN_BG);
+		Intent loginResult = new Intent(Const.BROADCAST_LOGIN);
 		loginResult.putExtra(Const.BROADCAST_LOGIN_RESULT, result);
 		Vars.applicationContext.sendBroadcast(loginResult);
 
@@ -156,6 +156,8 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		else
 		{
 			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
+			Utils.setExactWakeup(Const.STD_TIMEOUT, Vars.pendingRetries, Vars.pendingRetries2ndary);
+			//background manager will check if there is internet or not when the retry kicks in and will act accordingly
 		}
 
 		synchronized (loginLock)

@@ -56,7 +56,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 			@Override
 			public void onReceive(Context context, Intent intent)
 			{
-				if(intent.getAction().equals(Const.BROADCAST_LOGIN_FG))
+				if(intent.getAction().equals(Const.BROADCAST_LOGIN))
 				{
 					final boolean ok = intent.getBooleanExtra(Const.BROADCAST_LOGIN_RESULT, false);
 					processLoginResult(ok);
@@ -70,7 +70,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 	{
 		super.onResume();
 		IntentFilter initialUserFilter = new IntentFilter();
-		initialUserFilter.addAction(Const.BROADCAST_LOGIN_FG);
+		initialUserFilter.addAction(Const.BROADCAST_LOGIN);
 		registerReceiver(broadcastReceiver, initialUserFilter);
 	}
 

@@ -64,13 +64,12 @@ public class Const
 	public static final String BROADCAST_CALL_END = "end";
 
 	//broadcasting login result
-	public static final String BROADCAST_LOGIN_FG = "dt.call.aclient.broadcast_login_foreground";
-	public static final String BROADCAST_LOGIN_BG = "dt.call.aclient.broadcast_login_background";
+	public static final String BROADCAST_LOGIN = "dt.call.aclient.broadcast_login";
 	public static final String BROADCAST_LOGIN_RESULT = "login_result";
 
-	//app specific broadcast of internet reconnected
+	//whether or not to use the jobservice method of internet detection
 	public static final String BROADCAST_HAS_INTERNET = "dt.call.aclient.HAS_INTERNET";
-	public static final int MINVER_MANUAL_HAS_INTERNET = Build.VERSION_CODES.M;
+	public static final boolean NEEDS_MANUAL_INTERNET_DETECTION = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M;
 
 	//log related strings
 	public static final String EXTRA_LOG = "log_obj";
@@ -83,8 +82,7 @@ public class Const
 	public static final int ALARM_HEARTBEAT_ID = 999;
 	//alarm broadcast fore retry shared with broadcast for dead command listener BROADCAST_RELOGIN
 	public static final String ALARM_ACTION_HEARTBEAT = "do_heartbeat";
-	public static final int RETRY_FREQ = 5*60*1000;
-	public static final int HEARTBEAT_FREQ = 5*60*1000;
+	public static final int STD_TIMEOUT = 5*60*1000;
 
 	//timeout (IN SECONDS) before giving up on calling someone
 	public static final int CALL_TIMEOUT = 20;

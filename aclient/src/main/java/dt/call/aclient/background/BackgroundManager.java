@@ -31,15 +31,12 @@ public class BackgroundManager extends BroadcastReceiver
 	@Override
 	public void onReceive(final Context context, Intent intent)
 	{
-		if(Vars.applicationContext == null)
-		{
-			//after idling for a long time, Vars.applicationContext goes null sometimes
-			//the show must go on
-			Vars.applicationContext = context.getApplicationContext();
-			Utils.logcat(Const.LOGW, tag, "Vars.applicationContext == null, reinitializing.");
-		}
 
-		Utils.initAlarmVars(); //double check to make sure these things are setup
+		//after idling for a long time, Vars.applicationContext goes null sometimes
+		//the show must go on
+		//double check to make sure these things are setup
+		Vars.applicationContext = context.getApplicationContext();
+		Utils.initAlarmVars();
 		AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 
 		if(Vars.uname == null || Vars.passwd == null)
@@ -50,20 +47,23 @@ public class BackgroundManager extends BroadcastReceiver
 		}
 
 		String action = intent.getAction();
+		Utils.logcat(Const.LOGD, tag, "background manager received: " + action);
 
 		//to prevent timing problems, if android's connectivity_action AND workaround HAS_INTERNET broadcast are available
 		//to signal return of internet connectivity, only listen for one of them.
-		String connectivity;
-		if(Build.VERSION.SDK_INT >= Const.MINVER_MANUAL_HAS_INTERNET)
+		if(Const.NEEDS_MANUAL_INTERNET_DETECTION && action.equals(Const.BROADCAST_HAS_INTERNET))
 		{
-			connectivity = Const.BROADCAST_HAS_INTERNET;
-		}
-		else
-		{
-			connectivity = ConnectivityManager.CONNECTIVITY_ACTION;
-		}
+			//because internet detection is manual, no false positives
+			manager.cancel(Vars.pendingHeartbeat);
+			manager.cancel(Vars.pendingHeartbeat2ndary);
+			manager.cancel(Vars.pendingRetries);
+			manager.cancel(Vars.pendingRetries2ndary);
 
-		if(action.equals(connectivity))
+			Utils.logcat(Const.LOGD, tag, "internet was reconnected by manual detection");
+			new LoginAsync(Vars.uname, Vars.passwd).execute();
+			return;
+		}
+		else if (!Const.NEEDS_MANUAL_INTERNET_DETECTION && action.equals(ConnectivityManager.CONNECTIVITY_ACTION))
 		{
 			if(Utils.hasInternet())
 			{
@@ -83,7 +83,7 @@ public class BackgroundManager extends BroadcastReceiver
 					manager.cancel(Vars.pendingRetries);
 					manager.cancel(Vars.pendingRetries2ndary);
 
-					Utils.logcat(Const.LOGD, tag, "internet was reconnected by broadcast: " + connectivity);
+					Utils.logcat(Const.LOGD, tag, "internet was reconnected by legacy android automatic detection");
 					new LoginAsync(Vars.uname, Vars.passwd).execute();
 				}
 			}
@@ -92,13 +92,11 @@ public class BackgroundManager extends BroadcastReceiver
 				Utils.logcat(Const.LOGD, tag, "android detected internet loss");
 				handleNoInternet(context);
 			}
-			//command listener does a better of job of figuring when the internet died than android's connectivity manager.
-			//android's connectivity manager doesn't always react to subway internet loss
+			return;
 		}
-		else if (action.equals(Const.BROADCAST_RELOGIN))
-		{
-			String loge = "command listener dead received\n";
 
+		if (action.equals(Const.BROADCAST_RELOGIN))
+		{
 			//set persistent notification as offline for now while reconnect is trying
 			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
 
@@ -150,20 +148,6 @@ public class BackgroundManager extends BroadcastReceiver
 				handleNoInternet(context);
 			}
 		}
-		else if(action.equals(Const.BROADCAST_LOGIN_BG))
-		{
-			boolean ok = intent.getBooleanExtra(Const.BROADCAST_LOGIN_RESULT, false);
-			Utils.logcat(Const.LOGD, tag, "got login result of: " + ok);
-
-			Intent loginResult = new Intent(Const.BROADCAST_LOGIN_FG);
-			loginResult.putExtra(Const.BROADCAST_LOGIN_RESULT, ok);
-			context.sendBroadcast(loginResult);
-
-			if(!ok)
-			{
-				Utils.setExactWakeup(Const.RETRY_FREQ, Vars.pendingRetries, Vars.pendingRetries2ndary);
-			}
-		}
 	}
 
 	private void handleNoInternet(Context mainContext)
@@ -175,7 +159,7 @@ public class BackgroundManager extends BroadcastReceiver
 		manager.cancel(Vars.pendingRetries2ndary);
 
 		//for android 7.0+ manually trigger a "connectivity action" when the internet comes back to sign on again
-		if(Build.VERSION.SDK_INT >= Const.MINVER_MANUAL_HAS_INTERNET)
+		if(Const.NEEDS_MANUAL_INTERNET_DETECTION)
 		{
 			ComponentName jobServiceReceiver = new ComponentName(Const.PACKAGE_NAME, JobServiceReceiver.class.getName());
 			JobInfo.Builder builder = new JobInfo.Builder(1, jobServiceReceiver).setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);

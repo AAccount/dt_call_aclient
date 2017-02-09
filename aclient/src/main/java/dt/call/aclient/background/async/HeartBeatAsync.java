@@ -8,8 +8,6 @@ import android.os.AsyncTask;
 import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.sqlite.SQLiteDb;
-import dt.call.aclient.sqlite.DBLog;
 
 /**
  * Created by Daniel on 4/17/16.
@@ -28,7 +26,7 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 		{
 			Vars.commandSocket.getOutputStream().write(Const.JBYTE.getBytes());
 			Vars.mediaSocket.getOutputStream().write(Const.JBYTE.getBytes());
-			Utils.setExactWakeup(Const.HEARTBEAT_FREQ, Vars.pendingHeartbeat, Vars.pendingHeartbeat2ndary);
+			Utils.setExactWakeup(Const.STD_TIMEOUT, Vars.pendingHeartbeat, Vars.pendingHeartbeat2ndary);
 			Utils.logcat(Const.LOGD, tag, "heart beat sent and ok");
 			return true;
 		}

@@ -30,7 +30,6 @@
             <intent-filter>
                 <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
                 <action android:name="dt.call.aclient.relogin"/>
-                <action android:name="dt.call.aclient.broadcast_login_background"/>
                 <action android:name="dt.call.aclient.HAS_INTERNET"/>
             </intent-filter>
         </receiver>

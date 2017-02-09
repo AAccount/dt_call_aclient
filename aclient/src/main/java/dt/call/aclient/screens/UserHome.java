@@ -11,11 +11,8 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.ColorDrawable;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
-import android.provider.Settings;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -141,7 +138,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 						}
 					}
 				}
-				else if(intent.getAction().equals(Const.BROADCAST_LOGIN_FG))
+				else if(intent.getAction().equals(Const.BROADCAST_LOGIN))
 				{
 					boolean ok = intent.getBooleanExtra(Const.BROADCAST_LOGIN_RESULT, false);
 					if(loginProgress != null)
@@ -213,7 +210,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		//receiver must be reregistered when loading this screen from the back button
 		IntentFilter homeFilters = new IntentFilter();
 		homeFilters.addAction(Const.BROADCAST_HOME);
-		homeFilters.addAction(Const.BROADCAST_LOGIN_FG);
+		homeFilters.addAction(Const.BROADCAST_LOGIN);
 		registerReceiver(myReceiver, homeFilters);
 
 		//check to make sure mic permission is set... can't call without a mic
