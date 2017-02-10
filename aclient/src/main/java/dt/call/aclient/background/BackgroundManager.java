@@ -53,6 +53,16 @@ public class BackgroundManager extends BroadcastReceiver
 		//to signal return of internet connectivity, only listen for one of them.
 		if(Const.NEEDS_MANUAL_INTERNET_DETECTION && action.equals(Const.BROADCAST_HAS_INTERNET))
 		{
+			//just to be safe???
+			new Thread(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					Utils.killSockets();
+				}
+			}).start();
+
 			//because internet detection is manual, no false positives
 			manager.cancel(Vars.pendingHeartbeat);
 			manager.cancel(Vars.pendingHeartbeat2ndary);
@@ -108,16 +118,6 @@ public class BackgroundManager extends BroadcastReceiver
 			{
 				Utils.logcat(Const.LOGD, tag, "No internet detected from commnad listener dead");
 				handleNoInternet(context);
-				return;
-			}
-
-			//originally expected that when heartbeat detects dead sockets and closes them, it will trigger
-			// command listener to die and issue a "command listener dead". assumption is wrong if idling for
-			// a long time. both command listener and heart beat broadcast a relogin when needed. to prevent double
-			// logins when both send, only relogin if you have to. if it fails it will issue another relogin(retry) in 5 mins
-			if(Vars.commandSocket != null || Vars.mediaSocket != null)
-			{
-				Utils.logcat(Const.LOGW, tag, "got sockets aren't null;");
 				return;
 			}
 
