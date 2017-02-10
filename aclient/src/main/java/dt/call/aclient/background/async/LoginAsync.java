@@ -31,7 +31,6 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 	private static final String tag = "Login Async Task";
 	private static final Object loginLock = new Object();
 	private static boolean tryingLogin;
-	private static final int TIMEOUT = 30*1000;
 
 	/**
 	 *  @param cuname User name to login with
