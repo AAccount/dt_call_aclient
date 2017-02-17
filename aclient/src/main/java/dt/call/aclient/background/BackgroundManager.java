@@ -116,7 +116,7 @@ public class BackgroundManager extends BroadcastReceiver
 			//if the network is dead then don't bother
 			if(!Utils.hasInternet())
 			{
-				Utils.logcat(Const.LOGD, tag, "No internet detected from commnad listener dead");
+				Utils.logcat(Const.LOGD, tag, "No internet detected from relogin");
 				handleNoInternet(context);
 				return;
 			}
