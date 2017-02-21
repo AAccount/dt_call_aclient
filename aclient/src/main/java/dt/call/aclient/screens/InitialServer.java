@@ -43,7 +43,6 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 	private EditText addr, commandPort, mediaPort;
 	private Button cert;
 	private FloatingActionButton next;
-	private String certFile="", cert64 ="";
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -56,40 +55,11 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		ComponentName backgroundManager = new ComponentName(this, BackgroundManager.class);
 		getPackageManager().setComponentEnabledSetting(backgroundManager, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
 
-		//if the information is already there, go straight to the home screen
-		SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
-		//you need this stuff anyways for this screen
-		String savedAddr = sharedPreferences.getString(Const.PREF_ADDR, "");
-		String savedCommandString = sharedPreferences.getString(Const.PREF_COMMANDPORT, "");
-		String savedMediaString = sharedPreferences.getString(Const.PREF_MEDIAPORT, "");
-		String savedCertFName = sharedPreferences.getString(Const.PREF_CERTFNAME, "");
-		cert64 = sharedPreferences.getString(Const.PREF_CERT64, "");
-		//you need this stuff for the next screen. if it's already there then skip to the home screen
-		String savedUname = sharedPreferences.getString(Const.PREF_UNAME, "");
-		String savedPasswd = sharedPreferences.getString(Const.PREF_PASSWD, "");
-		Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, Vars.SHOUDLOG);
+		Utils.loadPrefs();
 
-		int savedCommand=0, savedMedia=0;
-		if(!savedCommandString.equals(""))
-		{
-			savedCommand = Integer.valueOf(savedCommandString);
-		}
-		if(!savedMediaString.equals(""))
-		{
-			savedMedia = Integer.valueOf(savedCommandString);
-		}
-
-		if(!savedUname.equals("") && !savedPasswd.equals(""))
+		if(!Vars.uname.equals("") && !Vars.passwd.equals(""))
 		{
 			Utils.logcat(Const.LOGD, tag, "Skipping to the home screen");
-
-			//set all the session variables
-			Vars.serverAddress = savedAddr;
-			Vars.commandPort = savedCommand;
-			Vars.mediaPort = savedMedia;
-			Vars.expectedCertDump = cert64;
-			Vars.uname = savedUname;
-			Vars.passwd = savedPasswd;
 
 			//don't need to start the command listener or do the login async. that will be started on the home screen
 
@@ -115,26 +85,21 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		next = (FloatingActionButton)findViewById(R.id.initial_server_next);
 		next.setOnClickListener(this);
 
-		if(!savedAddr.equals(""))
+		if(!Vars.serverAddress.equals(""))
 		{
-			addr.setText(savedAddr);
-			Vars.serverAddress = savedAddr;
+			addr.setText(Vars.serverAddress);
 		}
-		if(savedCommand != 0)
+		if(Vars.commandPort != 0)
 		{
-			commandPort.setText(String.valueOf(savedCommand)); //have to do valueof or it treats the port as a literal R. resource id
-			Vars.commandPort = savedCommand;
+			commandPort.setText(String.valueOf(Vars.commandPort)); //have to do valueof or it treats the port as a literal R. resource id
 		}
-		if(savedMedia != 0)
+		if(Vars.mediaPort != 0)
 		{
-			mediaPort.setText(String.valueOf(savedMedia));
-			Vars.mediaPort = savedMedia;
+			mediaPort.setText(String.valueOf(Vars.mediaPort));
 		}
-		if(!savedCertFName.equals(""))
+		if(!Vars.certName.equals("") && !Vars.certDump.equals(""))
 		{
-			cert.setText(savedCertFName);
-			certFile = savedCertFName; //save here so that when clickng next "" isn't written to saved prefs
-			Vars.expectedCertDump = cert64;
+			cert.setText(Vars.certName);
 		}
 	}
 
@@ -184,13 +149,13 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		else if(v == next)
 		{
 			//extract UI info
-			String addrString, commandString, mediaString;
-			addrString = addr.getText().toString();
+			String commandString, mediaString;
+			Vars.serverAddress = addr.getText().toString();
 			commandString = commandPort.getText().toString();
 			mediaString = mediaPort.getText().toString();
 
 			//check to make sure all the required information is filled in
-			boolean allFilled = !addrString.equals("") && !commandString.equals("") && !mediaString.equals("") && !cert64.equals("");
+			boolean allFilled = !Vars.serverAddress.equals("") && !commandString.equals("") && !mediaString.equals("") && !Vars.certDump.equals("");
 			if(!allFilled)
 			{
 				Utils.showOk(this, getString(R.string.alert_initial_server_incomplete_server));
@@ -221,18 +186,16 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			//Store all server information in shared preferences.
 			SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
 			SharedPreferences.Editor editor = sharedPreferences.edit();
-			editor.putString(Const.PREF_ADDR, addrString);
+			editor.putString(Const.PREF_ADDR, Vars.serverAddress);
 			editor.putString(Const.PREF_COMMANDPORT, commandString);
 			editor.putString(Const.PREF_MEDIAPORT, mediaString);
-			editor.putString(Const.PREF_CERT64, cert64);
-			editor.putString(Const.PREF_CERTFNAME, certFile);
+			editor.putString(Const.PREF_CERTDUMP, Vars.certDump);
+			editor.putString(Const.PREF_CERTFNAME, Vars.certName);
 			editor.apply();
 
 			//setup all the Vars
-			Vars.serverAddress = addrString;
 			Vars.commandPort = commandInt;
 			Vars.mediaPort = mediaInt;
-			Vars.expectedCertDump = cert64;
 
 			//go to the user information screen
 			Intent initUser = new Intent(this, InitialUserInfo.class);
@@ -259,12 +222,11 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 				InputStream certInputStream = resolver.openInputStream(uri);
 				X509Certificate expectedCert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(certInputStream);
 				byte[] expectedDump = expectedCert.getEncoded();
-				cert64 = Base64.encodeToString(expectedDump, Base64.NO_PADDING & Base64.NO_WRAP);
-				Vars.expectedCertDump = cert64;
+				Vars.certDump = Base64.encodeToString(expectedDump, Base64.NO_PADDING & Base64.NO_WRAP);
 
 				//store the certificate file name for esthetic purposes
-				certFile = expanded[expanded.length-1];
-				cert.setText(certFile);
+				Vars.certName = expanded[expanded.length-1];
+				cert.setText(Vars.certName);
 
 			}
 			catch (FileNotFoundException | CertificateException e)

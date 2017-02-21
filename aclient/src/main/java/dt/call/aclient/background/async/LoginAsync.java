@@ -5,8 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.security.cert.CertificateException;
 
 import dt.call.aclient.Const;
@@ -65,7 +63,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			}
 
 			//send login command
-			Vars.commandSocket = Utils.mkSocket(Vars.serverAddress, Vars.commandPort, Vars.expectedCertDump);
+			Vars.commandSocket = Utils.mkSocket(Vars.serverAddress, Vars.commandPort, Vars.certDump);
 			String login = Utils.currentTimeSeconds() + "|login|" + uname + "|" + passwd;
 			Vars.commandSocket.getOutputStream().write(login.getBytes());
 
@@ -111,7 +109,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			Vars.sessionid = Long.valueOf(respContents[3]);
 
 			//establish media socket
-			Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);
+			Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.certDump);
 			String associateMedia = Utils.currentTimeSeconds() + "|" + Vars.sessionid;
 			Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
 

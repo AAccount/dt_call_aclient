@@ -39,11 +39,11 @@ public class BackgroundManager extends BroadcastReceiver
 		Utils.initAlarmVars();
 		AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 
-		if(Vars.uname == null || Vars.passwd == null)
+		if(Vars.uname == null || Vars.passwd == null || Vars.serverAddress == null)
 		{
-			//if the person hasn't logged in then there's no way to start the command listener
-			//	since you won't have a command socket to listen on
-			Utils.logcat(Const.LOGW, tag, "user name and password aren't available?");
+			//sometimes Vars.(prefs stuff) disappears after idling in the background for a while
+			Utils.logcat(Const.LOGW, tag, "Reinitializing Vars from prefs file");
+			Utils.loadPrefs();
 		}
 
 		String action = intent.getAction();

@@ -194,7 +194,7 @@ public class CmdListener extends IntentService
 								Vars.mediaSocket.close();
 								try
 								{
-									Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);
+									Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.certDump);
 									String associateMedia = Utils.currentTimeSeconds() + "|" + Vars.sessionid;
 									Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
 								}
@@ -226,7 +226,7 @@ public class CmdListener extends IntentService
 							Vars.mediaSocket.close();
 							try
 							{
-								Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);
+								Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.certDump);
 								String associateMedia = Utils.currentTimeSeconds() + "|" + Vars.sessionid;
 								Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
 							}

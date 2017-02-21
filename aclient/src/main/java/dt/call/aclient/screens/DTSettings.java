@@ -110,13 +110,13 @@ public class DTSettings extends AppCompatActivity
 					X509Certificate expectedCert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(certInputStream);
 					byte[] expectedDump = expectedCert.getEncoded();
 					cert64 = Base64.encodeToString(expectedDump, Base64.NO_PADDING & Base64.NO_WRAP);
-					Vars.expectedCertDump = cert64;
+					Vars.certDump = cert64;
 
 					//store the certificate file name for esthetic purposes
 					certFile = expanded[expanded.length-1];
 					SharedPreferences sharedPreferences = getActivity().getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
 					SharedPreferences.Editor editor = sharedPreferences.edit();
-					editor.putString(Const.PREF_CERT64, cert64);
+					editor.putString(Const.PREF_CERTDUMP, cert64);
 					editor.putString(Const.PREF_CERTFNAME, certFile);
 					editor.apply();
 

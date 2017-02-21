@@ -190,14 +190,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				});
 			}
 
-			SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
-			Vars.uname = sharedPreferences.getString(Const.PREF_UNAME, "");
-			Vars.passwd = sharedPreferences.getString(Const.PREF_PASSWD, "");
-			Vars.serverAddress = sharedPreferences.getString(Const.PREF_ADDR, "");
-			Vars.commandPort = Integer.valueOf(sharedPreferences.getString(Const.PREF_COMMANDPORT, ""));
-			Vars.mediaPort = Integer.valueOf(sharedPreferences.getString(Const.PREF_MEDIAPORT, ""));
-			Vars.expectedCertDump = sharedPreferences.getString(Const.PREF_CERT64, "");
-			Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, Vars.SHOUDLOG);
+			Utils.loadPrefs();
 			new LoginAsync(Vars.uname, Vars.passwd).execute();
 		}
 	}

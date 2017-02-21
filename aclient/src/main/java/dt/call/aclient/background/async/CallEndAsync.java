@@ -47,7 +47,7 @@ public class CallEndAsync extends AsyncTask<String, String, Boolean>
 			Vars.mediaSocket.close();
 
 			Utils.logcat(Const.LOGD, tag, "Making new media port");
-			Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.expectedCertDump);
+			Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.certDump);
 			String associateMedia = Utils.currentTimeSeconds() + "|" + Vars.sessionid;
 			Utils.logcat(Const.LOGD, tag, associateMedia);
 			Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());

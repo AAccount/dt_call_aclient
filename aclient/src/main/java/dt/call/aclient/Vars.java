@@ -39,7 +39,8 @@ public class Vars
 	public static String serverAddress;
 	public static int commandPort;
 	public static int mediaPort;
-	public static String expectedCertDump;
+	public static String certDump;
+	public static String certName;
 
 	//user information (to be filled in when available)
 	public static String uname = null;

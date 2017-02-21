@@ -9,6 +9,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -374,5 +375,27 @@ public class Utils
 			dumpException(tag, e);
 		}
 		Vars.mediaSocket = null;
+	}
+
+	//for cases when Vars.(shared prefs variable) goes missing or the initia load
+	public static void loadPrefs()
+	{
+		SharedPreferences sharedPreferences = Vars.applicationContext.getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
+		Vars.uname = sharedPreferences.getString(Const.PREF_UNAME, "");
+		Vars.passwd = sharedPreferences.getString(Const.PREF_PASSWD, "");
+		Vars.serverAddress = sharedPreferences.getString(Const.PREF_ADDR, "");
+		try
+		{
+			Vars.commandPort = Integer.valueOf(sharedPreferences.getString(Const.PREF_COMMANDPORT, ""));
+			Vars.mediaPort = Integer.valueOf(sharedPreferences.getString(Const.PREF_MEDIAPORT, ""));
+		}
+		catch (NumberFormatException n)
+		{
+			//usually not fatal. first time running the app no saved values so will try to convert "" to #
+			dumpException(tag, n);
+		}
+		Vars.certName = sharedPreferences.getString(Const.PREF_CERTFNAME, "");
+		Vars.certDump = sharedPreferences.getString(Const.PREF_CERTDUMP, "");
+		Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, Vars.SHOUDLOG);
 	}
 }

@@ -18,7 +18,7 @@ public class Const
 	public static final String PREF_ADDR = "server_address";
 	public static final String PREF_COMMANDPORT = "command_port";
 	public static final String PREF_MEDIAPORT = "media_port";
-	public static final String PREF_CERT64 = "certificate_getEncoded_string_base64";
+	public static final String PREF_CERTDUMP = "certificate_getEncoded_string_base64";
 	public static final String PREF_CERTFNAME = "certificate_file_name";
 	public static final String PREF_UNAME = "username";
 	public static final String PREF_PASSWD = "password";
