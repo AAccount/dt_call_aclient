@@ -21,7 +21,6 @@ import android.util.Log;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.Socket;
 
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
@@ -29,6 +28,7 @@ import java.security.cert.X509Certificate;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
@@ -65,7 +65,7 @@ public class Utils
 		return Math.abs(diff) <= fivemins;
 	}
 
-	public static Socket mkSocket(String host, int port, final String expected64) throws CertificateException
+	public static SSLSocket mkSocket(String host, int port, final String expected64) throws CertificateException
 	{
 		TrustManager[] trustOnlyServerCert = new TrustManager[]
 		{new X509TrustManager()
@@ -108,11 +108,15 @@ public class Utils
 			context = SSLContext.getInstance("TLSv1.2");
 			context.init(new KeyManager[0], trustOnlyServerCert, new SecureRandom());
 			SSLSocketFactory mkssl = context.getSocketFactory();
-			Socket socket = mkssl.createSocket(host, port);
+			SSLSocket socket = (SSLSocket)mkssl.createSocket(host, port);
+			socket.setEnabledProtocols(new String[]{"TLSv1.2"});
+			socket.setEnabledCipherSuites(new String[]{"TLS_DHE_RSA_WITH_AES_256_GCM_SHA384"});
+			socket.startHandshake();
 			return socket;
 		}
 		catch (Exception e)
 		{
+			logcat(Const.LOGE, tag, "params server:port, cert: " + host + ":" + String.valueOf(port) + "\n" + expected64);
 			dumpException(tag, e);
 			return null;
 		}

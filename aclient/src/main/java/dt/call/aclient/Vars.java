@@ -6,8 +6,9 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 
-import java.net.Socket;
 import java.util.HashMap;
+
+import javax.net.ssl.SSLSocket;
 
 import dt.call.aclient.sqlite.Contact;
 
@@ -25,8 +26,8 @@ public class Vars
 	public static long sessionid = -1;
 
 	//2 sockets
-	public static Socket commandSocket = null;
-	public static Socket mediaSocket = null;
+	public static SSLSocket commandSocket = null;
+	public static SSLSocket mediaSocket = null;
 
 	//call related information
 	public volatile static CallState state = CallState.NONE;
