@@ -83,7 +83,6 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			//there's actual stuff to process, process it!
 			String loginresp = new String(responseRaw, 0, length);
-			Utils.logcat(Const.LOGD, tag, loginresp);
 
 			//process login response
 			String[] respContents = loginresp.split("\\|");
@@ -146,6 +145,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		Vars.applicationContext.sendBroadcast(loginResult);
 
 		//update the persistent notification with the login results
+		Utils.logcat(Const.LOGD, tag, "Result of login: " + result);
 		if(result)
 		{
 			Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
