@@ -56,7 +56,6 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 				if(tryingLogin)
 				{
 					Utils.logcat(Const.LOGW, tag, "already trying a login. ignoring request");
-					onPostExecute(false);
 					return false;
 				}
 				tryingLogin = true;
