@@ -267,6 +267,7 @@ public class CmdListener extends IntentService
 			}
 			catch (IOException e)
 			{
+				Utils.killSockets();
 				Utils.logcat(Const.LOGE, tag, "Command socket closed...");
 				Utils.dumpException(tag, e);
 				inputValid = false;
@@ -277,12 +278,16 @@ public class CmdListener extends IntentService
 			}
 			catch(NullPointerException n)
 			{
+				Utils.killSockets();
 				Utils.logcat(Const.LOGE, tag, "Command socket null pointer exception");
+				Utils.dumpException(tag, n);
 				inputValid = false;
 			}
 			catch(Exception e)
 			{
+				Utils.killSockets();
 				Utils.logcat(Const.LOGE, tag, "Other exception");
+				Utils.dumpException(tag, e);
 				inputValid = false;
 			}
 		}
@@ -299,8 +304,6 @@ public class CmdListener extends IntentService
 		manager.cancel(Vars.pendingHeartbeat2ndary);
 		manager.cancel(Vars.pendingRetries);
 		manager.cancel(Vars.pendingHeartbeat2ndary);
-
-		Utils.killSockets();
 
 		Intent deadBroadcast = new Intent(Const.BROADCAST_RELOGIN);
 		sendBroadcast(deadBroadcast);
