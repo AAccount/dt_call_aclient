@@ -6,6 +6,9 @@ import android.content.Intent;
 import android.os.AsyncTask;
 
 import java.security.cert.CertificateException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
@@ -29,6 +32,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 	private static final String tag = "Login Async Task";
 	private static final Object loginLock = new Object();
 	private static boolean tryingLogin;
+	SimpleDateFormat ts = new SimpleDateFormat("HH:mm:ss.SSSS",Locale.US);
 
 	/**
 	 *  @param cuname User name to login with
@@ -123,12 +127,14 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		}
 		catch (CertificateException c)
 		{
+			Utils.killSockets();
 			Utils.logcat(Const.LOGE, tag, "server certificate didn't match the expected");
 			onPostExecute(false);
 			return false;
 		}
 		catch (Exception i)
 		{
+			Utils.killSockets();
 			Utils.dumpException(tag, i);
 			onPostExecute(false);
 			return false;
@@ -144,7 +150,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		Vars.applicationContext.sendBroadcast(loginResult);
 
 		//update the persistent notification with the login results
-		Utils.logcat(Const.LOGD, tag, "Result of login: " + result);
+		Utils.logcat(Const.LOGD, tag, "Result of login: " + result + " " + ts.format(new Date()));
 		if(result)
 		{
 			Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);

@@ -67,6 +67,7 @@ public class Utils
 
 	public static SSLSocket mkSocket(String host, int port, final String expected64) throws CertificateException
 	{
+		SSLSocket socket = null;
 		TrustManager[] trustOnlyServerCert = new TrustManager[]
 		{new X509TrustManager()
 				{
@@ -108,7 +109,7 @@ public class Utils
 			context = SSLContext.getInstance("TLSv1.2");
 			context.init(new KeyManager[0], trustOnlyServerCert, new SecureRandom());
 			SSLSocketFactory mkssl = context.getSocketFactory();
-			SSLSocket socket = (SSLSocket)mkssl.createSocket(host, port);
+			socket = (SSLSocket)mkssl.createSocket(host, port);
 			socket.setEnabledProtocols(new String[]{"TLSv1.2"});
 			socket.setEnabledCipherSuites(new String[]{"TLS_DHE_RSA_WITH_AES_256_GCM_SHA384"});
 			socket.startHandshake();
@@ -116,7 +117,14 @@ public class Utils
 		}
 		catch (Exception e)
 		{
-			logcat(Const.LOGE, tag, "params server:port, cert: " + host + ":" + String.valueOf(port) + "\n" + expected64);
+			try
+			{
+				socket.close();
+			}
+			catch (Exception e1)
+			{
+				dumpException(tag, e1); //although there's nothing that can really be done at this point
+			}
 			dumpException(tag, e);
 			return null;
 		}
