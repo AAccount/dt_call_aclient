@@ -1,6 +1,7 @@
 package dt.call.aclient;
 
 import android.os.Build;
+import android.util.Base64;
 
 import dt.call.aclient.sqlite.Contact;
 
@@ -21,12 +22,22 @@ public class Const
 	public static final String PREF_CERTDUMP = "certificate_getEncoded_string_base64";
 	public static final String PREF_CERTFNAME = "certificate_file_name";
 	public static final String PREF_UNAME = "username";
-	public static final String PREF_PASSWD = "password";
+	public static final String PREF_PRIVATE_KEY_DUMP = "private_key";
+	public static final String PREF_PRIVATE_KEY_NAME = "private_key_name";
 	public static final String PREF_LOG = "log";
+
+	//file selection codes
+	public static final int SERVER_CERT_SELECT= 1;
+	public static final int PRIVATE_KEY_SELECT = 2;
+	public static final int BASE64_Flags = Base64.NO_PADDING & Base64.NO_WRAP;
+
+	//android permssion request codes
+	public static final int STORAGE_PERM = 1;
+	public static final int MIC_PERM = 2;
 
 	//Java 1byte workaround
 	public static final String JBYTE = "D";
-	public static final int BUFFERSIZE = 1024; //maximum size for command buffer. same name and size as seen in server's const.h
+	public static final int BUFFERSIZE = 4100; //maximum size for command buffer. same name and size as seen in server's const.h
 
 	//nobody: the default value for when not in a call
 	public static final Contact nobody = new Contact("(nobody)");
@@ -69,7 +80,7 @@ public class Const
 
 	//whether or not to use the jobservice method of internet detection
 	public static final String BROADCAST_HAS_INTERNET = "dt.call.aclient.HAS_INTERNET";
-	public static final boolean NEEDS_MANUAL_INTERNET_DETECTION = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M;
+	public static final boolean NEEDS_MANUAL_INTERNET_DETECTION = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N;
 
 	//log related strings
 	public static final String EXTRA_LOG = "log_obj";

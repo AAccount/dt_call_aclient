@@ -28,13 +28,12 @@
         android:maxLines="1"
         />
 
-    <EditText
-        android:id="@+id/initial_user_passwd"
+    <Button
+        android:id="@+id/initial_user_private_key"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/initial_user_uname"
-        android:hint="@string/initial_user_passwd_hint"
-        android:inputType="textPassword"
+        android:hint="@string/initial_user_private_key_hint"
         android:maxLines="1"
         />
 
@@ -45,7 +44,7 @@
         android:src="@drawable/ic_arrow_forward_white_48dp"
         android:clickable="true"
         app:rippleColor="@android:color/white"
-        android:layout_below="@+id/initial_user_passwd"
+        android:layout_below="@+id/initial_user_private_key"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="50dp"/>
 </RelativeLayout>

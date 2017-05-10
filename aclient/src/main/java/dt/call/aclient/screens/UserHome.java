@@ -46,7 +46,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	private static final String tag = "UserHome";
 	private static final int CHRENAME = 1;
 	private static final int CHRM = 2;
-	private static final int MIC_PERM = 1;
 
 	private EditText actionbox;
 	private FloatingActionButton call, add;
@@ -191,7 +190,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			}
 
 			Utils.loadPrefs();
-			new LoginAsync(Vars.uname, Vars.passwd).execute();
+			new LoginAsync(Vars.uname, Vars.privateKey).execute();
 		}
 	}
 
@@ -217,7 +216,27 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 						public void onClick(DialogInterface dialog, int which)
 						{
 							String[] perms = new String[]{Manifest.permission.RECORD_AUDIO};
-							ActivityCompat.requestPermissions(UserHome.this, perms, MIC_PERM);
+							ActivityCompat.requestPermissions(UserHome.this, perms, Const.MIC_PERM);
+							dialog.cancel();
+						}
+					});
+			AlertDialog showOkAlert = mkdialog.create();
+			showOkAlert.show();
+		}
+
+		//double check storage permissions. not fatal at this point because to get here you've logged on sucessfuly in the past.
+		//	that means at some point, the credentials stored here were good.
+		if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+		{
+			AlertDialog.Builder mkdialog = new AlertDialog.Builder(this);
+			mkdialog.setMessage(getString(R.string.alert_storage_perm))
+					.setPositiveButton(R.string.alert_ok, new DialogInterface.OnClickListener()
+					{
+						@Override
+						public void onClick(DialogInterface dialog, int which)
+						{
+							String[] perms = new String[]{Manifest.permission.READ_EXTERNAL_STORAGE};
+							ActivityCompat.requestPermissions(UserHome.this, perms, Const.STORAGE_PERM);
 							dialog.cancel();
 						}
 					});
@@ -488,12 +507,21 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	{
 		switch(requestCode)
 		{
-			case MIC_PERM:
+			case Const.MIC_PERM:
 			{
 				if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_DENIED)
 				{
 					//with mic denied, this app can't do anything useful
 					Utils.quit();
+				}
+			}
+			case Const.STORAGE_PERM:
+			{
+				if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_DENIED)
+				{
+					//storage denied isn't fatal because to get to the home screen you've logged in sucessfuly in the past.
+					//	credentials might be good but might not be. be sure to warn.
+					Utils.showOk(this, getString(R.string.alert_user_home_storage_denied_warning));
 				}
 			}
 		}

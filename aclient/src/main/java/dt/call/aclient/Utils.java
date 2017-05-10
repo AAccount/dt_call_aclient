@@ -6,6 +6,7 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ComponentName;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -13,18 +14,24 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Process;
 import android.support.v4.content.ContextCompat;
 import android.util.Base64;
 import android.util.Log;
 
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
+import java.security.KeyFactory;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.security.spec.PKCS8EncodedKeySpec;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
@@ -82,7 +89,7 @@ public class Utils
 						//Get the certificate encoded as ascii text. Normally a certificate can be opened
 						//	by a text editor anyways.
 						byte[] serverCertDump = chain[0].getEncoded();
-						String server64 = Base64.encodeToString(serverCertDump, Base64.NO_PADDING & Base64.NO_WRAP);
+						String server64 = Base64.encodeToString(serverCertDump, Const.BASE64_Flags);
 
 						//Trim the expected and presented server ceritificate ascii representations to prevent false
 						//	positive of not matching because of randomly appended new lines or tabs or both.
@@ -389,12 +396,11 @@ public class Utils
 		Vars.mediaSocket = null;
 	}
 
-	//for cases when Vars.(shared prefs variable) goes missing or the initia load
+	//for cases when Vars.(shared prefs variable) goes missing or the initial load
 	public static void loadPrefs()
 	{
 		SharedPreferences sharedPreferences = Vars.applicationContext.getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
 		Vars.uname = sharedPreferences.getString(Const.PREF_UNAME, "");
-		Vars.passwd = sharedPreferences.getString(Const.PREF_PASSWD, "");
 		Vars.serverAddress = sharedPreferences.getString(Const.PREF_ADDR, "");
 		try
 		{
@@ -409,5 +415,85 @@ public class Utils
 		Vars.certName = sharedPreferences.getString(Const.PREF_CERTFNAME, "");
 		Vars.certDump = sharedPreferences.getString(Const.PREF_CERTDUMP, "");
 		Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, Vars.SHOUDLOG);
+
+		//load the private key dump and make it usable
+		String privateKeyDump = sharedPreferences.getString(Const.PREF_PRIVATE_KEY_DUMP, "");
+		if(!privateKeyDump.equals(""))
+		{
+			try
+			{
+				byte[] keyDecoded = Base64.decode(privateKeyDump, Const.BASE64_Flags);
+				KeyFactory kf = KeyFactory.getInstance("RSA");
+				Vars.privateKey = kf.generatePrivate(new PKCS8EncodedKeySpec(keyDecoded));
+			}
+			catch (Exception e)
+			{
+				dumpException(tag, e);
+				Vars.privateKey = null;
+			}
+		}
+	}
+
+	//for dtsettings and initial server: read the server's public key and set it up for use
+	public static boolean readServerPublicKey(Uri uri, Context context)
+	{
+		try
+		{
+			ContentResolver resolver = context.getContentResolver();
+			InputStream certInputStream = resolver.openInputStream(uri);
+			X509Certificate expectedCert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(certInputStream);
+			byte[] expectedDump = expectedCert.getEncoded();
+			Vars.certDump = Base64.encodeToString(expectedDump, Const.BASE64_Flags);
+
+			//store the certificate file name for esthetic purposes
+			String[] expanded = uri.getPath().split("[\\/:\\:]");
+			Vars.certName = expanded[expanded.length-1];
+			return true;
+		}
+		catch (FileNotFoundException | CertificateException e)
+		{
+			//file somehow disappeared between picking and trying to use in the app
+			//	there's nothing you can do about it
+			Utils.showOk(context, context.getString(R.string.alert_corrupted_cert));
+			return false;
+		}
+	}
+
+	//for dtsettings and initial user: read the user's private key and set it up for use
+	public static boolean readUserPrivateKey(Uri uri, Context context)
+	{
+		try
+		{
+			//read the private key and convert to a string
+			ContentResolver resolver = context.getContentResolver();
+			InputStream privateKeyStream = resolver.openInputStream(uri);
+			byte[] keyBytes = new byte[Const.BUFFERSIZE];
+			privateKeyStream.read(keyBytes);
+			privateKeyStream.close();
+
+			//chop of header and footer
+			Vars.privateKeyDump = new String(keyBytes);
+			Vars.privateKeyDump = Vars.privateKeyDump.replace("-----BEGIN PRIVATE KEY-----\n", "");
+			Vars.privateKeyDump = Vars.privateKeyDump.replace("-----END PRIVATE KEY-----", "");
+
+			//actually turn the file into a key
+			byte[] keyDecoded = Base64.decode(Vars.privateKeyDump, Const.BASE64_Flags);
+			KeyFactory kf = KeyFactory.getInstance("RSA");
+			Vars.privateKey = kf.generatePrivate(new PKCS8EncodedKeySpec(keyDecoded));
+
+			//if it's gotten this far it must be a useable key, save the name
+			String[] expanded = uri.getPath().split("[\\/:\\:]");
+			Vars.privateKeyName = expanded[expanded.length-1];
+			return true;
+		}
+		catch (Exception e)
+		{
+			//file somehow disappeared between picking and trying to use in the app
+			//	there's nothing you can do about it
+			Utils.dumpException(tag, e);
+			Utils.showOk(context, context.getString(R.string.alert_corrupted_cert));
+
+			return false;
+		}
 	}
 }

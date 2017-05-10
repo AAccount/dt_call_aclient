@@ -6,6 +6,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 
+import java.security.PrivateKey;
 import java.util.HashMap;
 
 import javax.net.ssl.SSLSocket;
@@ -45,7 +46,9 @@ public class Vars
 
 	//user information (to be filled in when available)
 	public static String uname = null;
-	public static String passwd = null;
+	public static PrivateKey privateKey = null;
+	public static String privateKeyDump = null;
+	public static String privateKeyName = null;
 
 	//Ongoing notification with state information
 	public static Notification.Builder stateNotificationBuilder = null;

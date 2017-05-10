@@ -51,12 +51,10 @@
             android:summary="@string/settings_user_uname_summary"
             android:dialogTitle="@string/settings_user_uname_title"
             />
-        <EditTextPreference
-            android:key="password"
-            android:title="@string/settings_user_passwd_title"
-            android:summary="@string/settings_user_passwd_summary"
-            android:dialogTitle="@string/settings_user_passwd_title"
-            android:inputType="textPassword"
+        <Preference
+            android:key="private_key"
+            android:title="@string/settings_user_private_key_title"
+            android:summary="@string/settings_user_private_key_summary"
             />
     </PreferenceCategory>
 </PreferenceScreen>

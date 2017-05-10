@@ -8,7 +8,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
-import android.os.Build;
+import android.os.Bundle;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
@@ -39,7 +39,7 @@ public class BackgroundManager extends BroadcastReceiver
 		Utils.initAlarmVars();
 		AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 
-		if(Vars.uname == null || Vars.passwd == null || Vars.serverAddress == null)
+		if(Vars.uname == null || Vars.privateKey == null || Vars.serverAddress == null)
 		{
 			//sometimes Vars.(prefs stuff) disappears after idling in the background for a while
 			Utils.logcat(Const.LOGW, tag, "Reinitializing Vars from prefs file");
@@ -70,11 +70,25 @@ public class BackgroundManager extends BroadcastReceiver
 			manager.cancel(Vars.pendingRetries2ndary);
 
 			Utils.logcat(Const.LOGD, tag, "internet was reconnected by manual detection");
-			new LoginAsync(Vars.uname, Vars.passwd).execute();
+			new LoginAsync(Vars.uname, Vars.privateKey).execute();
 			return;
 		}
 		else if (!Const.NEEDS_MANUAL_INTERNET_DETECTION && action.equals(ConnectivityManager.CONNECTIVITY_ACTION))
 		{
+			boolean extra = intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false);
+			Bundle b = intent.getExtras();
+			String dump = "";
+			for(String k : b.keySet())
+			{
+				dump = dump + k + ": " + b.get(k) + "\n";
+			}
+			Utils.logcat(Const.LOGD, tag, dump);
+			if(extra)
+			{
+				Utils.logcat(Const.LOGD, tag, "skipping due to legacy extra info");
+				return;
+			}
+
 			if(Utils.hasInternet())
 			{
 				//internet reconnected case
@@ -94,7 +108,7 @@ public class BackgroundManager extends BroadcastReceiver
 					manager.cancel(Vars.pendingRetries2ndary);
 
 					Utils.logcat(Const.LOGD, tag, "internet was reconnected by legacy android automatic detection");
-					new LoginAsync(Vars.uname, Vars.passwd).execute();
+					new LoginAsync(Vars.uname, Vars.privateKey).execute();
 				}
 			}
 			else
@@ -121,7 +135,7 @@ public class BackgroundManager extends BroadcastReceiver
 				return;
 			}
 
-			new LoginAsync(Vars.uname, Vars.passwd).execute();
+			new LoginAsync(Vars.uname, Vars.privateKey).execute();
 		}
 		else if(action.equals(Const.ALARM_ACTION_HEARTBEAT))
 		{
@@ -163,7 +177,6 @@ public class BackgroundManager extends BroadcastReceiver
 		{
 			ComponentName jobServiceReceiver = new ComponentName(Const.PACKAGE_NAME, JobServiceReceiver.class.getName());
 			JobInfo.Builder builder = new JobInfo.Builder(1, jobServiceReceiver).setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
-			builder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
 			JobScheduler jobScheduler = (JobScheduler)mainContext.getSystemService(Context.JOB_SCHEDULER_SERVICE);
 			int result = jobScheduler.schedule(builder.build());
 			Utils.logcat(Const.LOGD, tag, "putting in a new job with status: " + result);

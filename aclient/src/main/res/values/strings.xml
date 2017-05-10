@@ -11,19 +11,24 @@
     <!-- Progress dialog messages -->
     <string name="progress_login">Dialing in...</string>
 
+    <!-- File picker messages -->
+    <string name="file_picker_server_public">Server\'s Expected Public Key</string>
+    <string name="file_picker_user_private">Your Private Key</string>
+
     <!-- Dialog Messages (not screen specific) -->
     <string name="alert_ok">OK</string>
     <string name="alert_login_failed">Login failed</string>
-
-    <!-- Dialog Messages (screen specific) -->
     <string name="alert_yes">Yes</string>
     <string name="alert_no">No</string>
     <string name="alert_technical_difficulties">Currently experience technical difficulties. Check DB Logs if possible.</string>
+    <string name="alert_corrupted_cert">Certificate file corrupted. Can\'t use.</string>
+    <string name="alert_storage_perm">Storage permission is required to open your private key to log on. Storage is also used to open the server\'s public key to verify you are connecting to the server you\'re expecting.</string>
+
+    <!-- Dialog Messages (screen specific) -->
     <string name="alert_initial_server_no_caja">No file explorers installed on your device</string>
     <string name="alert_initial_server_incomplete_server">Incomplete server information</string>
     <string name="alert_initial_server_invalid_port">Port # must be between 1 and 65535</string>
-    <string name="alert_initial_server_corrupted_cert">Certificate file corrupted. Can\'t use.</string>
-    <string name="alert_initial_user_missing_uinfo">Missing username or password.</string>
+    <string name="alert_initial_user_missing_uinfo">Missing username or private key.</string>
     <string name="alert_initial_user_cert_not_match">Server\'s certificate DOES NOT MATCH the expected. DO NOT continue.</string>
     <string name="alert_user_home_duplicate">Contact already exists</string>
     <string name="alert_user_home_contact_notexist">User does not exist</string>
@@ -33,9 +38,9 @@
     <string name="alert_user_home_cant_dial">User is not available to call</string>
     <string name="alert_user_home_no_internet">No internet connection. Can\'t login.</string>
     <string name="alert_user_home_mic_perm">Call does not have permission to use the microphone. It won\'t be much of a call if the other person can\'t hear you.</string>
+    <string name="alert_user_home_storage_denied_warning">With storage permission denied, you will not be able to change your private key or the expected server public key.</string>
     <string name="alert_user_home_really_quit">Are you sure you want to quit? People will not be able to call you.</string>
     <string name="alert_user_home_ignore_batter_savings_explain">Batter savings optimizations will kill internet access when the phone is not in use. This means you will only be able to make calls while using or shortly after using your phone. Battery optimizations need to be disabled.</string>
-    <string name="alert_initial_server_storage_perm">Call does not have permission to access storage. There is no point of an encrypted connection if the server you\'re connecting isn\'t the one you\'re expecting.</string>
 
     <!-- Persistent popup statuses -->
     <string name="state_popup_idle">Signed In</string>
@@ -47,7 +52,7 @@
     <!-- Initial user setup -->
     <string name="initial_user_title">User Information</string>
     <string name="initial_user_uname_hint">Name</string>
-    <string name="initial_user_passwd_hint">Password</string>
+    <string name="initial_user_private_key_hint">Choose Private Key</string>
 
     <!-- User home screen -->
     <string name="user_home_actionbox_hint">Choose someone to call</string>
@@ -79,11 +84,11 @@
 
     <!-- About this app screen -->
     <string name="about_title">App Info</string>
-    <string name="about_desc">Android client for Daniel Tjandra call server. Forces TLS 1.2, trusting only the supplied certificate regardless of its certificate chain. Uses amr narrow band @ 12.2kbit/s for voice.</string>
+    <string name="about_desc">Android client for Daniel Tjandra call server. Forces TLS 1.2, trusting only the supplied certificate regardless of its certificate chain. Uses amr narrow band @ 12.2kbit/s for voice.\nNew to v1.1: public key authentication.</string>
     <string name="about_compile_label">Git:</string>
     <string name="about_compile_revision">92df5c928e4d401d8e699e5674c6052b6015c555</string>
     <string name="about_version_label">Version:</string>
-    <string name="about_version_number">0.91</string> <!-- do not translate. it's just a number -->
+    <string name="about_version_number">1.1</string> <!-- do not translate. it's just a number -->
     <string name="about_by_label">Credits:</string>
     <string name="about_people">
         Daniel Tjandra (main)\n
@@ -120,7 +125,7 @@
     <string name="settings_user_title">User Account</string>
     <string name="settings_user_uname_title">User Name</string>
     <string name="settings_user_uname_summary">CASE SENSITIVE user account name</string>
-    <string name="settings_user_passwd_title">Password</string>
-    <string name="settings_user_passwd_summary">CASE SENSITIVE password</string>
+    <string name="settings_user_private_key_title">Private Key</string>
+    <string name="settings_user_private_key_summary">Your private key for logging in</string>
 
 </resources>

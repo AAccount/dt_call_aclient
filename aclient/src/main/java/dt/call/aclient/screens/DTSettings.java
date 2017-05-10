@@ -1,7 +1,6 @@
 package dt.call.aclient.screens;
 
 import android.content.ActivityNotFoundException;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -10,13 +9,6 @@ import android.os.Bundle;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Base64;
-
-import java.io.FileNotFoundException;
-import java.io.InputStream;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
 
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
@@ -40,8 +32,8 @@ public class DTSettings extends AppCompatActivity
 	public static class SettingsFragment extends PreferenceFragment implements Preference.OnPreferenceClickListener, Preference.OnPreferenceChangeListener
 	{
 		private static final String tag = "SettingsFragment";
-		private static final int FILE_SELECT_CODE = 1;
 		private Preference certPicker;
+		private Preference privateKeyPicker;
 		private Preference cmdPortPicker;
 		private Preference mediaPortPicker;
 
@@ -58,6 +50,8 @@ public class DTSettings extends AppCompatActivity
 			//setup the file picker for the certificate preference
 			certPicker = findPreference(Const.PREF_CERTFNAME);
 			certPicker.setOnPreferenceClickListener(this);
+			privateKeyPicker = findPreference(Const.PREF_PRIVATE_KEY_DUMP);
+			privateKeyPicker.setOnPreferenceClickListener(this);
 
 			//setup the command and media ports to make sure the port number is between 1 and 65536
 			cmdPortPicker = findPreference(Const.PREF_COMMANDPORT);
@@ -70,8 +64,22 @@ public class DTSettings extends AppCompatActivity
 		public boolean onPreferenceClick(Preference preference)
 		{
 			//mostly copied and pasted from InitlalServer
-			if(preference == certPicker)
+			if(preference == certPicker || preference == privateKeyPicker)
 			{
+				//choose the appropriate selection key and popup title
+				int selectionKey;
+				String selectionTitle;
+				if(preference == certPicker)
+				{
+					selectionKey = Const.SERVER_CERT_SELECT;
+					selectionTitle = getString(R.string.file_picker_server_public);
+				}
+				else
+				{
+					selectionKey = Const.PRIVATE_KEY_SELECT;
+					selectionTitle = getString(R.string.file_picker_user_private);
+				}
+
 				//https://stackoverflow.com/questions/7856959/android-file-chooser
 				// Open a file chooser dialog. Alert dialog if no file managers found
 				Intent fileDialog = new Intent(Intent.ACTION_GET_CONTENT);
@@ -79,7 +87,7 @@ public class DTSettings extends AppCompatActivity
 				fileDialog.addCategory(Intent.CATEGORY_OPENABLE);
 				try
 				{
-					startActivityForResult(Intent.createChooser(fileDialog, "Choose cert"), FILE_SELECT_CODE);
+					startActivityForResult(Intent.createChooser(fileDialog, selectionTitle), selectionKey);
 				}
 				catch (ActivityNotFoundException a)
 				{
@@ -90,42 +98,33 @@ public class DTSettings extends AppCompatActivity
 		}
 
 		@Override
-		//mostly copied and pasted from InitlalServer
 		public void onActivityResult(int requestCode, int result, Intent data)
 		{
 			//Only attempt to get the certificate file path if Intent data has stuff in it.
 			//	It won't have stuff in it if the user just clicks back.
-			if(requestCode == FILE_SELECT_CODE && data != null)
+			if(requestCode == Const.SERVER_CERT_SELECT && data != null)
 			{
 				Uri uri = data.getData();
-
-				//https://stackoverflow.com/questions/7492672/java-string-split-by-multiple-character-delimiter
-				String[] expanded = uri.getPath().split("[\\/:\\:]");
-				String cert64, certFile;
-				ContentResolver resolver = getActivity().getContentResolver();
-
-				try
+				if(Utils.readServerPublicKey(uri, getActivity()))
 				{
-					InputStream certInputStream = resolver.openInputStream(uri);
-					X509Certificate expectedCert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(certInputStream);
-					byte[] expectedDump = expectedCert.getEncoded();
-					cert64 = Base64.encodeToString(expectedDump, Base64.NO_PADDING & Base64.NO_WRAP);
-					Vars.certDump = cert64;
-
-					//store the certificate file name for esthetic purposes
-					certFile = expanded[expanded.length-1];
 					SharedPreferences sharedPreferences = getActivity().getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
 					SharedPreferences.Editor editor = sharedPreferences.edit();
-					editor.putString(Const.PREF_CERTDUMP, cert64);
-					editor.putString(Const.PREF_CERTFNAME, certFile);
+					editor.putString(Const.PREF_CERTDUMP, Vars.certDump);
+					editor.putString(Const.PREF_CERTFNAME, Vars.certName);
 					editor.apply();
-
 				}
-				catch (FileNotFoundException | CertificateException e)
+			}
+
+			else if(requestCode == Const.PRIVATE_KEY_SELECT && data != null)
+			{
+				Uri uri = data.getData();
+				if(Utils.readUserPrivateKey(uri, getActivity()))
 				{
-					//file somehow disappeared between picking and trying to use in the app
-					//	there's nothing you can do about it
-					Utils.showOk(getActivity(), getString(R.string.alert_initial_server_corrupted_cert));
+					SharedPreferences sharedPreferences = getActivity().getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
+					SharedPreferences.Editor editor = sharedPreferences.edit();
+					editor.putString(Const.PREF_PRIVATE_KEY_DUMP, Vars.privateKeyDump);
+					editor.putString(Const.PREF_PRIVATE_KEY_NAME, Vars.privateKeyName);
+					editor.apply();
 				}
 			}
 		}
@@ -152,6 +151,7 @@ public class DTSettings extends AppCompatActivity
 				catch (Exception e)
 				{
 					Utils.dumpException(tag, e);
+					Utils.showOk(getActivity(), getString(R.string.alert_initial_server_invalid_port));
 					return false;
 				}
 			}

@@ -37,8 +37,6 @@ import dt.call.aclient.background.BackgroundManager;
 public class InitialServer extends AppCompatActivity implements View.OnClickListener
 {
 	private static final String tag = "Initial Server";
-	private static final int FILE_SELECT_CODE = 1;
-	private static final int STORAGE_PERM = 1;
 
 	private EditText addr, commandPort, mediaPort;
 	private Button cert;
@@ -57,7 +55,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 
 		Utils.loadPrefs();
 
-		if(!Vars.uname.equals("") && !Vars.passwd.equals(""))
+		if(!Vars.uname.equals("") && !(Vars.privateKey == null))
 		{
 			Utils.logcat(Const.LOGD, tag, "Skipping to the home screen");
 
@@ -111,14 +109,14 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
 		{
 			AlertDialog.Builder mkdialog = new AlertDialog.Builder(this);
-			mkdialog.setMessage(getString(R.string.alert_initial_server_storage_perm))
+			mkdialog.setMessage(getString(R.string.alert_storage_perm))
 					.setPositiveButton(R.string.alert_ok, new DialogInterface.OnClickListener()
 					{
 						@Override
 						public void onClick(DialogInterface dialog, int which)
 						{
 							String[] perms = new String[]{Manifest.permission.READ_EXTERNAL_STORAGE};
-							ActivityCompat.requestPermissions(InitialServer.this, perms, STORAGE_PERM);
+							ActivityCompat.requestPermissions(InitialServer.this, perms, Const.STORAGE_PERM);
 							dialog.cancel();
 						}
 					});
@@ -139,7 +137,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			fileDialog.addCategory(Intent.CATEGORY_OPENABLE);
 			try
 			{
-				startActivityForResult(Intent.createChooser(fileDialog, "Choose cert"), FILE_SELECT_CODE);
+				startActivityForResult(Intent.createChooser(fileDialog, getString(R.string.file_picker_server_public)), Const.SERVER_CERT_SELECT);
 			}
 			catch (ActivityNotFoundException a)
 			{
@@ -164,13 +162,12 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 
 			//check to make sure the ports are valid
 			boolean commandValid, mediaValid;
-			int commandInt=0, mediaInt=0;
 			try
 			{
-				commandInt = Integer.valueOf(commandString);
-				mediaInt = Integer.valueOf(mediaString);
-				commandValid = commandInt > 0 && commandInt < 65536;
-				mediaValid = mediaInt > 0 && mediaInt < 65536;
+				Vars.commandPort = Integer.valueOf(commandString);
+				Vars.mediaPort = Integer.valueOf(mediaString);
+				commandValid = Vars.commandPort > 0 && Vars.commandPort < 65536;
+				mediaValid = Vars.mediaPort > 0 && Vars.mediaPort < 65536;
 			}
 			catch (NumberFormatException n)
 			{
@@ -193,10 +190,6 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			editor.putString(Const.PREF_CERTFNAME, Vars.certName);
 			editor.apply();
 
-			//setup all the Vars
-			Vars.commandPort = commandInt;
-			Vars.mediaPort = mediaInt;
-
 			//go to the user information screen
 			Intent initUser = new Intent(this, InitialUserInfo.class);
 			startActivity(initUser);
@@ -209,31 +202,12 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 	{
 		//Only attempt to get the certificate file path if Intent data has stuff in it.
 		//	It won't have stuff in it if the user just clicks back.
-		if(requestCode == FILE_SELECT_CODE && data != null)
+		if(requestCode == Const.SERVER_CERT_SELECT && data != null)
 		{
 			Uri uri = data.getData();
-
-			//https://stackoverflow.com/questions/7492672/java-string-split-by-multiple-character-delimiter
-			String[] expanded = uri.getPath().split("[\\/:\\:]");
-
-			ContentResolver resolver = getContentResolver();
-			try
+			if(Utils.readServerPublicKey(uri, InitialServer.this))
 			{
-				InputStream certInputStream = resolver.openInputStream(uri);
-				X509Certificate expectedCert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(certInputStream);
-				byte[] expectedDump = expectedCert.getEncoded();
-				Vars.certDump = Base64.encodeToString(expectedDump, Base64.NO_PADDING & Base64.NO_WRAP);
-
-				//store the certificate file name for esthetic purposes
-				Vars.certName = expanded[expanded.length-1];
 				cert.setText(Vars.certName);
-
-			}
-			catch (FileNotFoundException | CertificateException e)
-			{
-				//file somehow disappeared between picking and trying to use in the app
-				//	there's nothing you can do about it
-				Utils.showOk(this, getString(R.string.alert_initial_server_corrupted_cert));
 			}
 		}
 	}
@@ -243,27 +217,14 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 	{
 		switch(requestCode)
 		{
-			case STORAGE_PERM:
+			case Const.STORAGE_PERM:
 			{
 				if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_DENIED)
 				{
 					/**
 					 * Not verifying the server you're connecting to defeats the purpose of call encryption.
-					 * If another server is impersonating the expected one, you've just lost your password,
-					 * and possibly opened yourself to call tapping. Just quit the app.
 					 */
-
-					//prevent background manager from restarting command listener when sockets kill async is called
-					ComponentName backgroundManager = new ComponentName(this, BackgroundManager.class);
-					getPackageManager().setComponentEnabledSetting(backgroundManager, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
-
-					//https://stackoverflow.com/questions/3226495/android-exit-application-code
-					//basically a way to get out of aclient
-					Intent intent = new Intent(Intent.ACTION_MAIN);
-					intent.addCategory(Intent.CATEGORY_HOME);
-					intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-					startActivity(intent);
-					System.exit(0); //actually close the app so it will start fresh from login
+					Utils.quit();
 				}
 			}
 		}
