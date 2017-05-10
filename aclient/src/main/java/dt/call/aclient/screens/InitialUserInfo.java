@@ -225,7 +225,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 			{
 				if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_DENIED)
 				{
-					/**
+					/*
 					 * If you can't even read your own private key, there's no way to log in.
 					 * Exit the app like a sore loser.
 					 */

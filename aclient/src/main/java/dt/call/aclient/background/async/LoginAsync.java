@@ -36,7 +36,6 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 	private static final String tag = "Login Async Task";
 	private static final Object loginLock = new Object();
 	private static boolean tryingLogin;
-	SimpleDateFormat ts = new SimpleDateFormat("HH:mm:ss.SSSS",Locale.US);
 
 	/**
 	 *  @param cuname User name to login with
@@ -192,7 +191,8 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		Vars.applicationContext.sendBroadcast(loginResult);
 
 		//update the persistent notification with the login results
-		Utils.logcat(Const.LOGD, tag, "Result of login: " + result + " " + ts.format(new Date()));
+		SimpleDateFormat ts = new SimpleDateFormat("HH:mm:ss.SSSS",Locale.US);
+		Utils.logcat(Const.LOGD, tag, "Result of login: " + result + " @" + ts.format(new Date()));
 		if(result)
 		{
 			Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
@@ -214,11 +214,11 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 	//	3 digit #s glued to each other. also turned unsigned #s into signed #s
 	private byte[] destringify(String numbers)
 	{
-		byte[] result = new byte[(int)(numbers.length()/3)];
+		byte[] result = new byte[numbers.length()/3];
 		for(int i=0; i<numbers.length(); i=i+3)
 		{
 			String digit = numbers.substring(i, i+3);
-			result[(int)(i/3)] = (byte)(0xff & Integer.valueOf(digit));
+			result[i/3] = (byte)(0xff & Integer.valueOf(digit));
 		}
 		return result;
 	}

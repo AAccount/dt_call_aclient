@@ -7,9 +7,10 @@
     <string name="initial_server_addr_media">Media Port Number</string>
     <string name="initial_server_certificate">Choose Expected Certificate</string>
     <string name="initial_server_title">Server Information</string>
+    <string name="initial_server_image_accessibility">Server picture from Fedora Linux</string>
 
     <!-- Progress dialog messages -->
-    <string name="progress_login">Dialing in...</string>
+    <string name="progress_login">Dialing in &#8230;</string>
 
     <!-- File picker messages -->
     <string name="file_picker_server_public">Server\'s Expected Public Key</string>
@@ -53,6 +54,7 @@
     <string name="initial_user_title">User Information</string>
     <string name="initial_user_uname_hint">Name</string>
     <string name="initial_user_private_key_hint">Choose Private Key</string>
+    <string name="initial_user_image_accessibility">Faceless user picture from Fedora Linux</string>
 
     <!-- User home screen -->
     <string name="user_home_actionbox_hint">Choose someone to call</string>

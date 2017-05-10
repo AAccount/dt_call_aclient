@@ -8,9 +8,9 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.ColorDrawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.support.design.widget.FloatingActionButton;
@@ -167,8 +167,17 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		//for some types of crashes it goes back to the UserHome screen but with no save data (and missing connections)
 		if(Vars.commandSocket == null || Vars.mediaSocket == null)
 		{
-			PowerManager powerManager = (PowerManager)getSystemService(Context.POWER_SERVICE);
-			boolean screenOn = powerManager.isScreenOn();//no choice. targeting >=4.1
+			PowerManager pm = (PowerManager)getSystemService(Context.POWER_SERVICE);
+			boolean screenOn = false; //https://stackoverflow.com/questions/30718783/andorid-is-screen-on-or-off-deprecated-isscreenon
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH)
+			{
+				screenOn = pm.isInteractive();
+
+			}
+			else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT_WATCH)
+			{
+				screenOn = pm.isScreenOn();
+			}
 			loginProgress = null;
 
 			//for self restarts or call end --> home while screen is off, this will never go away if the screen is off when the progressdialog is launched

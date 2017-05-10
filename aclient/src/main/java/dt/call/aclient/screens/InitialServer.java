@@ -221,7 +221,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			{
 				if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_DENIED)
 				{
-					/**
+					/*
 					 * Not verifying the server you're connecting to defeats the purpose of call encryption.
 					 */
 					Utils.quit();
