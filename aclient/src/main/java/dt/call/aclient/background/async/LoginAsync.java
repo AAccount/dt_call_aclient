@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 
-import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -148,7 +147,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			manager.cancel(Vars.pendingHeartbeat);
 			manager.cancel(Vars.pendingHeartbeat2ndary);
-			Utils.setExactWakeup(Const.STD_TIMEOUT, Vars.pendingHeartbeat, Vars.pendingHeartbeat2ndary);
+			Utils.setExactWakeup(Vars.pendingHeartbeat, Vars.pendingHeartbeat2ndary);
 
 			onPostExecute(true);
 			return true;
@@ -187,7 +186,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		else
 		{
 			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
-			Utils.setExactWakeup(Const.STD_TIMEOUT, Vars.pendingRetries, Vars.pendingRetries2ndary);
+			Utils.setExactWakeup(Vars.pendingRetries, Vars.pendingRetries2ndary);
 			//background manager will check if there is internet or not when the retry kicks in and will act accordingly
 		}
 

@@ -37,7 +37,8 @@
         android:layout_height="wrap_content"
         android:src="@drawable/user"
         android:layout_below="@+id/call_main_status"
-        android:layout_centerHorizontal="true"/>
+        android:layout_centerHorizontal="true"
+        android:contentDescription="@string/initial_user_image_accessibility"/>
 
     <TextView
         android:id="@+id/call_main_callerid"

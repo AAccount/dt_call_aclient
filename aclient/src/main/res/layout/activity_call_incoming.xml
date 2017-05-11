@@ -18,6 +18,7 @@
         android:layout_centerHorizontal="true"
         android:src="@drawable/user"
         android:layout_marginTop="@dimen/call_incoming_vertical_spacing"
+        android:contentDescription="@string/initial_user_image_accessibility"
         />
 
     <TextView

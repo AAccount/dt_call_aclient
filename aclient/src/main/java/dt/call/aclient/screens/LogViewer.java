@@ -64,14 +64,7 @@ public class LogViewer extends AppCompatActivity implements View.OnClickListener
 	{
 		if(v == enable)
 		{
-			if(enable.isChecked())
-			{
-				Vars.SHOUDLOG = true;
-			}
-			else
-			{
-				Vars.SHOUDLOG = false;
-			}
+			Vars.SHOUDLOG = enable.isChecked();
 			SharedPreferences prefs = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
 			SharedPreferences.Editor ed = prefs.edit();
 			ed.putBoolean(Const.PREF_LOG, Vars.SHOUDLOG);

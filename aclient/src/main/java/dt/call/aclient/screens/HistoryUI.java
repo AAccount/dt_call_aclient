@@ -45,7 +45,7 @@ public class HistoryUI extends AppCompatActivity implements View.OnClickListener
 
 		sqLiteDb = SQLiteDb.getInstance(getApplicationContext());
 		dbhistory = sqLiteDb.getCallHistory();
-		addEntries(20);
+		addEntries();
 	}
 
 	@Override
@@ -53,13 +53,13 @@ public class HistoryUI extends AppCompatActivity implements View.OnClickListener
 	{
 		if(v == moreHistory)
 		{
-			addEntries(20);
+			addEntries();
 		}
 	}
 
-	private void addEntries(int howMany)
+	private void addEntries()
 	{
-		int max = Math.min(i + howMany, dbhistory.size());
+		int max = Math.min(i + 20, dbhistory.size());
 		while(i < max)
 		{
 			//create a new table row for each log
@@ -100,14 +100,17 @@ public class HistoryUI extends AppCompatActivity implements View.OnClickListener
 			if(history.getType() == Const.CALLINCOMING)
 			{
 				status.setBackground(ContextCompat.getDrawable(this, R.drawable.ic_call_received_blue_48dp));
+				status.setContentDescription(getString(R.string.history_incoming_accessibility));
 			}
 			else if(history.getType() == Const.CALLMISSED)
 			{
 				status.setBackground(ContextCompat.getDrawable(this, R.drawable.ic_call_missed_red_48dp));
+				status.setContentDescription(getString(R.string.history_missed_accessibility));
 			}
 			else if(history.getType() == Const.CALLOUTGOING)
 			{
 				status.setBackground(ContextCompat.getDrawable(this, R.drawable.ic_call_made_green_48dp));
+				status.setContentDescription(getString(R.string.history_outgoing_accessibility));
 			}
 			historyLayout.addView(entry);
 			i++;

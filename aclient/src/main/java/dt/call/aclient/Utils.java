@@ -81,6 +81,7 @@ public class Utils
 					@Override
 					public void checkClientTrusted(X509Certificate[] chain, String alg)
 					{
+						//this IS the client. it's not going to be getting clients itself. nothing to see here
 					}
 
 					@Override
@@ -134,32 +135,6 @@ public class Utils
 			}
 			dumpException(tag, e);
 			return null;
-		}
-	}
-
-	//for temporary spammy logging. don't junk up the db
-	public static void logcat(int type, String tag, String message, boolean logToDb)
-	{
-		if(Vars.SHOUDLOG)
-		{
-			if(type == Const.LOGD)
-			{
-				Log.d(tag, message);
-			}
-			else if (type == Const.LOGE)
-			{
-				Log.e(tag, message);
-			}
-			else if (type == Const.LOGW)
-			{
-				Log.w(tag, message);
-			}
-
-			if(logToDb)
-			{
-				SQLiteDb sqLiteDb = SQLiteDb.getInstance(Vars.applicationContext);
-				sqLiteDb.insertLog(new DBLog(tag, message));
-			}
 		}
 	}
 
@@ -350,20 +325,20 @@ public class Utils
 	//some cell phones are too aggressive with power saving and shut down the wifi when it looks like nothing is using it.
 	//this will kill the connection (sometimes silently) and cause calls not to come in but still make it look like you're signed on
 	//force the use of exact wakeup alarms to really check the connection regularly... and really schedule the next login when it says.
-	public static void setExactWakeup(long timeFromNow, PendingIntent operation, PendingIntent secondary)
+	public static void setExactWakeup(PendingIntent operation, PendingIntent secondary)
 	{
 		AlarmManager alarmManager = (AlarmManager)Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
 		if (Build.VERSION.SDK_INT >= 19)
 		{
-			alarmManager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + timeFromNow, operation);
+			alarmManager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + Const.STD_TIMEOUT, operation);
 			if(secondary != null)
 			{
-				alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + timeFromNow, secondary);
+				alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + Const.STD_TIMEOUT, secondary);
 			}
 		}
 		else
 		{
-			alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + timeFromNow, operation);
+			alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + Const.STD_TIMEOUT, operation);
 		}
 	}
 

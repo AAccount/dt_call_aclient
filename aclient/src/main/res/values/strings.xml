@@ -112,6 +112,9 @@
 
     <string name="history_title">History</string>
     <string name="history_more">Show More</string>
+    <string name="history_incoming_accessibility">Blue incoming down arrow</string>
+    <string name="history_missed_accessibility">Red missed call reflected off bottom arrow</string>
+    <string name="history_outgoing_accessibility">Green outgoing up arrow</string>
 
     <!-- DTSettings stuff and its fragment -->
     <string name="title_activity_settings">Settings</string>

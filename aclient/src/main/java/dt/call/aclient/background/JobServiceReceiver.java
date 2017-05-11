@@ -18,7 +18,7 @@ import dt.call.aclient.Vars;
 
 public class JobServiceReceiver extends JobService
 {
-	public static final String tag = "JobServiceReceiver";
+	private static final String tag = "JobServiceReceiver";
 
 	@Override
 	public boolean onStartJob(JobParameters params)
