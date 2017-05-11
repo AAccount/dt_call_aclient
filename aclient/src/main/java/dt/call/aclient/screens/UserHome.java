@@ -199,7 +199,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			}
 
 			Utils.loadPrefs();
-			new LoginAsync(Vars.uname, Vars.privateKey).execute();
+			new LoginAsync().execute();
 		}
 	}
 

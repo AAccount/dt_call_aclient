@@ -155,7 +155,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 				return;
 			}
 
-			new LoginAsync(Vars.uname, Vars.privateKey).execute();
+			new LoginAsync().execute();
 		}
 		else if(v == privateKeyButton)
 		{

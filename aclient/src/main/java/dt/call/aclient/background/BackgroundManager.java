@@ -70,7 +70,7 @@ public class BackgroundManager extends BroadcastReceiver
 			manager.cancel(Vars.pendingRetries2ndary);
 
 			Utils.logcat(Const.LOGD, tag, "internet was reconnected by manual detection");
-			new LoginAsync(Vars.uname, Vars.privateKey).execute();
+			new LoginAsync().execute();
 			return;
 		}
 		else if (!Const.NEEDS_MANUAL_INTERNET_DETECTION && action.equals(ConnectivityManager.CONNECTIVITY_ACTION))
@@ -108,7 +108,7 @@ public class BackgroundManager extends BroadcastReceiver
 					manager.cancel(Vars.pendingRetries2ndary);
 
 					Utils.logcat(Const.LOGD, tag, "internet was reconnected by legacy android automatic detection");
-					new LoginAsync(Vars.uname, Vars.privateKey).execute();
+					new LoginAsync().execute();
 				}
 			}
 			else
@@ -135,7 +135,7 @@ public class BackgroundManager extends BroadcastReceiver
 				return;
 			}
 
-			new LoginAsync(Vars.uname, Vars.privateKey).execute();
+			new LoginAsync().execute();
 		}
 		else if(action.equals(Const.ALARM_ACTION_HEARTBEAT))
 		{

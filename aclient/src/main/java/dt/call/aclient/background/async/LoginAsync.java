@@ -30,22 +30,9 @@ import dt.call.aclient.background.CmdListener;
  */
 public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 {
-	private String uname;
-	private PrivateKey privateKey;
-
 	private static final String tag = "Login Async Task";
 	private static final Object loginLock = new Object();
 	private static boolean tryingLogin;
-
-	/**
-	 *  @param cuname User name to login with
-	 * @param cprivate User's private key in useable object form
-	 */
-	public LoginAsync(String cuname, PrivateKey cprivate)
-	{
-		uname = cuname;
-		privateKey = cprivate;
-	}
 
 	@Override
 	protected Boolean doInBackground(Boolean... params)
@@ -70,7 +57,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			//request login challenge
 			Vars.commandSocket = Utils.mkSocket(Vars.serverAddress, Vars.commandPort, Vars.certDump);
-			String login = Utils.currentTimeSeconds() + "|login1|" + uname;
+			String login = Utils.currentTimeSeconds() + "|login1|" + Vars.uname;
 			Vars.commandSocket.getOutputStream().write(login.getBytes());
 
 			//read in login challenge
@@ -118,10 +105,10 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			//answer the challenge
 			Cipher rsa = Cipher.getInstance("RSA/NONE/PKCS1Padding");
-			rsa.init(Cipher.DECRYPT_MODE, privateKey);
+			rsa.init(Cipher.DECRYPT_MODE, Vars.privateKey);
 			byte[] decrypted = rsa.doFinal(challengeNumbers);
 			String challengeDec = new String(decrypted, "UTF8");
-			String loginChallengeResponse = Utils.currentTimeSeconds() + "|login2|" + uname + "|" + challengeDec;
+			String loginChallengeResponse = Utils.currentTimeSeconds() + "|login2|" + Vars.uname + "|" + challengeDec;
 			Vars.commandSocket.getOutputStream().write(loginChallengeResponse.getBytes());
 
 			//see if the server liked the challenge response
