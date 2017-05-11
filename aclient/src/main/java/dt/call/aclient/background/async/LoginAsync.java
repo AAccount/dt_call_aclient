@@ -94,20 +94,20 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			String[] loginChallengeContents = loginChallenge.split("\\|");
 			if(loginChallengeContents.length != 4)
 			{
-				Utils.logcat(Const.LOGW, tag, "Server response imporoperly formatted");
+				Utils.logcat(Const.LOGW, tag, "login1 response imporoperly formatted");
 				onPostExecute(false); //not a legitimate server response
 				return false;
 			}
 			if(!(loginChallengeContents[1].equals("resp") && loginChallengeContents[2].equals("login1")))
 			{
-				Utils.logcat(Const.LOGW, tag, "Server response CONTENTS imporperly formated");
+				Utils.logcat(Const.LOGW, tag, "login1 response CONTENTS improperly formated");
 				onPostExecute(false); //server response doesn't make sense
 				return false;
 			}
 			long ts = Long.valueOf(loginChallengeContents[0]);
 			if(!Utils.validTS(ts))
 			{
-				Utils.logcat(Const.LOGW, tag, "Server had an unacceptable timestamp");
+				Utils.logcat(Const.LOGW, tag, "login1 had an unacceptable timestamp");
 				onPostExecute(false);
 				return false;
 			}
@@ -133,18 +133,18 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			String[] answerResponseContents = answerResponse.split("\\|");
 			if(answerResponseContents.length != 4)
 			{
-				System.out.println("Server response imporoperly formatted");
+				Utils.logcat(Const.LOGW, tag, "login2 response imporoperly formatted");
 				return false; //not a legitimate server response
 			}
 			if(!(answerResponseContents[1].equals("resp") && answerResponseContents[2].equals("login2")))
 			{
-				System.out.println("Server response CONTENTS imporperly formateed");
+				Utils.logcat(Const.LOGW, tag, "login2 response CONTENTS imporperly formateed");
 				return false; //server response doesn't make sense
 			}
 			ts = Long.valueOf(answerResponseContents[0]);
 			if(!Utils.validTS(ts))
 			{
-				Utils.logcat(Const.LOGW, tag, "Server had an unacceptable timestamp");
+				Utils.logcat(Const.LOGW, tag, "login2 had an unacceptable timestamp");
 				onPostExecute(false);
 				return false;
 			}
