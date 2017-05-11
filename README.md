@@ -13,7 +13,15 @@ As a footnote: functionality is heavily stressed over fashionability. The client
 
 End note: there are no plans to make an iOS client because there are no good resources for learning how to make and use raw TLS sockets as seen on in AClient in swift3. (Not https connections.) If you have a good tutorial please email danieltjandra@gmail.com. If you have a big book along the lines of "iOS programming from scratch" or "learn iOS programming" or "the definitive guide to swift for iOS", please don't suggest it. I find programming to be hands on approach. Reading thick explanation books with a skeleton example every few pages is tedious and not fruitful.
 
-# Changelog
+## Screenshots
+![Server Information](https://github.com/AAccount/dt_call_aclient/blob/master/screenshots/Server%20Info.png)
+![User Login](https://github.com/AAccount/dt_call_aclient/blob/master/screenshots/User%20Login.png)
+![Main Screen](https://github.com/AAccount/dt_call_aclient/blob/master/screenshots/Main.png)
+![Debug Screen](https://github.com/AAccount/dt_call_aclient/blob/master/screenshots/Debug%20Logs.png)
+![Incoming Call Screen](https://github.com/AAccount/dt_call_aclient/blob/master/screenshots/Incoming%20Call.png)
+![In Call Screen](https://github.com/AAccount/dt_call_aclient/blob/master/screenshots/Main%20Call.png)
+
+## Changelog
 **V 1.1:** public key authentication.
 
 **V 0.91:** initial functionality.
