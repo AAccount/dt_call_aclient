@@ -30,6 +30,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -53,6 +54,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final int WAVBUFFERSIZE = 160;
 	private static final int AMRBUFFERSIZE = 32;
 	private static final int bufferSize = AudioTrack.getMinBufferSize(SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT);
+	private static final int DIAL_TONE_SIZE = 32000;
 
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
@@ -73,6 +75,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	//related to audio playback and recording
 	private AudioManager audioManager;
 	private AudioRecord wavRecorder = null;
+
+	//for dial tone when initiating a call
+	private AudioTrack dialTone = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, DIAL_TONE_SIZE, AudioTrack.MODE_STATIC);
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -201,6 +206,22 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			uiCallMode();
 			startMediaDecodeThread();
 			startMediaEncodeThread();
+		}
+		else //otherwise you're the one placing a call. play a dial tone for user feedback
+		{
+			byte[] dialToneDump = new byte[DIAL_TONE_SIZE]; //right click the file and get the exact size
+			try
+			{
+				InputStream dialToneStream = getResources().openRawResource(R.raw.dialtone8000);
+				int amount = dialToneStream.read(dialToneDump);
+				dialTone.write(dialToneDump, 0, amount);
+				dialTone.setLoopPoints(0, DIAL_TONE_SIZE/2, -1);
+				dialTone.play();
+			}
+			catch (Exception e)
+			{
+				Utils.dumpException(tag, e);
+			}
 		}
 	}
 
@@ -335,6 +356,17 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private void uiCallMode()
 	{
+		try
+		{
+			dialTone.stop();
+			dialTone.release();
+			dialTone = null;
+		}
+		catch (Exception e)
+		{
+			//will happen when you're on the receiving end and the dial tone was never played
+		}
+
 		//it is impossible to change the status bar @ run time below 5.0, only the action bar color.
 		//results in a weird blue/green look. only change the look for >= 5.0
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
