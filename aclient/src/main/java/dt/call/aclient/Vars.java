@@ -24,7 +24,7 @@ public class Vars
 {
 	public static boolean SHOUDLOG = true;
 
-	public static long sessionid = -1;
+	public static String sessionid = "";
 
 	//2 sockets
 	public static SSLSocket commandSocket = null;

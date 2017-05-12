@@ -212,8 +212,8 @@ public class CmdListener extends IntentService
 					}
 					else if(subCommand.equals("drop"))
 					{
-						long servSession = Long.valueOf(respContents[3]);
-						if(servSession == Vars.sessionid)
+						String servSession = respContents[3];
+						if(servSession.equals(Vars.sessionid))
 						{
 							logd = logd +  "Call with " + Vars.callWith + " was dropped\n";
 							Vars.state = CallState.NONE;

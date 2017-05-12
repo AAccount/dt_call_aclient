@@ -135,7 +135,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 				return false;
 			}
 
-			Vars.sessionid = Long.valueOf(answerResponseContents[3]);
+			Vars.sessionid = answerResponseContents[3];
 
 			//establish media socket
 			Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.certDump);
