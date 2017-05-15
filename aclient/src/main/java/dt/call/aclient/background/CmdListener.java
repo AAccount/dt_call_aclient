@@ -45,9 +45,7 @@ public class CmdListener extends IntentService
 			//timestamp|ring|available|tried_to_call
 			//timestamp|ring|incoming|trying_to_call
 			//timestamp|ring|busy|tried_to_call
-			//timestamp|ring|timeout|trying to call you
 			//timestamp|lookup|who|exists
-			//timestamp|resp|login|sessionid
 			//timestamp|call|start|with
 			//timestamp|call|reject|by
 			//timestamp|call|end|by
@@ -136,21 +134,6 @@ public class CmdListener extends IntentService
 						Vars.callWith = Const.nobody;
 						notifyCanInit(false);
 						Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
-					}
-					else if(subCommand.equals("timeout"))
-					{
-						if(involved.equals(Vars.callWith.getName()))
-						{
-							logd = logd +  "60seconds is up to answer a call from " + Vars.callWith + "\n";
-							Vars.state = CallState.NONE;
-							Vars.callWith = Const.nobody;
-							notifyCallStateChange(Const.BROADCAST_CALL_END);
-							Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
-						}
-						else
-						{
-							Utils.logcat(Const.LOGW, tag, "Erroneous timeout from: " + involved + " instead of: " + Vars.callWith);
-						}
 					}
 					else
 					{
