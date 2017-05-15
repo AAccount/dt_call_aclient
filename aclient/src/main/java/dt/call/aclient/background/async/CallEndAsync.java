@@ -1,7 +1,6 @@
 package dt.call.aclient.background.async;
 
 import android.os.AsyncTask;
-import android.os.SystemClock;
 
 import java.security.cert.CertificateException;
 

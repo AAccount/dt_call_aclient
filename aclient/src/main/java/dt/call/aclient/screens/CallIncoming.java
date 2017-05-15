@@ -26,7 +26,8 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.CallAcceptAsync;
 import dt.call.aclient.background.async.CallRejectAsync;
-import dt.call.aclient.sqlite.*;
+import dt.call.aclient.sqlite.History;
+import dt.call.aclient.sqlite.SQLiteDb;
 
 public class CallIncoming extends AppCompatActivity implements View.OnClickListener
 {

@@ -21,10 +21,10 @@ import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup.LayoutParams;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.view.ViewGroup.LayoutParams;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -34,12 +34,12 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.background.async.LoginAsync;
 import dt.call.aclient.background.async.CallInitAsync;
+import dt.call.aclient.background.async.LoginAsync;
 import dt.call.aclient.background.async.LookupAsync;
 import dt.call.aclient.sqlite.Contact;
-import dt.call.aclient.sqlite.SQLiteDb;
 import dt.call.aclient.sqlite.History;
+import dt.call.aclient.sqlite.SQLiteDb;
 
 public class UserHome extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener
 {

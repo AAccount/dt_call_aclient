@@ -16,8 +16,8 @@ import java.util.ArrayList;
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Vars;
-import dt.call.aclient.sqlite.SQLiteDb;
 import dt.call.aclient.sqlite.DBLog;
+import dt.call.aclient.sqlite.SQLiteDb;
 
 public class LogViewer extends AppCompatActivity implements View.OnClickListener
 {
