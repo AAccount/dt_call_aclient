@@ -51,7 +51,6 @@ public class CmdListener extends IntentService
 			//timestamp|call|start|with
 			//timestamp|call|reject|by
 			//timestamp|call|end|by
-			//timestamp|call|drop|sessionid
 
 			String logd = ""; //accumulate all the diagnostic message together to prevent multiple entries of diagnostics in log ui just for cmd listener
 			try
@@ -208,33 +207,6 @@ public class CmdListener extends IntentService
 						else
 						{
 							Utils.logcat(Const.LOGW, tag, "Erroneous call rejected/end with: " + involved + " instead of " + Vars.callWith);
-						}
-					}
-					else if(subCommand.equals("drop"))
-					{
-						String servSession = respContents[3];
-						if(servSession.equals(Vars.sessionid))
-						{
-							logd = logd +  "Call with " + Vars.callWith + " was dropped\n";
-							Vars.state = CallState.NONE;
-							Vars.callWith = Const.nobody;
-							notifyCallStateChange(Const.BROADCAST_CALL_END);
-							Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
-
-							//there is no way to kill the thread but to stop the socket to cause an exception
-							//	restart after the exception
-							Vars.mediaSocket.close();
-							try
-							{
-								Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.certDump);
-								String associateMedia = Utils.currentTimeSeconds() + "|" + Vars.sessionid;
-								Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
-							}
-							catch (CertificateException c)
-							{
-								Utils.logcat(Const.LOGE, tag, "trying to reassociate media after dropped call but suddenly the server's cert is invalid");
-								inputValid = false;
-							}
 						}
 					}
 					else

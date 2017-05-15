@@ -33,12 +33,6 @@ public class CallEndAsync extends AsyncTask<String, String, Boolean>
 				return true;
 			}
 
-			//tell the server to end the call
-			String endit = Utils.currentTimeSeconds() + "|end|" + Vars.callWith.getName() + "|" + Vars.sessionid;
-			Utils.logcat(Const.LOGD, tag, endit);
-			Vars.commandSocket.getOutputStream().write(endit.getBytes());
-			SystemClock.sleep(1000); //give some time for the command to reach the server before "pulling the plug"
-
 			//reset the media socket to kill the media read/write threads
 			//also need to kill the media socket to flush out any data still in its buffers so the next call
 			//doesn't play a few seconds off the previous call, followed by the next call or worse...
