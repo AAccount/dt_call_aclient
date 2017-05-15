@@ -120,11 +120,13 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			if(answerResponseContents.length != 4)
 			{
 				Utils.logcat(Const.LOGW, tag, "login2 response imporoperly formatted");
+				onPostExecute(false); //not a legitimate server response
 				return false; //not a legitimate server response
 			}
 			if(!(answerResponseContents[1].equals("resp") && answerResponseContents[2].equals("login2")))
 			{
 				Utils.logcat(Const.LOGW, tag, "login2 response CONTENTS imporperly formateed");
+				onPostExecute(false); //not a legitimate server response
 				return false; //server response doesn't make sense
 			}
 			ts = Long.valueOf(answerResponseContents[0]);
