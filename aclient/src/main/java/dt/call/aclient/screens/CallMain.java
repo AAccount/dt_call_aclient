@@ -624,14 +624,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	public void onSensorChanged(SensorEvent event)
 	{
 		float x = event.values[0];
-		float y = event.values[1];
-		float z = event.values[2];
 
 		if(x < 5)
 		{
 			//with there being no good information on turning the screen on and off
 			//go with the next best thing of disabling all the buttons
-			Utils.logcat(Const.LOGD, tag, "proximity sensor NEAR: " + x + " " + y + " "+ z);
 			screenShowing = false;
 			end.setEnabled(false);
 			mic.setEnabled(false);
@@ -639,7 +636,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		}
 		else
 		{
-			Utils.logcat(Const.LOGD, tag, "proximity sensor FAR: " + x + " " + y + " "+ z);
 			screenShowing = true;
 			end.setEnabled(true);
 			mic.setEnabled(true);
