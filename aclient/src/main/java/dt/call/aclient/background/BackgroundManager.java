@@ -139,10 +139,18 @@ public class BackgroundManager extends BroadcastReceiver
 		}
 		else if(action.equals(Const.ALARM_ACTION_HEARTBEAT))
 		{
-			if (Vars.state == CallState.NONE && Utils.hasInternet()) //check call state first then hasInternet function. prevent log spam and unnecessary effort
+			if (Vars.state == CallState.NONE && Utils.hasInternet())
 			{
+				//only send if there is internet and not in a call. heartbeat during a call will inject a random byte into
+				//	the amr stream and cause a "frameshift mutation" of the amr data ==> turn amr into alien morse code
 				Utils.logcat(Const.LOGD, tag, "sending heart beat");
 				new HeartBeatAsync().execute();
+			}
+			else if(Vars.state != CallState.NONE)
+			{
+				//if there is a call (automatically means there is internet), don't let the heartbeat die out.
+				//	keep scheduling and keep ignoring until it's all done
+				Utils.setExactWakeup(Vars.pendingHeartbeat, Vars.pendingHeartbeat2ndary);
 			}
 			else if (!Utils.hasInternet())
 			{
