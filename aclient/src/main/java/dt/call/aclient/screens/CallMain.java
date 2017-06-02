@@ -260,6 +260,18 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		{
 			new CallEndAsync().execute();
 
+			//for cases when you make a call but decide you don't want to anymore
+			try
+			{
+				dialTone.stop();
+				dialTone.release();
+				dialTone = null;
+			}
+			catch (Exception e)
+			{
+				//will happen if you're on the receiving end or if the call has been connected
+			}
+
 			//no longer in a call
 			audioManager.setMode(AudioManager.MODE_NORMAL);
 			counter.cancel();
