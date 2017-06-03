@@ -5,6 +5,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.os.PowerManager;
 
 import java.security.PrivateKey;
 import java.util.HashMap;
@@ -33,6 +34,7 @@ public class Vars
 	//call related information
 	public volatile static CallState state = CallState.NONE;
 	public static Contact callWith;
+	public static PowerManager.WakeLock wakeLock = null;
 
 	//contacts hash table to avoid having to lookup the db for incoming calls
 	public static HashMap<String, String> contactTable = null;

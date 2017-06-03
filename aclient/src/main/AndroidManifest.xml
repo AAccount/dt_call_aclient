@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/> <!-- so the other person can hear you talk -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/> <!-- switch ear piece/speaker phone -->
     <uses-permission android:name="android.permission.VIBRATE"/> <!-- vibrate when in silent mode -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" /> <!-- turn on the screen after the cell phone hasn't been used in a while -->
+
 
     <!-- allowBackup=false to prevent automatic cloud backup which will unknowingly leak your information. -->
     <!-- the goal is to prevent unknowingly/unintentionally sending your information to someone else's servers -->

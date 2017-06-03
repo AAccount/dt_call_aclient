@@ -97,4 +97,7 @@ public class Const
 
 	//timeout (IN SECONDS) before giving up on calling someone
 	public static final int CALL_TIMEOUT = 20;
+
+	//wakelock tag
+	public static final String WAKELOCK_TAG = "dt.call.aclient.wakelock";
 }

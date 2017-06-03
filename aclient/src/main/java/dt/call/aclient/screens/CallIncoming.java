@@ -56,6 +56,15 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 		window.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);
 		window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
 		window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+		window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+
+		//cell phone now awake. release the wakelock
+		if(Vars.wakeLock != null)
+		{
+			Vars.wakeLock.release();
+			Vars.wakeLock = null;
+		}
 
 		accept = (FloatingActionButton)findViewById(R.id.call_incoming_accept);
 		accept.setOnClickListener(this);
@@ -197,6 +206,9 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 		{
 			new CallAcceptAsync().execute();
 			//need to wait for the server to say it's time to talk. don't assume it's immediately ready.
+			//if the other person gets cold feet and cancels the call then accept will be seen as invalid.
+			//	that's ok. when the server figures out the other person got cold feet it will send you the
+			//	call cancel soon enough.
 		}
 		else if (v == reject)
 		{

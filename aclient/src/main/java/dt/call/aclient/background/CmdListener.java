@@ -4,6 +4,7 @@ import android.app.AlarmManager;
 import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
+import android.os.PowerManager;
 
 import java.io.IOException;
 import java.security.cert.CertificateException;
@@ -122,6 +123,12 @@ public class CmdListener extends IntentService
 						Contact contact = new Contact(involved, Vars.contactTable.get(involved));
 						Vars.callWith = contact;
 
+						//wake up the cell phone
+						PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+						Vars.wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE, Const.WAKELOCK_TAG);
+						Vars.wakeLock.acquire();
+
+						//launch the incoming call screen
 						Utils.setNotification(R.string.state_popup_incoming, R.color.material_light_blue, Vars.go2CallIncomingPending);
 						Intent showIncoming = new Intent(getApplicationContext(), CallIncoming.class);
 						showIncoming.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK); //needed to start activity from background
