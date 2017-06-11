@@ -53,6 +53,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final int STREAMCALL = AudioManager.STREAM_VOICE_CALL;
 	private static final int WAVBUFFERSIZE = 160;
 	private static final int AMRBUFFERSIZE = 32;
+	private static final int ACCUMULATORSIZE = AMRBUFFERSIZE*16;
 	private static final int bufferSize = AudioTrack.getMinBufferSize(SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT);
 	private static final int DIAL_TONE_SIZE = 32000;
 
@@ -418,6 +419,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 				byte[] amrbuffer = new byte[AMRBUFFERSIZE];
 				short[] wavbuffer = new short[WAVBUFFERSIZE];
+				byte[] accumulator = new byte[ACCUMULATORSIZE];
+				int accumulatorPosition = 0;
 
 				//setup the wave audio recorder. since it is released and restarted, it needs to be setup here and not onCreate
 				wavRecorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, SAMPLESAMR, AudioFormat.CHANNEL_IN_MONO, FORMAT, bufferSize);
@@ -469,10 +472,23 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							totalRead = totalRead + dataRead;
 						}
 
+						/**
+						 * Send data in 512byte chunks ~ 1/3 of a second. Sending too many 32 byte amr packets
+						 * wastes tons of space in tcp+ip+hardware headers. Also greatly increases the chances of
+						 * packets coming out of order which will increase latency due to reordering fixing. 1/3 of a second
+						 * chosen because that is the minimum offset it takes to notice audio/video out of sync when mixing
+						 * in english audio into hd anime files.
+ 						 */
 						int encodeLength = AmrEncoder.encode(AmrEncoder.Mode.MR122.ordinal(), wavbuffer, amrbuffer);
+						System.arraycopy(amrbuffer, 0, accumulator, accumulatorPosition, encodeLength);
+						accumulatorPosition = accumulatorPosition + AMRBUFFERSIZE; //guarantee using 32byte chunks
 						try
 						{
-							Vars.mediaSocket.getOutputStream().write(amrbuffer, 0, encodeLength);
+							if(accumulatorPosition >= ACCUMULATORSIZE)
+							{
+								accumulatorPosition = 0;
+								Vars.mediaSocket.getOutputStream().write(accumulator, 0, ACCUMULATORSIZE);
+							}
 						}
 						catch (Exception e)
 						{
@@ -502,6 +518,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 								}
 							});
 							micStatusNew = false;
+							accumulatorPosition = 0;
 						}
 						SystemClock.sleep(1000);
 					}
@@ -548,28 +565,25 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has started");
 				byte[] amrbuffer = new byte[AMRBUFFERSIZE];
 				short[] wavbuffer = new short[WAVBUFFERSIZE];
+				byte[] accumulator = new byte[ACCUMULATORSIZE];
+				int accumulatorPosition = 0;
+				int skipCount = 0;
 
 				//setup the wave audio track with enhancements if available
 				wavPlayer = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, bufferSize, AudioTrack.MODE_STREAM);
 				wavPlayer.play();
 
-				/*
-				 * Detect when a bunch of audio starts rushing in. This happens because the network connection that went bad is suddenly "good"
-				 * and all the missing packets are flooding. This will create an audio backlog and delay the audio from the real conversation.
-				 * Discard the audio flood and just ask "what did you say. my connection was bad"
-				 */
-				long start, elapsed, minNanos = 30000;
 				long amrstate = AmrDecoder.init();
 				while(Vars.state == CallState.INCALL)
 				{
 					int totalRead=0, dataRead;
 					try
 					{
-						//guarantee you have AMRBUFFERSIZE(32) bytes to send to the native library
-						start = System.nanoTime();
-						while(totalRead < AMRBUFFERSIZE)
+						//read into the acccumulator
+						long start = SystemClock.elapsedRealtime();
+						while(totalRead < ACCUMULATORSIZE)
 						{
-							dataRead = Vars.mediaSocket.getInputStream().read(amrbuffer, totalRead, AMRBUFFERSIZE -totalRead);
+							dataRead = Vars.mediaSocket.getInputStream().read(accumulator, totalRead, ACCUMULATORSIZE -totalRead);
 							totalRead = totalRead + dataRead;
 
 							if(dataRead == -1)
@@ -577,16 +591,31 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 								throw new IOException("read from media socket thought it was the end of file (-1)");
 							}
 						}
-						elapsed = System.nanoTime() - start;
-						if(elapsed > minNanos)
+						long diff = SystemClock.elapsedRealtime() - start;
+
+						/**
+						 * AMR data is sent every 1/3 of a second in MediaEncoder. If it takes longer than 1/3 of a
+						 * second to receive, the conversation will lag too far compared to what is happening in real time.
+						 * For every 1/3 of a second the data came too late, ignore that many future incoming 512byte chunks.
+						 * Need to skip old data to get the conversation back into the present. Example: took 1 second to come
+						 * in, skip the next 1/ (1/3) = 3 512byte chunks.
+						 */
+						skipCount = skipCount + (int)(diff / 333);
+						if(skipCount == 0)
 						{
-							AmrDecoder.decode(amrstate, amrbuffer, wavbuffer);
-							wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
+							while (accumulatorPosition < ACCUMULATORSIZE)
+							{//break up accumulator into amr sized chunks
+								System.arraycopy(accumulator, accumulatorPosition, amrbuffer, 0, AMRBUFFERSIZE);
+								accumulatorPosition = accumulatorPosition + AMRBUFFERSIZE;
+								AmrDecoder.decode(amrstate, amrbuffer, wavbuffer);
+								wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
+							}
 						}
 						else
 						{
-							Utils.logcat(Const.LOGD, tag, "Detected rushing in of audio... " + elapsed);
+							skipCount--;
 						}
+						accumulatorPosition = 0;
 					}
 					catch (Exception i) //io or null pointer depending on when the connection dies
 					{
