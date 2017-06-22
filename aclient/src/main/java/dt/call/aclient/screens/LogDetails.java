@@ -13,7 +13,6 @@ import dt.call.aclient.sqlite.DBLog;
  */
 public class LogDetails extends AppCompatActivity
 {
-	private TextView time, date, tag, message;
 
 	protected void onCreate(Bundle savedInstanceState)
 	{
@@ -23,13 +22,13 @@ public class LogDetails extends AppCompatActivity
 
 		DBLog log = (DBLog)getIntent().getSerializableExtra(Const.EXTRA_LOG);
 
-		date = (TextView)findViewById(R.id.log_details_value_date);
+		TextView date = (TextView) findViewById(R.id.log_details_value_date);
 		date.setText(" " + log.getDateOnly());
-		time = (TextView)findViewById(R.id.log_details_value_time);
+		TextView time = (TextView) findViewById(R.id.log_details_value_time);
 		time.setText(" " + log.getTimeOnly());
-		tag = (TextView)findViewById(R.id.log_details_value_tag);
+		TextView tag = (TextView) findViewById(R.id.log_details_value_tag);
 		tag.setText(" " + log.getTag());
-		message = (TextView)findViewById(R.id.log_details_value_message);
+		TextView message = (TextView) findViewById(R.id.log_details_value_message);
 		message.setText(log.getMessage());
 	}
 }

@@ -36,10 +36,8 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 	private static final long[] vibratePattern = new long[] {0, 400, 200};
 
 	private FloatingActionButton accept, reject;
-	private TextView callerid;
 	private BroadcastReceiver myReceiver;
 	private Timer counter = new Timer();
-	private Uri ringtoneUri = null;
 	private Ringtone ringtone = null;
 	private Vibrator vibrator = null;
 
@@ -70,7 +68,7 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 		accept.setOnClickListener(this);
 		reject = (FloatingActionButton)findViewById(R.id.call_incoming_reject);
 		reject.setOnClickListener(this);
-		callerid = (TextView)findViewById(R.id.call_incoming_callerid);
+		TextView callerid = (TextView) findViewById(R.id.call_incoming_callerid);
 		callerid.setText(Vars.callWith.toString());
 
 
@@ -142,7 +140,7 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 		switch(audioManager.getRingerMode())
 		{
 			case AudioManager.RINGER_MODE_NORMAL:
-				ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+				Uri ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
 				ringtone = RingtoneManager.getRingtone(getApplicationContext(), ringtoneUri);
 				ringtone.play();
 				break;
