@@ -561,8 +561,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				int accumulatorPosition = 0;
 
 				//variables for keeping the conversation in close to real time
-				long skipCount = 0, lifetimeSkip=0;
-				double lifetimeSkipExact = 0;
+				long skipCount = 0;
 
 				//setup the wave audio track with enhancements if available
 				AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, WAVBUFFERSIZE, AudioTrack.MODE_STREAM);
@@ -594,23 +593,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						//log the old skip counter to know if it was changed
 						long oldCount = skipCount;
 						double newSegmentsExact = (double)diff / (double)333;
-						//it should take 1/3 of a second to arrive. count the amount of 1/3rds after the first 1/3rd as the # of segments to skip
-						long newSegments = Math.max(0, (Math.round(newSegmentsExact) - 1));
+						//it should take 1/3 of a second to arrive. round up the amount of 1/3rds after the first 1/3rd as the # of segments to skip
+						long newSegments = Math.max(0, (long)(Math.ceil(newSegmentsExact) - 1));
 						newSegmentsExact = newSegmentsExact -1; //adjust exact AFTER rounding. don't want to round a negative number
 						skipCount = skipCount + newSegments;
-						//if too many rounding mistakes accumulate, need to proactively skip. should never skip LESS than you should. that introduces lag
-						if((lifetimeSkipExact - (double)lifetimeSkip) > 1)
-						{
-							long error = Math.round(lifetimeSkipExact) - lifetimeSkip;
-							skipCount = skipCount + error;
-							Utils.logcat(Const.LOGD, tag, "Adjusting cumulative rounding mistakes by " + error);
-						}
 						if(skipCount != oldCount) //if new segments are skipped update counters
 						{
-							lifetimeSkip = lifetimeSkip + newSegments;
-							lifetimeSkipExact = lifetimeSkipExact + newSegmentsExact;
-							Utils.logcat(Const.LOGD, tag, "Skip count increased by " + newSegments + "("+newSegmentsExact+") to " + skipCount +
-									", lifetime (app,exact): (" + lifetimeSkip+","+lifetimeSkipExact+")");
+							Utils.logcat(Const.LOGD, tag, "Skip count increased by " + newSegments + "("+newSegmentsExact+") to " + skipCount);
 						}
 
 						if(skipCount == 0)
