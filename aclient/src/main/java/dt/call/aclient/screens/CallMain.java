@@ -590,16 +590,17 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						 * AMR data is sent every 1/3 of a second in MediaEncoder. If it takes longer than 1/3 of a
 						 * second to receive, the conversation will lag too far compared to what is happening in real time.
 						 */
-						//log the old skip counter to know if it was changed
-						long oldCount = skipCount;
-						double newSegmentsExact = (double)diff / (double)333;
-						//it should take 1/3 of a second to arrive. round up the amount of 1/3rds after the first 1/3rd as the # of segments to skip
-						long newSegments = Math.max(0, (long)(Math.ceil(newSegmentsExact) - 1));
-						newSegmentsExact = newSegmentsExact -1; //adjust exact AFTER rounding. don't want to round a negative number
+						long oldCount = skipCount; //log the old skip counter to know if it was changed
+						long thirdsUsed = (diff / 333) + 1; //how many 1/3 of a second did it take to download? (int division rounds down answer, +1 to compensate)
+						long newSegments = 0;
+						if(thirdsUsed > 1) //if it took more than 1, 1/3 of need to skip segments
+						{
+							newSegments = newSegments + thirdsUsed;
+						}
 						skipCount = skipCount + newSegments;
 						if(skipCount != oldCount) //if new segments are skipped update counters
 						{
-							Utils.logcat(Const.LOGD, tag, "Skip count increased by " + newSegments + "("+newSegmentsExact+") to " + skipCount);
+							Utils.logcat(Const.LOGD, tag, "Skip count increased by " + newSegments + " to " + skipCount);
 						}
 
 						if(skipCount == 0)
