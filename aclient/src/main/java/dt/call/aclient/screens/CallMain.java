@@ -31,6 +31,7 @@ import android.widget.Toast;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -54,7 +55,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final int WAVBUFFERSIZE = 160;
 	private static final int AMRBUFFERSIZE = 32;
 	private static final int ACCUMULATORSIZE = AMRBUFFERSIZE*16;
-	private static final int bufferSize = AudioTrack.getMinBufferSize(SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT);
 	private static final int DIAL_TONE_SIZE = 32000;
 
 	//ui stuff
@@ -64,7 +64,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private boolean micStatusNew = false;
 	private boolean onSpeaker = false;
 	private boolean screenShowing;
-	private TextView status, callerid, time;
+	private TextView status;
+	private TextView time;
 	private int min=0, sec=0;
 	private Timer counter = new Timer();
 	private BroadcastReceiver myReceiver;
@@ -104,7 +105,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		echoCancel = (Button)findViewById(R.id.call_main_echo_cancel);
 		echoCancel.setOnClickListener(this);
 		status = (TextView)findViewById(R.id.call_main_status); //by default ringing. change it when in a call
-		callerid = (TextView)findViewById(R.id.call_main_callerid);
+		TextView callerid = (TextView) findViewById(R.id.call_main_callerid);
 		time = (TextView)findViewById(R.id.call_main_time);
 		callerid.setText(Vars.callWith.toString());
 
@@ -198,7 +199,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
 		audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
 		audioManager.setSpeakerphoneOn(false);
-		Utils.logcat(Const.LOGD, tag, "wave audio bufferSize for mono @ 8000sample/sec: " + bufferSize);
 
 		//now that the setup has been complete:
 		//set the ui to call mode: if you got to this screen after accepting an incoming call
@@ -423,7 +423,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				int accumulatorPosition = 0;
 
 				//setup the wave audio recorder. since it is released and restarted, it needs to be setup here and not onCreate
-				wavRecorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, SAMPLESAMR, AudioFormat.CHANNEL_IN_MONO, FORMAT, bufferSize);
+				wavRecorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, SAMPLESAMR, AudioFormat.CHANNEL_IN_MONO, FORMAT, WAVBUFFERSIZE);
 				wavRecorder.startRecording();
 
 				//my dying i9300 on CM12.1 sometimes can't get the audio record on its first try
@@ -448,79 +448,72 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 				AmrEncoder.init(0);
 
-				while(Vars.state == CallState.INCALL)
+				while (Vars.state == CallState.INCALL)
 				{
-					if(!micMute)
+
+					if (micStatusNew)
 					{
-						if (micStatusNew)
+						runOnUiThread(new Runnable()
 						{
-							runOnUiThread(new Runnable()
+							@Override
+							public void run()
 							{
-								@Override
-								public void run()
-								{
-									mic.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_mic_white_48dp));
-								}
-							});
-							micStatusNew = false;
-						}
-
-						int totalRead = 0, dataRead;
-						while (totalRead < WAVBUFFERSIZE)
-						{//although unlikely to be necessary, bufferSize the mic input
-							dataRead = wavRecorder.read(wavbuffer, totalRead, WAVBUFFERSIZE - totalRead);
-							totalRead = totalRead + dataRead;
-						}
-
-						/**
-						 * Send data in 512byte chunks ~ 1/3 of a second. Sending too many 32 byte amr packets
-						 * wastes tons of space in tcp+ip+hardware headers. Also greatly increases the chances of
-						 * packets coming out of order which will increase latency due to reordering fixing. 1/3 of a second
-						 * chosen because that is the minimum offset it takes to notice audio/video out of sync when mixing
-						 * in english audio into hd anime files.
- 						 */
-						int encodeLength = AmrEncoder.encode(AmrEncoder.Mode.MR122.ordinal(), wavbuffer, amrbuffer);
-						System.arraycopy(amrbuffer, 0, accumulator, accumulatorPosition, encodeLength);
-						accumulatorPosition = accumulatorPosition + AMRBUFFERSIZE; //guarantee using 32byte chunks
-						try
-						{
-							if(accumulatorPosition >= ACCUMULATORSIZE)
-							{
-								accumulatorPosition = 0;
-								Vars.mediaSocket.getOutputStream().write(accumulator, 0, ACCUMULATORSIZE);
-							}
-						}
-						catch (Exception e)
-						{
-							Utils.logcat(Const.LOGE, tag, "Cannot send amr out the media socket");
-							Utils.dumpException(tag, e);
-
-							//if the socket died it's impossible to continue the call.
-							//the other person will get a dropped call and you can start the call again.
-							//
-							//kill the sockets so that UserHome's crash recovery will reinitialize them
-							endThread();
-						}
-					}
-					else
-					{
-						//instead of going into a crazy while no-op loop, wait 1 second before checking
-						//if the mute has been released. this is the simplest implementation i can think of
-						//that doesn't involve thread starting/stopping and making sure only 1 encode thread is running
-						if (micStatusNew)
-						{
-							runOnUiThread(new Runnable()
-							{
-								@Override
-								public void run()
+								if(micMute)
 								{
 									mic.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_mic_off_white_48dp));
 								}
-							});
-							micStatusNew = false;
+								else
+								{
+									mic.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_mic_white_48dp));
+								}
+							}
+						});
+						micStatusNew = false;
+					}
+
+					int totalRead = 0, dataRead;
+					while (totalRead < WAVBUFFERSIZE)
+					{//although unlikely to be necessary, bufferSize the mic input
+						dataRead = wavRecorder.read(wavbuffer, totalRead, WAVBUFFERSIZE - totalRead);
+						totalRead = totalRead + dataRead;
+					}
+
+					if(micMute)
+					{
+						//if muting, erase the recorded audio
+						//need to record during mute because a cell phone can generate zeros faster than real time talking
+						//	so you can't just skip the recording and send placeholder zeros in a loop
+						Arrays.fill(wavbuffer, (short)0);
+					}
+
+					/**
+					 * Send data in 512byte chunks ~ 1/3 of a second. Sending too many 32 byte amr packets
+					 * wastes tons of space in tcp+ip+hardware headers. Also greatly increases the chances of
+					 * packets coming out of order which will increase latency due to reordering fixing. 1/3 of a second
+					 * chosen because that is the minimum offset it takes to notice audio/video out of sync when mixing
+					 * in english audio into hd anime files.
+					 */
+					int encodeLength = AmrEncoder.encode(AmrEncoder.Mode.MR122.ordinal(), wavbuffer, amrbuffer);
+					System.arraycopy(amrbuffer, 0, accumulator, accumulatorPosition, encodeLength);
+					accumulatorPosition = accumulatorPosition + AMRBUFFERSIZE; //guarantee using 32byte chunks
+					try
+					{
+						if(accumulatorPosition >= ACCUMULATORSIZE)
+						{
 							accumulatorPosition = 0;
+							Vars.mediaSocket.getOutputStream().write(accumulator, 0, ACCUMULATORSIZE);
 						}
-						SystemClock.sleep(1000);
+					}
+					catch (Exception e)
+					{
+						Utils.logcat(Const.LOGE, tag, "Cannot send amr out the media socket");
+						Utils.dumpException(tag, e);
+
+						//if the socket died it's impossible to continue the call.
+						//the other person will get a dropped call and you can start the call again.
+						//
+						//kill the sockets so that UserHome's crash recovery will reinitialize them
+						endThread();
 					}
 				}
 
@@ -557,7 +550,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		Thread playbackThread = new Thread(new Runnable()
 		{
 			private static final String tag = "DecodingThread";
-			private AudioTrack wavPlayer;
 
 			@Override
 			public void run()
@@ -567,11 +559,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				short[] wavbuffer = new short[WAVBUFFERSIZE];
 				byte[] accumulator = new byte[ACCUMULATORSIZE];
 				int accumulatorPosition = 0;
-				int skipCount = 0;
+
+				//variables for keeping the conversation in close to real time
+				long skipCount = 0, lifetimeSkip=0;
+				double lifetimeSkipExact = 0;
 
 				//setup the wave audio track with enhancements if available
-				wavPlayer = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, bufferSize, AudioTrack.MODE_STREAM);
-				wavPlayer.play();
+				AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, WAVBUFFERSIZE, AudioTrack.MODE_STREAM);
 
 				long amrstate = AmrDecoder.init();
 				while(Vars.state == CallState.INCALL)
@@ -593,16 +587,35 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						}
 						long diff = SystemClock.elapsedRealtime() - start;
 
-						/**
+						/*
 						 * AMR data is sent every 1/3 of a second in MediaEncoder. If it takes longer than 1/3 of a
 						 * second to receive, the conversation will lag too far compared to what is happening in real time.
-						 * For every 1/3 of a second the data came too late, ignore that many future incoming 512byte chunks.
-						 * Need to skip old data to get the conversation back into the present. Example: took 1 second to come
-						 * in, skip the next 1/ (1/3) = 3 512byte chunks.
 						 */
-						skipCount = skipCount + (int)(diff / 333);
-						if(skipCount == 0)
+						//log the old skip counter to know if it was changed
+						long oldCount = skipCount;
+						double newSegmentsExact = (double)diff / (double)333;
+						//it should take 1/3 of a second to arrive. count the amount of 1/3rds after the first 1/3rd as the # of segments to skip
+						long newSegments = Math.max(0, (Math.round(newSegmentsExact) - 1));
+						newSegmentsExact = newSegmentsExact -1; //adjust exact AFTER rounding. don't want to round a negative number
+						skipCount = skipCount + newSegments;
+						//if too many rounding mistakes accumulate, need to proactively skip. should never skip LESS than you should. that introduces lag
+						if((lifetimeSkipExact - (double)lifetimeSkip) > 1)
 						{
+							long error = Math.round(lifetimeSkipExact) - lifetimeSkip;
+							skipCount = skipCount + error;
+							Utils.logcat(Const.LOGD, tag, "Adjusting cumulative rounding mistakes by " + error);
+						}
+						if(skipCount != oldCount) //if new segments are skipped update counters
+						{
+							lifetimeSkip = lifetimeSkip + newSegments;
+							lifetimeSkipExact = lifetimeSkipExact + newSegmentsExact;
+							Utils.logcat(Const.LOGD, tag, "Skip count increased by " + newSegments + "("+newSegmentsExact+") to " + skipCount +
+									", lifetime (app,exact): (" + lifetimeSkip+","+lifetimeSkipExact+")");
+						}
+
+						if(skipCount == 0)
+						{//must start and stop the wave player so it only plays when amr is being decoded to prevent buffer underrun delays
+							wavPlayer.play();
 							while (accumulatorPosition < ACCUMULATORSIZE)
 							{//break up accumulator into amr sized chunks
 								System.arraycopy(accumulator, accumulatorPosition, amrbuffer, 0, AMRBUFFERSIZE);
@@ -610,6 +623,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 								AmrDecoder.decode(amrstate, amrbuffer, wavbuffer);
 								wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
 							}
+							wavPlayer.pause();
 						}
 						else
 						{
@@ -645,7 +659,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				wavPlayer.stop();
 				wavPlayer.flush(); //must flush after stop
 				wavPlayer.release(); //mandatory cleanup to prevent wavPlayer from outliving its usefulness
-				wavPlayer = null;
 				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has stopped, state:" + Vars.state);
 			}
 		});
