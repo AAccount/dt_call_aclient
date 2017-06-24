@@ -40,6 +40,34 @@
         android:layout_centerHorizontal="true"
         android:contentDescription="@string/initial_user_image_accessibility"/>
 
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/call_main_echo_cancel"
+        android:id="@+id/call_main_echo_cancel"
+        android:enabled="false"
+        android:layout_below="@+id/call_main_user_image"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"/>
+
+    <Button
+        android:id="@+id/call_main_stats"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/call_main_user_image"
+        android:layout_centerHorizontal="true"
+        android:text="@string/call_main_stats"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/call_main_noise_reduction"
+        android:id="@+id/call_main_noise_reduction"
+        android:enabled="false"
+        android:layout_below="@+id/call_main_user_image"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"/>
+
     <TextView
         android:id="@+id/call_main_callerid"
         android:layout_width="wrap_content"
@@ -48,7 +76,6 @@
         android:text="Caller ID"
         android:layout_centerVertical="true"
         android:layout_centerHorizontal="true"/>
-
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/call_main_end_call"
@@ -84,23 +111,4 @@
         android:layout_alignParentRight="true"
         android:layout_marginRight="@dimen/call_main_bottom_row_padding"/>
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/call_main_echo_cancel"
-        android:id="@+id/call_main_echo_cancel"
-        android:layout_above="@+id/call_main_callerid"
-        android:layout_alignRight="@+id/call_main_time"
-        android:layout_alignEnd="@+id/call_main_time"
-        android:enabled="false"/>
-
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/call_main_noise_reduction"
-        android:id="@+id/call_main_noise_reduction"
-        android:layout_alignTop="@+id/call_main_echo_cancel"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:enabled="false"/>
 </RelativeLayout>

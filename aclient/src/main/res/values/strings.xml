@@ -68,6 +68,10 @@
     <string name="call_main_toast_micstatus">DOUBLE CHECK mic button icon. It can take up to 1 second to change mute/unmute.</string>
     <string name="call_main_noise_reduction">Noise</string>
     <string name="call_main_echo_cancel">Echo</string>
+    <string name="call_main_stats">Stats</string>
+    <string name="call_main_stat_skip">Skip</string>
+    <string name="call_main_stat_tx">Out</string>
+    <string name="call_main_stat_rx">In</string>
 
     <!-- Incoming call screen -->
     <string name="call_incoming_title">Incoming Call</string>

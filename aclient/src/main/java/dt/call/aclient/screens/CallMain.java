@@ -56,19 +56,24 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final int AMRBUFFERSIZE = 32;
 	private static final int ACCUMULATORSIZE = AMRBUFFERSIZE*16;
 	private static final int DIAL_TONE_SIZE = 32000;
+	private static final int HEADERS = 82; //tcp + ip + wikipedia ethernet
 
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
-	private Button noiseReduction, echoCancel;
+	private Button noiseReduction, echoCancel, stats;
 	private volatile boolean micMute = false;
 	private boolean micStatusNew = false;
 	private boolean onSpeaker = false;
 	private boolean screenShowing;
 	private TextView status;
 	private TextView time;
+	private TextView callerid;
 	private int min=0, sec=0;
 	private Timer counter = new Timer();
 	private BroadcastReceiver myReceiver;
+	private int lifetimeSkip=0, tx=0, rx=0;
+	private String skipLabel, txLabel, rxLabel;
+	private boolean showStats = false;
 
 	//proximity sensor stuff
 	private SensorManager sensorManager;
@@ -104,8 +109,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		noiseReduction.setOnClickListener(this);
 		echoCancel = (Button)findViewById(R.id.call_main_echo_cancel);
 		echoCancel.setOnClickListener(this);
+		stats = (Button)findViewById(R.id.call_main_stats);
+		stats.setOnClickListener(this);
 		status = (TextView)findViewById(R.id.call_main_status); //by default ringing. change it when in a call
-		TextView callerid = (TextView) findViewById(R.id.call_main_callerid);
+		callerid = (TextView) findViewById(R.id.call_main_callerid);
 		time = (TextView)findViewById(R.id.call_main_time);
 		callerid.setText(Vars.callWith.toString());
 
@@ -158,9 +165,56 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						}
 					});
 				}
+
+				if(showStats)
+				{
+					String rxDisp, txDisp;
+					if(rx > 1000000)
+					{
+						rxDisp = (rx/1000000) + "M";
+					}
+					else if (rx > 1000)
+					{
+						rxDisp = (rx/1000) + "K";
+					}
+					else
+					{
+						rxDisp = Integer.toString(rx);
+					}
+					if(tx > 1000000)
+					{
+						txDisp = (tx/1000000) + "M";
+					}
+					else if (tx > 1000)
+					{
+						txDisp = (tx/1000) + "K";
+					}
+					else
+					{
+						txDisp = Integer.toString(tx);
+					}
+					final String latestStats = skipLabel + ": " + lifetimeSkip + " " +rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp;
+					runOnUiThread(new Runnable()
+					{
+						@Override
+						public void run()
+						{
+							callerid.setText(latestStats);
+						}
+					});
+				}
 			}
 		};
 		counter.schedule(counterTask, 0, 1000);
+
+		//Setup the strings for displaying tx rx skip stats
+		skipLabel = getString(R.string.call_main_stat_skip);
+		txLabel = getString(R.string.call_main_stat_tx);
+		rxLabel = getString(R.string.call_main_stat_rx);
+		if(!Vars.SHOUDLOG)
+		{
+			stats.setVisibility(View.INVISIBLE);
+		}
 
 		//listen for call accepted or rejected
 		myReceiver = new BroadcastReceiver()
@@ -353,6 +407,19 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			}
 			echoCancel.setEnabled(false);
 		}
+		else if (v == stats)
+		{
+			showStats = !showStats;
+			if(showStats)
+			{
+				stats.setTextColor(ContextCompat.getColor(this, R.color.material_green));
+			}
+			else
+			{
+				stats.setTextColor(ContextCompat.getColor(this, android.R.color.white));
+				callerid.setText(Vars.callWith.toString());
+			}
+		}
 	}
 
 	private void updateTime()
@@ -502,6 +569,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						{
 							accumulatorPosition = 0;
 							Vars.mediaSocket.getOutputStream().write(accumulator, 0, ACCUMULATORSIZE);
+							tx = tx + ACCUMULATORSIZE + HEADERS;
 						}
 					}
 					catch (Exception e)
@@ -587,6 +655,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						int diff = (int)(SystemClock.elapsedRealtime() - start);
 						//https://stackoverflow.com/questions/20852412/does-int-vs-long-comparison-hurt-performance-in-java
 						//http://nicolas.limare.net/pro/notes/2014/12/12_arit_speed/
+						rx = rx + totalRead + HEADERS;
 
 						/*
 						 * AMR data is sent every 1/3 of a second in MediaEncoder. If it takes longer than 1/3 of a
@@ -603,6 +672,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						if(skipCount != oldCount) //if new segments are skipped update counters
 						{
 							Utils.logcat(Const.LOGD, tag, "Skip count increased by " + newSegments + " to " + skipCount);
+							lifetimeSkip = lifetimeSkip + newSegments;
 						}
 
 						if(skipCount == 0)
