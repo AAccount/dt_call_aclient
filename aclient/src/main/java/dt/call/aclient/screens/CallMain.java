@@ -561,7 +561,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				int accumulatorPosition = 0;
 
 				//variables for keeping the conversation in close to real time
-				long skipCount = 0;
+				int skipCount = 0;
 
 				//setup the wave audio track with enhancements if available
 				AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, WAVBUFFERSIZE, AudioTrack.MODE_STREAM);
@@ -572,7 +572,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					int totalRead=0, dataRead;
 					try
 					{
-						//read into the acccumulator
+						//read into the accumulator
 						long start = SystemClock.elapsedRealtime();
 						while(totalRead < ACCUMULATORSIZE)
 						{
@@ -584,15 +584,17 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 								throw new IOException("read from media socket thought it was the end of file (-1)");
 							}
 						}
-						long diff = SystemClock.elapsedRealtime() - start;
+						int diff = (int)(SystemClock.elapsedRealtime() - start);
+						//https://stackoverflow.com/questions/20852412/does-int-vs-long-comparison-hurt-performance-in-java
+						//http://nicolas.limare.net/pro/notes/2014/12/12_arit_speed/
 
 						/*
 						 * AMR data is sent every 1/3 of a second in MediaEncoder. If it takes longer than 1/3 of a
 						 * second to receive, the conversation will lag too far compared to what is happening in real time.
 						 */
-						long oldCount = skipCount; //log the old skip counter to know if it was changed
-						long thirdsUsed = (diff / 333) + 1; //how many 1/3 of a second did it take to download? (int division rounds down answer, +1 to compensate)
-						long newSegments = 0;
+						int oldCount = skipCount; //log the old skip counter to know if it was changed
+						int thirdsUsed = (diff / 333) + 1; //how many 1/3 of a second did it take to download? (int division rounds down answer, +1 to compensate)
+						int newSegments = 0;
 						if(thirdsUsed > 1) //if it took more than 1, 1/3 of need to skip segments
 						{
 							newSegments = newSegments + thirdsUsed;
