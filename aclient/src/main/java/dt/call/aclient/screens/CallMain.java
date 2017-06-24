@@ -629,7 +629,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				int accumulatorPosition = 0;
 
 				//variables for keeping the conversation in close to real time
-				int skipCount = 0;
+				int skipCount = 0, consecutiveOk = 0;
 
 				//setup the wave audio track with enhancements if available
 				AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, WAVBUFFERSIZE, AudioTrack.MODE_STREAM);
@@ -673,12 +673,20 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						{
 							Utils.logcat(Const.LOGD, tag, "Skip count increased by " + newSegments + " to " + skipCount);
 							lifetimeSkip = lifetimeSkip + newSegments;
+							consecutiveOk = 0;
+						}
+
+						int accumulatorMax = ACCUMULATORSIZE;
+						if(consecutiveOk == 4)
+						{//if the conditions are too good, just the act of decoding amr-->wav introduces tiny lag that adds up
+							accumulatorMax = accumulatorMax - AMRBUFFERSIZE;
+							consecutiveOk = 0;
 						}
 
 						if(skipCount == 0)
 						{//must start and stop the wave player so it only plays when amr is being decoded to prevent buffer underrun delays
 							wavPlayer.play();
-							while (accumulatorPosition < ACCUMULATORSIZE)
+							while (accumulatorPosition < accumulatorMax)
 							{//break up accumulator into amr sized chunks
 								System.arraycopy(accumulator, accumulatorPosition, amrbuffer, 0, AMRBUFFERSIZE);
 								accumulatorPosition = accumulatorPosition + AMRBUFFERSIZE;
@@ -686,10 +694,12 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 								wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
 							}
 							wavPlayer.pause();
+							consecutiveOk++;
 						}
 						else
 						{
 							skipCount--;
+							consecutiveOk = 0;
 						}
 						accumulatorPosition = 0;
 					}
