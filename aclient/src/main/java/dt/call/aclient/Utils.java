@@ -122,7 +122,7 @@ public class Utils
 			socket.startHandshake();
 			if(port == Vars.mediaPort)
 			{
-				socket.setTrafficClass(0x2E); //Expedited forwarding (EF)
+				socket.setTrafficClass(0xB8); //Expedited forwarding (EF) 0x2E << 2
 			}
 			return socket;
 		}
