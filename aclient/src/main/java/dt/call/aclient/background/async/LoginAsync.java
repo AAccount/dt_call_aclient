@@ -103,7 +103,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			byte[] challengeNumbers = Utils.destringify(challenge, false);
 
 			//answer the challenge
-			Cipher rsa = Cipher.getInstance("RSA/NONE/PKCS1Padding");
+			Cipher rsa = Cipher.getInstance("RSA/NONE/OAEPWithSHA1AndMGF1Padding");
 			rsa.init(Cipher.DECRYPT_MODE, Vars.privateKey);
 			byte[] decrypted = rsa.doFinal(challengeNumbers);
 			String challengeDec = new String(decrypted, "UTF8");

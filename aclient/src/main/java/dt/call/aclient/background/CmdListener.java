@@ -176,7 +176,7 @@ public class CmdListener extends IntentService
 						PublicKey publicKey = kf.generatePublic(new X509EncodedKeySpec(dumpDecoded));
 
 						//encrypt the aes key: proof this app's end to end is the real deal (not even the call server knows the aes key)
-						Cipher rsa = Cipher.getInstance("RSA/NONE/PKCS1Padding");
+						Cipher rsa = Cipher.getInstance("RSA/NONE/OAEPWithSHA1AndMGF1Padding");
 						rsa.init(Cipher.ENCRYPT_MODE, publicKey);
 						byte[] encrypted = rsa.doFinal(Vars.aesKey);
 						String encString = Utils.stringify(encrypted, true);
@@ -209,7 +209,7 @@ public class CmdListener extends IntentService
 						Vars.mediaUdp.setTrafficClass(0xB8);
 
 						//encrypt the registration string
-						Cipher rsa = Cipher.getInstance("RSA/NONE/PKCS1Padding");
+						Cipher rsa = Cipher.getInstance("RSA/NONE/OAEPWithSHA1AndMGF1Padding");
 						rsa.init(Cipher.ENCRYPT_MODE, serverKey);
 						String register = Utils.currentTimeSeconds() + "|" + Vars.sessionid;
 						byte[] encrypted = rsa.doFinal(register.getBytes());
@@ -275,7 +275,7 @@ public class CmdListener extends IntentService
 				}
 				else if(command.equals("direct"))
 				{
-					Cipher rsa = Cipher.getInstance("RSA/NONE/PKCS1Padding");
+					Cipher rsa = Cipher.getInstance("RSA/NONE/OAEPWithSHA1AndMGF1Padding");
 					rsa.init(Cipher.DECRYPT_MODE, Vars.privateKey);
 					String aesEncB64ed = respContents[2];
 					byte[] aesEncBytes = Utils.destringify(aesEncB64ed, true);
