@@ -34,9 +34,8 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.background.async.CallInitAsync;
+import dt.call.aclient.background.async.CommandCallAsync;
 import dt.call.aclient.background.async.LoginAsync;
-import dt.call.aclient.background.async.LookupAsync;
 import dt.call.aclient.sqlite.Contact;
 import dt.call.aclient.sqlite.History;
 import dt.call.aclient.sqlite.SQLiteDb;
@@ -90,54 +89,27 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 
 		//receives the server response from clicking the 2 FAB buttons
 		//	Click +: whether new contact to add is valid
-		//	Click phone: whether the person you want to call is available
 		myReceiver = new BroadcastReceiver()
 		{
 			@Override
 			public void onReceive(Context context, Intent intent)
 			{
-
-				if(intent.getAction().equals(Const.BROADCAST_HOME))
+				//Result of clicking the phone button. If the user you're trying to call doesn't exist
+				//	the server treats it as not available. It IS the server's job to verify all input given to it.
+				if(intent.getAction().equals(Const.BROADCAST_CALL))
 				{
-					String type = intent.getStringExtra(Const.BROADCAST_HOME_TYPE);
-
-					//Result of clicking the "+" for adding a contact
-					if (type.equals(Const.BROADCAST_HOME_TYPE_LOOKUP))
+					String response = intent.getStringExtra(Const.BROADCAST_CALL_RESP);
+					if(response.equals(Const.BROADCAST_CALL_TRY))
 					{
-						String user = intent.getStringExtra(Const.BROADCAST_HOME_LOOKUP_NAME);
-						String result = intent.getStringExtra(Const.BROADCAST_HOME_LOOKUP_RESULT);
-						if (result.equals("exists"))
-						{
-							Contact newGuy = new Contact(user);
-							sqliteDb.insertContact(newGuy);
-							addToContactList(newGuy);
-							actionbox.setText("");
-							Vars.contactTable.put(user, "");
-						}
-						else
-						{
-							Utils.showOk(UserHome.this, getString(R.string.alert_user_home_contact_notexist));
-							//don't reset the actionbox text. coulda just been a typo
-						}
+						Intent startCall = new Intent(UserHome.this, CallMain.class);
+						startActivity(startCall);
 					}
-
-					//Result of clicking the phone button. If the user you're trying to call doesn't exist
-					//	the server treats it as not available. It IS the server's job to verify all input given to it.
-					else if (type.equals(Const.BROADCAST_HOME_TYPE_INIT))
+					else
 					{
-						boolean canInit = intent.getBooleanExtra(Const.BROADCAST_HOME_INIT_CANINIT, false);
-						if (canInit)
-						{
-							Intent startCall = new Intent(UserHome.this, CallMain.class);
-							startActivity(startCall);
-						}
-						else
-						{
-							Utils.showOk(UserHome.this, getString(R.string.alert_user_home_cant_dial));
-						}
+						Utils.showOk(UserHome.this, getString(R.string.alert_user_home_cant_dial));
 					}
 				}
-				else if(intent.getAction().equals(Const.BROADCAST_LOGIN))
+				else if (intent.getAction().equals(Const.BROADCAST_LOGIN))
 				{
 					boolean ok = intent.getBooleanExtra(Const.BROADCAST_LOGIN_RESULT, false);
 					if(loginProgress != null)
@@ -165,7 +137,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		//	it will already be there if you're coming back to the UserHome screen from doing something else
 
 		//for some types of crashes it goes back to the UserHome screen but with no save data (and missing connections)
-		if(Vars.commandSocket == null || Vars.mediaSocket == null)
+		if(Vars.commandSocket == null)
 		{
 			PowerManager pm = (PowerManager)getSystemService(Context.POWER_SERVICE);
 			boolean screenOn = false; //https://stackoverflow.com/questions/30718783/andorid-is-screen-on-or-off-deprecated-isscreenon
@@ -210,7 +182,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 
 		//receiver must be reregistered when loading this screen from the back button
 		IntentFilter homeFilters = new IntentFilter();
-		homeFilters.addAction(Const.BROADCAST_HOME);
+		homeFilters.addAction(Const.BROADCAST_CALL);
 		homeFilters.addAction(Const.BROADCAST_LOGIN);
 		registerReceiver(myReceiver, homeFilters);
 
@@ -299,7 +271,13 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				actionbox.setText("");
 				return;
 			}
-			new LookupAsync().execute(actionBoxContact); //result will be processed in myReceiver BroadcastReceiver
+			else
+			{
+				sqliteDb.insertContact(actionBoxContact);
+				addToContactList(actionBoxContact);
+				actionbox.setText("");
+				Vars.contactTable.put(actionBoxName, "");
+			}
 		}
 		else if (v == call)
 		{
@@ -310,7 +288,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			}
 
 			Contact contact = new Contact(who, Vars.contactTable.get(who));
-			new CallInitAsync(contact).execute();
+			new CommandCallAsync(contact).execute();
 			long now = System.currentTimeMillis();
 			//don't need the nickname because sqliteDb only records user name
 			//	sqliteDb doesn' need to record nickname because it will be figured out when drawing the history table

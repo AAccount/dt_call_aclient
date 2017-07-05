@@ -8,9 +8,9 @@ import dt.call.aclient.Vars;
 /**
  * Created by Daniel on 1/31/16.
  */
-public class CallAcceptAsync extends AsyncTask<String, String, Boolean>
+public class CommandAcceptAsync extends AsyncTask<String, String, Boolean>
 {
-	private static final String tag = "CallAcceptAsync";
+	private static final String tag = "CommandAcceptAsync";
 
 	@Override
 	protected Boolean doInBackground(String... params)

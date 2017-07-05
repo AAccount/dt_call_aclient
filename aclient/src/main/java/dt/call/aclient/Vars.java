@@ -7,6 +7,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.PowerManager;
 
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.security.PrivateKey;
 import java.util.HashMap;
 
@@ -29,12 +31,14 @@ public class Vars
 
 	//2 sockets
 	public static SSLSocket commandSocket = null;
-	public static SSLSocket mediaSocket = null;
+	public static DatagramSocket mediaUdp = null;
+	public static InetAddress callServer = null;
 
 	//call related information
 	public volatile static CallState state = CallState.NONE;
 	public static Contact callWith;
 	public static PowerManager.WakeLock wakeLock = null;
+	public static byte[] aesKey = new byte[256/8];
 
 	//contacts hash table to avoid having to lookup the db for incoming calls
 	public static HashMap<String, String> contactTable = null;

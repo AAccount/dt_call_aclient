@@ -37,19 +37,11 @@ public class Const
 
 	//Java 1byte workaround
 	public static final String JBYTE = "D";
-	public static final int BUFFERSIZE = 4100; //maximum size for command buffer. same name and size as seen in server's const.h
+	public static final int COMMAND_SIZE = 2048;
+	public static final int STD_BUFFER = 1024; //maximum size for command buffer. same name and size as seen in server's const.h
 
 	//nobody: the default value for when not in a call
 	public static final Contact nobody = new Contact("(nobody)");
-
-	//broadcast intent for user home related strings
-	public static final String BROADCAST_HOME = "notify_home";
-	public static final String BROADCAST_HOME_TYPE = "type";
-	public static final String BROADCAST_HOME_TYPE_LOOKUP = "type_lookup";
-	public static final String BROADCAST_HOME_LOOKUP_NAME = "lookup_name";
-	public static final String BROADCAST_HOME_LOOKUP_RESULT = "lookup_result";
-	public static final String BROADCAST_HOME_TYPE_INIT = "type_init";
-	public static final String BROADCAST_HOME_INIT_CANINIT = "can_init";
 
 	//log.e/d/i wrapper to avoid wasting cpu for logging
 	public static final int LOGE = 1;
@@ -71,6 +63,7 @@ public class Const
 	//only call main responds to call accept
 	public static final String BROADCAST_CALL = "dt.call.aclient.notify_call_info";
 	public static final String BROADCAST_CALL_RESP = "call_response";
+	public static final String BROADCAST_CALL_TRY = "try";
 	public static final String BROADCAST_CALL_START = "start";
 	public static final String BROADCAST_CALL_END = "end";
 
@@ -97,7 +90,12 @@ public class Const
 
 	//timeout (IN SECONDS) before giving up on calling someone
 	public static final int CALL_TIMEOUT = 20;
+	public static final int UDP_ACK_TIMEOUT = 100; //in milliseconds
 
 	//wakelock tag
 	public static final String WAKELOCK_TAG = "dt.call.aclient.wakelock";
+
+	//command maximum segments
+	public static final int COMMAND_MAX_SEGMENTS = 5;
+	public static final int LOGIN_MAX_SEGMENTS = 3;
 }

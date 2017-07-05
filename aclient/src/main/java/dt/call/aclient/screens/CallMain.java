@@ -31,17 +31,30 @@ import android.widget.Toast;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
+import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.background.async.CallEndAsync;
-import dt.call.aclient.background.async.CallTimeoutAsync;
+import dt.call.aclient.background.async.CommandEndAsync;
 import io.kvh.media.amr.AmrDecoder;
 import io.kvh.media.amr.AmrEncoder;
 
@@ -56,7 +69,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final int AMRBUFFERSIZE = 32;
 	private static final int ACCUMULATORSIZE = AMRBUFFERSIZE*16;
 	private static final int DIAL_TONE_SIZE = 32000;
-	private static final int HEADERS = 82; //tcp + ip + wikipedia ethernet
 
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
@@ -85,6 +97,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	//for dial tone when initiating a call
 	private AudioTrack dialTone = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, DIAL_TONE_SIZE, AudioTrack.MODE_STATIC);
+
+	private Key aesKeyObj;
+
+	private boolean firstEncode = true, firstDecode = true;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -149,7 +165,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				//if the person hasn't answered after 60 seconds give up. it's probably not going to happen.
 				if((Vars.state == CallState.INIT) && (sec == Const.CALL_TIMEOUT))
 				{
-					new CallTimeoutAsync().execute();
+					new CommandEndAsync().execute();
 					Vars.state = CallState.NONE; //guarantee state == NONE. don't leave it to chance
 					onStop();
 				}
@@ -168,32 +184,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 				if(showStats)
 				{
-					String rxDisp, txDisp;
-					if(rx > 1000000)
-					{
-						rxDisp = (rx/1000000) + "M";
-					}
-					else if (rx > 1000)
-					{
-						rxDisp = (rx/1000) + "K";
-					}
-					else
-					{
-						rxDisp = Integer.toString(rx);
-					}
-					if(tx > 1000000)
-					{
-						txDisp = (tx/1000000) + "M";
-					}
-					else if (tx > 1000)
-					{
-						txDisp = (tx/1000) + "K";
-					}
-					else
-					{
-						txDisp = Integer.toString(tx);
-					}
-					final String latestStats = skipLabel + ": " + lifetimeSkip + " " +rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp;
+					String rxDisp=formatInternetMeteric(rx), txDisp=formatInternetMeteric(tx);
+					final String latestStats = skipLabel + ": " + lifetimeSkip + "\n" +rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp;
 					runOnUiThread(new Runnable()
 					{
 						@Override
@@ -313,7 +305,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		 */
 		if(Vars.state == CallState.NONE)
 		{
-			new CallEndAsync().execute();
+			new CommandEndAsync().execute();
 
 			//for cases when you make a call but decide you don't want to anymore
 			try
@@ -436,6 +428,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private void uiCallMode()
 	{
+		aesKeyObj = new SecretKeySpec(Vars.aesKey, "AES");
 		try
 		{
 			dialTone.stop();
@@ -568,8 +561,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						if(accumulatorPosition >= ACCUMULATORSIZE)
 						{
 							accumulatorPosition = 0;
-							Vars.mediaSocket.getOutputStream().write(accumulator, 0, ACCUMULATORSIZE);
-							tx = tx + ACCUMULATORSIZE + HEADERS;
+							byte[] enc = encrypt(accumulator);
+							DatagramPacket packet = new DatagramPacket(enc, enc.length, Vars.callServer, Vars.mediaPort);
+							Vars.mediaUdp.send(packet);
+							tx = tx + enc.length;
 						}
 					}
 					catch (Exception e)
@@ -641,52 +636,48 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					try
 					{
 						//read into the accumulator
+						byte[] inputBuffer = new byte[Const.STD_BUFFER];
+						DatagramPacket received = new DatagramPacket(inputBuffer, Const.STD_BUFFER);
 						long start = SystemClock.elapsedRealtime();
-						while(totalRead < ACCUMULATORSIZE)
-						{
-							dataRead = Vars.mediaSocket.getInputStream().read(accumulator, totalRead, ACCUMULATORSIZE -totalRead);
-							totalRead = totalRead + dataRead;
-
-							if(dataRead == -1)
-							{
-								throw new IOException("read from media socket thought it was the end of file (-1)");
-							}
-						}
+						Vars.mediaUdp.receive(received);
 						int diff = (int)(SystemClock.elapsedRealtime() - start);
+
+						//decrypt
+						byte[] inputTrimmed = new byte[received.getLength()];
+						System.arraycopy(received.getData(), 0, inputTrimmed, 0, received.getLength());
+						accumulator = decrypt(inputTrimmed);
+						if(accumulator == null)
+						{
+							Utils.logcat(Const.LOGD, tag, "tossing 1");
+							continue;
+						}
 						//https://stackoverflow.com/questions/20852412/does-int-vs-long-comparison-hurt-performance-in-java
 						//http://nicolas.limare.net/pro/notes/2014/12/12_arit_speed/
-						rx = rx + totalRead + HEADERS;
+						rx = rx + received.getLength();
 
 						/*
 						 * AMR data is sent every 1/3 of a second in MediaEncoder. If it takes longer than 1/3 of a
 						 * second to receive, the conversation will lag too far compared to what is happening in real time.
 						 */
-						int oldCount = skipCount; //log the old skip counter to know if it was changed
-						int thirdsUsed = (diff / 333) + 1; //how many 1/3 of a second did it take to download? (int division rounds down answer, +1 to compensate)
-						int newSegments = 0;
-						if(thirdsUsed > 1) //if it took more than 1, 1/3 of need to skip segments
-						{
-							newSegments = newSegments + thirdsUsed;
-						}
-						skipCount = skipCount + newSegments;
-						if(skipCount != oldCount) //if new segments are skipped update counters
-						{
-							Utils.logcat(Const.LOGD, tag, "Skip count increased by " + newSegments + " to " + skipCount);
-							lifetimeSkip = lifetimeSkip + newSegments;
-							consecutiveOk = 0;
-						}
-
-						int accumulatorMax = ACCUMULATORSIZE;
-						if(consecutiveOk == 4)
-						{//if the conditions are too good, just the act of decoding amr-->wav introduces tiny lag that adds up
-							accumulatorMax = accumulatorMax - AMRBUFFERSIZE;
-							consecutiveOk = 0;
-						}
+//						int oldCount = skipCount; //log the old skip counter to know if it was changed
+//						int thirdsUsed = (diff / 333) + 1; //how many 1/3 of a second did it take to download? (int division rounds down answer, +1 to compensate)
+//						int newSegments = 0;
+//						if(thirdsUsed > 1) //if it took more than 1, 1/3 of need to skip segments
+//						{
+//							newSegments = newSegments + thirdsUsed;
+//						}
+//						skipCount = skipCount + newSegments;
+//						if(skipCount != oldCount) //if new segments are skipped update counters
+//						{
+//							Utils.logcat(Const.LOGD, tag, "Skip count increased by " + newSegments + " to " + skipCount);
+//							lifetimeSkip = lifetimeSkip + newSegments;
+//							consecutiveOk = 0;
+//						}
 
 						if(skipCount == 0)
 						{//must start and stop the wave player so it only plays when amr is being decoded to prevent buffer underrun delays
 							wavPlayer.play();
-							while (accumulatorPosition < accumulatorMax)
+							while (accumulatorPosition < ACCUMULATORSIZE)
 							{//break up accumulator into amr sized chunks
 								System.arraycopy(accumulator, accumulatorPosition, amrbuffer, 0, AMRBUFFERSIZE);
 								accumulatorPosition = accumulatorPosition + AMRBUFFERSIZE;
@@ -773,5 +764,84 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	public void onAccuracyChanged(Sensor sensor, int accuracy)
 	{
 		//not relevant for proximity sensor so do nothing
+	}
+
+	private byte[] encrypt(byte[] in)
+	{
+		byte[] result;
+		try
+		{
+			Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+			cipher.init(Cipher.ENCRYPT_MODE, aesKeyObj);
+			byte[] init = cipher.getIV();
+			byte[] enc = cipher.doFinal(in);
+			result = new byte[1+init.length + enc.length]; //|length;init;encrypted|
+			result[0] = (byte)init.length;
+			System.arraycopy(init, 0, result, 1, init.length);
+			System.arraycopy(enc, 0, result, 1 + init.length, enc.length);
+			if(firstEncode)
+			{
+				System.out.println("enc");
+				firstEncode = false;
+				dumpBytes(result);
+			}
+			return result;
+		}
+		catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e)
+		{
+			Utils.dumpException(tag, e);
+		}
+		return null;
+	}
+
+	private byte[] decrypt(byte[] in)
+	{
+		if(firstDecode)
+		{
+			firstDecode = false;
+			System.out.println("dec");
+			dumpBytes(in);
+		}
+		try
+		{
+			Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+			byte[] init = new byte[in[0]];
+			System.arraycopy(in, 1, init, 0, in[0]);
+			cipher.init(Cipher.DECRYPT_MODE, aesKeyObj, new IvParameterSpec(init));
+			return cipher.doFinal(in, init.length+1, in.length-init.length-1);
+		}
+		catch (NoSuchAlgorithmException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | NoSuchPaddingException | InvalidAlgorithmParameterException e)
+		{
+			Utils.dumpException(tag, e);
+		}
+
+		return null;
+	}
+
+	private String formatInternetMeteric(int n)
+	{
+		DecimalFormat decimalFormat = new DecimalFormat("#.##");
+		if(n > 1000000)
+		{
+			return decimalFormat.format((float)n / (float)1000000) + "M";
+		}
+		else if (n > 1000)
+		{
+			return (n/1000) + "K";
+		}
+		else
+		{
+			return Integer.toString(n);
+		}
+	}
+
+	private void dumpBytes(byte[] param)
+	{
+		String dump = "";
+		for(int i=0; i<param.length; i++)
+		{
+			dump = dump + String.valueOf(param[i]) + " ";
+		}
+		System.out.println(dump);
 	}
 }

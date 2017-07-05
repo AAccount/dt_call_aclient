@@ -5,15 +5,32 @@ import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
 import android.os.PowerManager;
+import android.provider.ContactsContract;
+import android.util.Base64;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.security.cert.CertificateException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketTimeoutException;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.concurrent.TimeoutException;
+
+import javax.crypto.Cipher;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
+import dt.call.aclient.background.async.CommandEndAsync;
 import dt.call.aclient.screens.CallIncoming;
 import dt.call.aclient.sqlite.Contact;
 
@@ -27,6 +44,11 @@ public class CmdListener extends IntentService
 
 	//copied over from jclient
 	private boolean inputValid = true; //causes the thread to stop whether for technical or paranoia
+
+	//for deciding when to send the ready command
+	private boolean haveAesKey = false;
+	private boolean preparationsComplete = false;
+	private boolean isCallInitiator = false;
 
 	public CmdListener()
 	{
@@ -42,20 +64,19 @@ public class CmdListener extends IntentService
 		while(inputValid)
 		{
 			//responses from the server command connection will always be in text format
-			//timestamp|ring|notavailable|tried_to_call
-			//timestamp|ring|available|tried_to_call
-			//timestamp|ring|incoming|trying_to_call
-			//timestamp|ring|busy|tried_to_call
-			//timestamp|lookup|who|exists
-			//timestamp|call|start|with
-			//timestamp|call|reject|by
-			//timestamp|call|end|by
+			//timestamp|available|tried_to_call
+			//timestamp|incoming|trying_to_call
+			//timestamp|start|with
+			//timestamp|end|other_person
+			//timestamp|prepare|(optionally public key),other_person
+			//timestamp|direct|(encrypted aes key)|other_person
+			//timestamp|invalid
 
 			String logd = ""; //accumulate all the diagnostic message together to prevent multiple entries of diagnostics in log ui just for cmd listener
 			try
 			{//the async magic here... it will patiently wait until something comes in
 
-				byte[] rawString = new byte[Const.BUFFERSIZE];
+				byte[] rawString = new byte[Const.COMMAND_SIZE];
 				int length = Vars.commandSocket.getInputStream().read(rawString);
 				if(length < 0)
 				{
@@ -66,7 +87,7 @@ public class CmdListener extends IntentService
 				logd = logd +  "Server response raw: " + fromServer + "\n";
 
 				//check for properly formatted command
-				if(respContents.length != 4)
+				if(respContents.length > Const.COMMAND_MAX_SEGMENTS)
 				{
 					Utils.logcat(Const.LOGW, tag, "invalid server response");
 					continue;
@@ -81,148 +102,194 @@ public class CmdListener extends IntentService
 				}
 
 				//look at what the server is telling the call simulator to do
-				String serverCommand = respContents[1];
-				if(serverCommand.equals("ring"))
+				String command = respContents[1];
+				String involved = respContents[respContents.length-1];
+
+				if (command.equals("incoming"))
 				{
-					String subCommand = respContents[2];
-					String involved = respContents[3];
-					if(subCommand.equals("notavailable"))
-					{
-						if(involved.equals(Vars.callWith.getName()))
-						{
-							logd = logd +   Vars.callWith + " isn't online to talk with right now\n";
-							Vars.state = CallState.NONE;
-							Vars.callWith = Const.nobody;
-							notifyCanInit(false);
-							Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
-						}
-						else
-						{
-							Utils.logcat(Const.LOGW, tag, "Erroneous user n/a for call from: " + involved + " instead of: " + Vars.callWith);
-						}
-					}
-					else if(subCommand.equals("available"))
-					{
-						if(involved.equals(Vars.callWith.getName()))
-						{
-							logd = logd +  Vars.callWith + " is online. Ringing him/her now\n";
-							Vars.state = CallState.INIT;
-							notifyCanInit(true);
-							Utils.setNotification(R.string.state_popup_init, R.color.material_light_blue, Vars.go2CallMainPending);
-							//if the person is online, the server will ring him
-						}
-						else
-						{
-							Utils.logcat(Const.LOGW, tag, "Erroneous user available from: " + involved + " instead of: " + Vars.callWith);
-						}
-					}
-					else if(subCommand.equals("incoming"))
-					{
-						logd = logd +  "Incoming call from: " + involved + "\n";
-						Vars.state = CallState.INIT;
-						Contact contact = new Contact(involved, Vars.contactTable.get(involved));
-						Vars.callWith = contact;
+					//wake up the cell phone
+					PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+					Vars.wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE, Const.WAKELOCK_TAG);
+					Vars.wakeLock.acquire();
 
-						//wake up the cell phone
-						PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-						Vars.wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE, Const.WAKELOCK_TAG);
-						Vars.wakeLock.acquire();
+					logd = logd + "Incoming call from: " + involved + "\n";
+					Vars.state = CallState.INIT;
+					isCallInitiator = false;
+					haveAesKey = false;
+					Contact contact = new Contact(involved, Vars.contactTable.get(involved));
+					Vars.callWith = contact;
 
-						//launch the incoming call screen
-						Utils.setNotification(R.string.state_popup_incoming, R.color.material_light_blue, Vars.go2CallIncomingPending);
-						Intent showIncoming = new Intent(getApplicationContext(), CallIncoming.class);
-						showIncoming.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK); //needed to start activity from background
-						startActivity(showIncoming);
-					}
-					else if(subCommand.equals("busy"))
+					//launch the incoming call screen
+					Utils.setNotification(R.string.state_popup_incoming, R.color.material_light_blue, Vars.go2CallIncomingPending);
+					Intent showIncoming = new Intent(getApplicationContext(), CallIncoming.class);
+					showIncoming.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK); //needed to start activity from background
+					startActivity(showIncoming);
+					continue;
+				}
+
+				if (!involved.equals(Vars.callWith.getName()))
+				{
+					Utils.logcat(Const.LOGW, tag, "Erroneous command involving: " + involved + " instead of: " + Vars.callWith);
+					continue;
+				}
+
+				if(command.equals("available"))
+				{
+					logd = logd + Vars.callWith + " is online. Ringing him/her now\n";
+					Vars.state = CallState.INIT;
+					isCallInitiator = true;
+					haveAesKey = true; //person who makes the call gets to choose the key
+					notifyCallStateChange(Const.BROADCAST_CALL_TRY);
+					Utils.setNotification(R.string.state_popup_init, R.color.material_light_blue, Vars.go2CallMainPending);
+					//if the person is online, the server will ring him
+				}
+				else if (command.equals("start"))
+				{
+					logd = logd + Vars.callWith + " picked up. Start talking.\n";
+					Vars.state = CallState.INCALL;
+					notifyCallStateChange(Const.BROADCAST_CALL_START);
+					Utils.setNotification(R.string.state_popup_incall, R.color.material_light_blue, Vars.go2CallMainPending);
+				}
+				else if (command.equals("end"))
+				{
+					logd = logd + Vars.callWith + " is ending the call.\n";
+					Vars.state = CallState.NONE;
+					Vars.callWith = Const.nobody;
+					notifyCallStateChange(Const.BROADCAST_CALL_END);
+					Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
+				}
+				else if(command.equals("prepare"))
+				{
+					//first person gets to choose the disposable 256bit aes key for the call
+					KeyFactory kf = KeyFactory.getInstance("RSA");
+					if(isCallInitiator)
 					{
-						logd = logd +  involved + " is already in a call\n";
-						Vars.state = CallState.NONE;
-						Vars.callWith = Const.nobody;
-						notifyCanInit(false);
-						Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
+						//choose aes key
+						SecureRandom srand = new SecureRandom();
+						srand.nextBytes(Vars.aesKey);
+
+						//prepare the other person's public key for use
+						String userKeyDump = respContents[2];
+						userKeyDump = userKeyDump.replace("-----BEGIN PUBLIC KEY-----\n", "");
+						userKeyDump = userKeyDump.replace("-----END PUBLIC KEY-----", "");
+						byte[] dumpDecoded = Base64.decode(userKeyDump, Const.BASE64_Flags);
+						PublicKey publicKey = kf.generatePublic(new X509EncodedKeySpec(dumpDecoded));
+
+						//encrypt the aes key: proof this app's end to end is the real deal (not even the call server knows the aes key)
+						Cipher rsa = Cipher.getInstance("RSA/NONE/PKCS1Padding");
+						rsa.init(Cipher.ENCRYPT_MODE, publicKey);
+						byte[] encrypted = rsa.doFinal(Vars.aesKey);
+						String encString = Utils.stringify(encrypted, true);
+
+						//send the aes key
+						String passthrough = Utils.currentTimeSeconds() + "|passthrough|" + involved + "|" + encString + "|" + Vars.sessionid;
+						Utils.logcat(Const.LOGD, tag, passthrough);
+						try
+						{
+							Vars.commandSocket.getOutputStream().write(passthrough.getBytes());
+						}
+						catch (IOException e)
+						{
+							Utils.dumpException(tag, e);
+							new CommandEndAsync().doInForeground(); //can't send aes key, nothing left to continue
+						}
+					}
+
+					//prepare the server's public key
+					int retries = 10;
+					boolean gotAck = false;
+					byte[] serverCertBytes = Base64.decode(Vars.certDump, Const.BASE64_Flags);
+					X509Certificate serverCert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(serverCertBytes));
+					PublicKey serverKey = serverCert.getPublicKey();
+					while(!gotAck && retries > 0)
+					{
+						//setup the udp socket
+						Vars.callServer = InetAddress.getByName(Vars.serverAddress);
+						Vars.mediaUdp = new DatagramSocket();
+						Vars.mediaUdp.setTrafficClass(0xB8);
+
+						//encrypt the registration string
+						Cipher rsa = Cipher.getInstance("RSA/NONE/PKCS1Padding");
+						rsa.init(Cipher.ENCRYPT_MODE, serverKey);
+						String register = Utils.currentTimeSeconds() + "|" + Vars.sessionid;
+						byte[] encrypted = rsa.doFinal(register.getBytes());
+
+						//send the registration
+						DatagramPacket registration = new DatagramPacket(encrypted, encrypted.length, Vars.callServer, Vars.mediaPort);
+						Vars.mediaUdp.send(registration);
+
+						//wait for media port registration ack
+						byte[] udpReceived = new byte[Const.STD_BUFFER];
+						DatagramPacket ack = new DatagramPacket(udpReceived, Const.STD_BUFFER);
+						try
+						{
+							Vars.mediaUdp.setSoTimeout(Const.UDP_ACK_TIMEOUT);
+							Vars.mediaUdp.receive(ack);
+							Utils.logcat(Const.LOGD, tag, "udp " + ack.getLength());
+						}
+						catch (SocketTimeoutException t)
+						{
+							//not much you can do if it took too long
+							retries--;
+							continue; //no response to parse
+						}
+
+						//check sender authenticity
+//						if(!ack.getAddress().equals(callServer) || ack.getPort() != Vars.mediaPort)
+//						{
+//							Utils.logcat(Const.LOGW, tag, "ack from unexpected server");
+//							continue;
+//						}
+
+						//extract ack response
+						byte[] ackBytes = new byte[ack.getLength()];
+						System.arraycopy(ack.getData(), 0, ackBytes, 0, ack.getLength());
+
+						//decrypt ack
+						rsa.init(Cipher.DECRYPT_MODE, Vars.privateKey);
+						byte[] decAck = rsa.doFinal(ackBytes);
+						String ackString = new String(decAck, "UTF-8");
+
+						//parse ack
+						String[] ackContents = ackString.split("\\|");
+						long ackts = Long.valueOf(ackContents[0]);
+						if(Utils.validTS(ackts) && ackContents[1].equals("ok"))
+						{
+							gotAck = true;
+							break; //udp media port established
+						}
+						retries--;
+					}
+
+					if(gotAck)
+					{
+						Vars.mediaUdp.setSoTimeout(0);
+						preparationsComplete = true;
+						sendReady();
 					}
 					else
 					{
-						Utils.logcat(Const.LOGW, tag, "Unknown server RING command: " + fromServer);
+						Utils.logcat(Const.LOGE, tag, "call preparations cannot complete");
+						new CommandEndAsync().doInForeground();
 					}
 				}
-				else if (serverCommand.equals("call"))
+				else if(command.equals("direct"))
 				{
-					String subCommand = respContents[2];
-					String involved = respContents[3];
-					if(subCommand.equals("start"))
-					{
-						if(involved.equals(Vars.callWith.getName()))
-						{
-							logd = logd +  Vars.callWith + " picked up. Start talking.\n";
-							Vars.state = CallState.INCALL;
-							notifyCallStateChange(Const.BROADCAST_CALL_START);
-							Utils.setNotification(R.string.state_popup_incall, R.color.material_light_blue, Vars.go2CallMainPending);
-						}
-						else
-						{
-							Utils.logcat(Const.LOGW, tag, "Erroneous start call with: " + involved + " instead of: " + Vars.callWith);
-						}
-					}
-					else if(subCommand.equals("reject") || subCommand.equals("end"))
-					{
-						if(involved.equals(Vars.callWith.getName()))
-						{
-							logd = logd +  Vars.callWith + " is ending the call.\n";
-							//don't change the call state and call with. those will be managed by the screens
-							Vars.state = CallState.NONE;
-							Vars.callWith = Const.nobody;
-							notifyCallStateChange(Const.BROADCAST_CALL_END);
-							Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
-
-							if(subCommand.equals("end"))
-							{//need for force stop the media read thread if it's an end
-								//there is no way to kill the thread but to stop the socket to cause an exception
-								//	restart after the exception
-								Vars.mediaSocket.close();
-								try
-								{
-									Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.certDump);
-									String associateMedia = Utils.currentTimeSeconds() + "|" + Vars.sessionid;
-									Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
-								}
-								catch (CertificateException c)
-								{
-									Utils.logcat(Const.LOGE, tag, "Tring to reestablish media port but somehow the certificate is wrong");
-									inputValid = false;
-								}
-							}
-						}
-						else
-						{
-							Utils.logcat(Const.LOGW, tag, "Erroneous call rejected/end with: " + involved + " instead of " + Vars.callWith);
-						}
-					}
-					else
-					{
-						Utils.logcat(Const.LOGW, tag, "Erroneous call command: " + fromServer);
-					}
+					Cipher rsa = Cipher.getInstance("RSA/NONE/PKCS1Padding");
+					rsa.init(Cipher.DECRYPT_MODE, Vars.privateKey);
+					String aesEncB64ed = respContents[2];
+					byte[] aesEncBytes = Utils.destringify(aesEncB64ed, true);
+					Vars.aesKey = rsa.doFinal(aesEncBytes);
+					haveAesKey = true;
+					sendReady();
 				}
-				else if(serverCommand.equals("lookup"))
+				else if(command.equals("invalid"))
 				{
-					String who = respContents[2];
-					String status = respContents[3];
-					logd = logd + "Lookup of: " + who + " --> " + status + "\n";
-
-					Intent lookupStatus = new Intent(Const.BROADCAST_HOME);
-					lookupStatus.putExtra(Const.BROADCAST_HOME_TYPE, Const.BROADCAST_HOME_TYPE_LOOKUP);
-					lookupStatus.putExtra(Const.BROADCAST_HOME_LOOKUP_NAME, who);
-					lookupStatus.putExtra(Const.BROADCAST_HOME_LOOKUP_RESULT, status);
-					sendBroadcast(lookupStatus);
-				}
-				else if(serverCommand.equals("resp"))
-				{//currently only being used for invalid command
-					Utils.logcat(Const.LOGW, tag, "command was invalid");
+					Utils.logcat(Const.LOGE, tag, "android app sent an invalid command??!!");
 				}
 				else
 				{
-					Utils.logcat(Const.LOGW, tag, "Unknown command/response: " + fromServer);
+					Utils.logcat(Const.LOGW, tag, "Unknown command: " + fromServer);
 				}
 
 				Utils.logcat(Const.LOGD, tag, logd);
@@ -230,25 +297,26 @@ public class CmdListener extends IntentService
 			catch (IOException e)
 			{
 				Utils.killSockets();
-				Utils.logcat(Const.LOGE, tag, "Command socket closed...");
+				Utils.logcat(Const.LOGE, tag, "Command socket closed...\n"+logd);
 				Utils.dumpException(tag, e);
 				inputValid = false;
 			}
 			catch(NumberFormatException n)
 			{
-				Utils.logcat(Const.LOGE, tag, "string --> # error: ");
+				Utils.logcat(Const.LOGE, tag, "string --> # error: \n"+logd);
+				Utils.dumpException(tag, n);
 			}
 			catch(NullPointerException n)
 			{
 				Utils.killSockets();
-				Utils.logcat(Const.LOGE, tag, "Command socket null pointer exception");
+				Utils.logcat(Const.LOGE, tag, "Command socket null pointer exception\n"+logd);
 				Utils.dumpException(tag, n);
 				inputValid = false;
 			}
 			catch(Exception e)
 			{
 				Utils.killSockets();
-				Utils.logcat(Const.LOGE, tag, "Other exception");
+				Utils.logcat(Const.LOGE, tag, "Other exception\n"+logd);
 				Utils.dumpException(tag, e);
 				inputValid = false;
 			}
@@ -272,40 +340,42 @@ public class CmdListener extends IntentService
 	}
 
 	/**
-	 * Broadcasts to UserHome whether or not you can start the call
-	 * @param canInit whether to star the call or not
-	 */
-	private void notifyCanInit(boolean canInit)
-	{
-		Utils.logcat(Const.LOGD, tag, "broadcasting type_init intent to home with status: " + canInit);
-		Intent initStatus = new Intent(Const.BROADCAST_HOME);
-		initStatus.putExtra(Const.BROADCAST_HOME_TYPE, Const.BROADCAST_HOME_TYPE_INIT);
-		initStatus.putExtra(Const.BROADCAST_HOME_INIT_CANINIT, canInit);
-		sendBroadcast(initStatus);
-	}
-
-	/**
 	 * Broadcasts to CallInit and CallMain about call state changes
-	 * @param change Either Const.BROADCAST_CALL_END (end call) or Const.BROADCAST_CALL_START (start call)
+	 * @param change Either Const.BROADCAST_CALL_END (end call) or Const.BROADCAST_CALL_START (start call) or Const.BROADCAST_CALL_TRY (ok to try and call the other person)
 	 */
 	private void notifyCallStateChange(String change)
 	{
 		Intent stateChange = new Intent(Const.BROADCAST_CALL);
-		if(change.equals(Const.BROADCAST_CALL_END))
+		if((change.equals(Const.BROADCAST_CALL_END)) || (change.equals(Const.BROADCAST_CALL_START)) ||  (change.equals(Const.BROADCAST_CALL_TRY)))
 		{
-			Utils.logcat(Const.LOGD, tag, "broadcasting call end");
-			stateChange.putExtra(Const.BROADCAST_CALL_RESP, Const.BROADCAST_CALL_END);
-		}
-		else if (change.equals(Const.BROADCAST_CALL_START))
-		{
-			Utils.logcat(Const.LOGD, tag, "broadcasting call start");
-			stateChange.putExtra(Const.BROADCAST_CALL_RESP, Const.BROADCAST_CALL_START);
+			Utils.logcat(Const.LOGD, tag, "broadcasting: " + change);
+			stateChange.putExtra(Const.BROADCAST_CALL_RESP, change);
 		}
 		else
 		{
 			//an invalid call response to broadcast was given
+			Utils.logcat(Const.LOGD, tag, "ignoring invalid broadcast of: " + change);
 			return;
 		}
 		sendBroadcast(stateChange);
+	}
+
+	private void sendReady()
+	{
+		Utils.logcat(Const.LOGD, tag, "key, prep " + haveAesKey + ","+preparationsComplete);
+		if(haveAesKey && preparationsComplete)
+		{
+			String ready = Utils.currentTimeSeconds() + "|ready|" + Vars.callWith.getName() + "|" + Vars.sessionid;
+			Utils.logcat(Const.LOGD, tag, ready);
+			try
+			{
+				Vars.commandSocket.getOutputStream().write(ready.getBytes());
+			}
+			catch(Exception e)
+			{
+				Utils.dumpException(tag, e);
+				new CommandEndAsync().doInForeground();
+			}
+		}
 	}
 }

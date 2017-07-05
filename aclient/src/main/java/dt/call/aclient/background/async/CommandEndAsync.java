@@ -2,6 +2,7 @@ package dt.call.aclient.background.async;
 
 import android.os.AsyncTask;
 
+import java.io.IOException;
 import java.security.cert.CertificateException;
 
 import dt.call.aclient.CallState;
@@ -13,9 +14,14 @@ import dt.call.aclient.Vars;
 /**
  * Created by Daniel on 1/30/16.
  */
-public class CallEndAsync extends AsyncTask<String, String, Boolean>
+public class CommandEndAsync extends AsyncTask<String, String, Boolean>
 {
-	private static final String tag = "CallEndAsync";
+	private static final String tag = "CommandEndAsync";
+
+	public void doInForeground()
+	{//to avoid copying and pasting, allow the "main attraction" of this class to be run outside of the async framework
+		doInBackground();
+	}
 
 	@Override
 	protected Boolean doInBackground(String... params)
@@ -31,28 +37,11 @@ public class CallEndAsync extends AsyncTask<String, String, Boolean>
 			{
 				return true;
 			}
-
-			//reset the media socket to kill the media read/write threads
-			//also need to kill the media socket to flush out any data still in its buffers so the next call
-			//doesn't play a few seconds off the previous call, followed by the next call or worse...
-			//the old call data causes a "frameshift mutation" of the new call data and produces alien morse code
-			Utils.logcat(Const.LOGD, tag, "Killing old media port");
-			Vars.mediaSocket.close();
-
-			Utils.logcat(Const.LOGD, tag, "Making new media port");
-			Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.certDump);
-			String associateMedia = Utils.currentTimeSeconds() + "|" + Vars.sessionid;
-			Utils.logcat(Const.LOGD, tag, associateMedia);
-			Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
-
+			String end = Utils.currentTimeSeconds() + "|end|" + Vars.callWith.getName() + "|" + Vars.sessionid;
+			Vars.commandSocket.getOutputStream().write(end.getBytes());
 			result = true;
 		}
-		catch (CertificateException c)
-		{
-			Utils.logcat(Const.LOGE, tag, "Tring to reestablish media port but somehow the certificate is wrong");
-			result = false;
-		}
-		catch (Exception i)
+		catch (IOException i)
 		{
 			Utils.dumpException(tag, i);
 			result = false;

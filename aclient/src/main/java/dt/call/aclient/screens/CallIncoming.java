@@ -24,8 +24,8 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.background.async.CallAcceptAsync;
-import dt.call.aclient.background.async.CallRejectAsync;
+import dt.call.aclient.background.async.CommandAcceptAsync;
+import dt.call.aclient.background.async.CommandEndAsync;
 import dt.call.aclient.sqlite.History;
 import dt.call.aclient.sqlite.SQLiteDb;
 
@@ -202,7 +202,7 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 
 		if(v == accept)
 		{
-			new CallAcceptAsync().execute();
+			new CommandAcceptAsync().execute();
 			//need to wait for the server to say it's time to talk. don't assume it's immediately ready.
 			//if the other person gets cold feet and cancels the call then accept will be seen as invalid.
 			//	that's ok. when the server figures out the other person got cold feet it will send you the
@@ -210,7 +210,7 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 		}
 		else if (v == reject)
 		{
-			new CallRejectAsync().execute();
+			new CommandEndAsync().execute();
 			goHome();
 		}
 	}

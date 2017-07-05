@@ -11,12 +11,12 @@ import dt.call.aclient.sqlite.Contact;
 /**
  * Created by Daniel on 1/24/16.
  */
-public class CallInitAsync extends AsyncTask<String, String, Boolean>
+public class CommandCallAsync extends AsyncTask<String, String, Boolean>
 {
-	private static final String tag = "CallInitAsync";
+	private static final String tag = "CommandCallAsync";
 	private Contact who;
 
-	public CallInitAsync(Contact cwho)
+	public CommandCallAsync(Contact cwho)
 	{
 		who = cwho;
 	}

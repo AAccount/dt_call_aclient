@@ -359,19 +359,6 @@ public class Utils
 			dumpException(tag, e);
 		}
 		Vars.commandSocket = null;
-
-		try
-		{
-			if(Vars.mediaSocket != null)
-			{
-				Vars.mediaSocket.close();
-			}
-		}
-		catch (Exception e)
-		{
-			dumpException(tag, e);
-		}
-		Vars.mediaSocket = null;
 	}
 
 	//for cases when Vars.(shared prefs variable) goes missing or the initial load
@@ -445,7 +432,7 @@ public class Utils
 			//read the private key and convert to a string
 			ContentResolver resolver = context.getContentResolver();
 			InputStream privateKeyStream = resolver.openInputStream(uri);
-			byte[] keyBytes = new byte[Const.BUFFERSIZE];
+			byte[] keyBytes = new byte[Const.COMMAND_SIZE];
 			privateKeyStream.read(keyBytes);
 			privateKeyStream.close();
 
@@ -473,5 +460,63 @@ public class Utils
 
 			return false;
 		}
+	}
+
+	//turn a string of #s into actual #s assuming the string is a bunch of
+	//	3 digit #s glued to each other. also turned unsigned #s into signed #s
+	public static byte[] destringify(String numbers, boolean signed)
+	{
+		int increment;
+		if(signed)
+		{
+			increment = 4;
+		}
+		else
+		{
+			increment = 3;
+		}
+
+		byte[] result = new byte[numbers.length()/increment];
+		for(int i=0; i<numbers.length(); i=i+increment)
+		{
+			String digit = numbers.substring(i, i+increment);
+//			Utils.logcat(Const.LOGD, tag, "destringify #: " + digit);
+			result[i/increment] = (byte)(0xff & Integer.valueOf(digit));
+		}
+		return result;
+	}
+
+	public static String stringify(byte[] bytes, boolean signed)
+	{
+		String result = "";
+		for(int i=0; i<bytes.length; i++)
+		{
+			String number = String.valueOf(Math.abs(bytes[i]));
+
+			//prepend the required zeros
+			if(Math.abs(bytes[i]) < 10)
+			{//for 1,2,3 to keep everything as 3 digit #s make it 001, 002 etc
+				number = "00" + number;
+			}
+			else if (Math.abs(bytes[i]) < 100)
+			{//for 10,11,12 make it 010,011,012
+				number = "0" + number;
+			}
+
+			if(signed)
+			{
+				//add the sign
+				if (bytes[i] >= 0)
+				{
+					number = "+" + number;
+				}
+				else
+				{
+					number = "-" + number;
+				}
+			}
+			result = result + number;
+		}
+		return result;
 	}
 }

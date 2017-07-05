@@ -60,7 +60,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			Vars.commandSocket.getOutputStream().write(login.getBytes());
 
 			//read in login challenge
-			byte[] responseRaw = new byte[Const.BUFFERSIZE];
+			byte[] responseRaw = new byte[Const.COMMAND_SIZE];
 			int length = Vars.commandSocket.getInputStream().read(responseRaw);
 
 			//on the off chance the socket crapped out right from the get go, now you'll know
@@ -78,13 +78,13 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			//process login challenge response
 			String[] loginChallengeContents = loginChallenge.split("\\|");
-			if(loginChallengeContents.length != 4)
+			if(loginChallengeContents.length != Const.LOGIN_MAX_SEGMENTS)
 			{
 				Utils.logcat(Const.LOGW, tag, "login1 response imporoperly formatted");
 				onPostExecute(false); //not a legitimate server response
 				return false;
 			}
-			if(!(loginChallengeContents[1].equals("resp") && loginChallengeContents[2].equals("login1")))
+			if(!loginChallengeContents[1].equals("login1resp"))
 			{
 				Utils.logcat(Const.LOGW, tag, "login1 response CONTENTS improperly formated");
 				onPostExecute(false); //server response doesn't make sense
@@ -99,8 +99,8 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			}
 
 			//get the challenge
-			String challenge = loginChallengeContents[3];
-			byte[] challengeNumbers = destringify(challenge);
+			String challenge = loginChallengeContents[2];
+			byte[] challengeNumbers = Utils.destringify(challenge, false);
 
 			//answer the challenge
 			Cipher rsa = Cipher.getInstance("RSA/NONE/PKCS1Padding");
@@ -111,19 +111,19 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			Vars.commandSocket.getOutputStream().write(loginChallengeResponse.getBytes());
 
 			//see if the server liked the challenge response
-			byte[] answerResponseBuffer = new byte[Const.BUFFERSIZE];
+			byte[] answerResponseBuffer = new byte[Const.COMMAND_SIZE];
 			length = Vars.commandSocket.getInputStream().read(answerResponseBuffer);
 			String answerResponse = new String(answerResponseBuffer, 0, length);
 
 			//check reaction response
 			String[] answerResponseContents = answerResponse.split("\\|");
-			if(answerResponseContents.length != 4)
+			if(answerResponseContents.length != Const.LOGIN_MAX_SEGMENTS)
 			{
 				Utils.logcat(Const.LOGW, tag, "login2 response imporoperly formatted");
 				onPostExecute(false); //not a legitimate server response
 				return false; //not a legitimate server response
 			}
-			if(!(answerResponseContents[1].equals("resp") && answerResponseContents[2].equals("login2")))
+			if(!answerResponseContents[1].equals("login2resp"))
 			{
 				Utils.logcat(Const.LOGW, tag, "login2 response CONTENTS imporperly formateed");
 				onPostExecute(false); //not a legitimate server response
@@ -137,12 +137,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 				return false;
 			}
 
-			Vars.sessionid = answerResponseContents[3];
-
-			//establish media socket
-			Vars.mediaSocket = Utils.mkSocket(Vars.serverAddress, Vars.mediaPort, Vars.certDump);
-			String associateMedia = Utils.currentTimeSeconds() + "|" + Vars.sessionid;
-			Vars.mediaSocket.getOutputStream().write(associateMedia.getBytes());
+			Vars.sessionid = answerResponseContents[2];
 
 			Intent cmdListenerIntent = new Intent(Vars.applicationContext, CmdListener.class);
 			Vars.applicationContext.startService(cmdListenerIntent);
@@ -196,18 +191,5 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		{
 			tryingLogin = false;
 		}
-	}
-
-	//turn a string of #s into actual #s assuming the string is a bunch of
-	//	3 digit #s glued to each other. also turned unsigned #s into signed #s
-	private byte[] destringify(String numbers)
-	{
-		byte[] result = new byte[numbers.length()/3];
-		for(int i=0; i<numbers.length(); i=i+3)
-		{
-			String digit = numbers.substring(i, i+3);
-			result[i/3] = (byte)(0xff & Integer.valueOf(digit));
-		}
-		return result;
 	}
 }
