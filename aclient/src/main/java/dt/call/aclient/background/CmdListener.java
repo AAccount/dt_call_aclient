@@ -19,6 +19,8 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import javax.crypto.Cipher;
 
@@ -30,6 +32,7 @@ import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.CommandEndAsync;
 import dt.call.aclient.screens.CallIncoming;
 import dt.call.aclient.sqlite.Contact;
+import dt.call.aclient.sqlite.SQLiteDb;
 
 /**
  * Created by Daniel on 1/19/16.
@@ -109,6 +112,17 @@ public class CmdListener extends IntentService
 					PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 					Vars.wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE, Const.WAKELOCK_TAG);
 					Vars.wakeLock.acquire();
+
+					//build the contacts list if it doesn't already exist
+					if(Vars.contactTable == null)
+					{
+						ArrayList<Contact> allContacts = SQLiteDb.getInstance(getApplication()).getContacts();
+						Vars.contactTable = new HashMap<String, String>();
+						for (Contact contact : allContacts)
+						{
+							Vars.contactTable.put(contact.getName(), contact.getNickname());
+						}
+					}
 
 					Vars.state = CallState.INIT;
 					isCallInitiator = false;
