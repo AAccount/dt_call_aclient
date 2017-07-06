@@ -480,7 +480,6 @@ public class Utils
 		for(int i=0; i<numbers.length(); i=i+increment)
 		{
 			String digit = numbers.substring(i, i+increment);
-//			Utils.logcat(Const.LOGD, tag, "destringify #: " + digit);
 			result[i/increment] = (byte)(0xff & Integer.valueOf(digit));
 		}
 		return result;
