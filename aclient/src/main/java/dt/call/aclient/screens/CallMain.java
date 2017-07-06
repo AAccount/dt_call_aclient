@@ -22,6 +22,7 @@ import android.os.SystemClock;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -29,10 +30,8 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.DatagramPacket;
-import java.net.InetAddress;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
@@ -69,6 +68,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final int AMRBUFFERSIZE = 32;
 	private static final int ACCUMULATORSIZE = AMRBUFFERSIZE*16;
 	private static final int DIAL_TONE_SIZE = 32000;
+
+	//realtime strategy variables
+	private static final int TIMELIMIT = 333;
+	private static final int OVERTIME_TOLERATE = 2;
+	private static final int SEGMENT_TIME_CHECK = 30*3;
 
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
@@ -622,11 +626,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has started");
 				byte[] amrbuffer = new byte[AMRBUFFERSIZE];
 				short[] wavbuffer = new short[WAVBUFFERSIZE];
-				byte[] accumulator = new byte[ACCUMULATORSIZE];
+				byte[] accumulator;
 				int accumulatorPosition = 0;
 
 				//variables for keeping the conversation in close to real time
-				int skipCount = 0, consecutiveOk = 0;
+				int skipCount=0, consecutiveOk=0, errorTime=0, uncorrectedErrors=0;
 
 				//setup the wave audio track with enhancements if available
 				AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, WAVBUFFERSIZE, AudioTrack.MODE_STREAM);
@@ -642,7 +646,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						DatagramPacket received = new DatagramPacket(inputBuffer, Const.STD_BUFFER);
 						long start = SystemClock.elapsedRealtime();
 						Vars.mediaUdp.receive(received);
-						int diff = (int)(SystemClock.elapsedRealtime() - start);
+						int downloadTime = (int)(SystemClock.elapsedRealtime() - start);
 
 						//decrypt
 						rx = rx + received.getLength();
@@ -658,26 +662,63 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						//http://nicolas.limare.net/pro/notes/2014/12/12_arit_speed/
 
 						/*
-						 * AMR data is sent every 1/3 of a second in MediaEncoder. If it takes longer than 1/3 of a
-						 * second to receive, the conversation will lag too far compared to what is happening in real time.
-						 * Still an issue (but much less) with UDP because the wifi router may attempt to retry failed transmissions.
+						 * --------------Realtime Strategy---------------
+						 * AMR data is sent every 1/3 of a second in MediaEncoder.
+						 * -Time how long it takes to download a packet.
+						 * -If it took over 1/3 of a second, see how much over 1/3 it was.
+						 * -If it was over by an allowable margin of error, allow it but increase the error counters.
+						 * -If it was over by too much, figure out how many thirds of a second it took and skip that many new packets
+						 * -After a while, check how much time has accumulated in the error time counter
+						 * -Determine the amount of thirds to skip from the accumulated errors.
+						 * -(Accumulated errors also calculated when force skipping above)
 						 */
-						int thirdsUsed = (diff / 333) + 1; //how many 1/3 of a second did it take to download? (int division rounds down answer, +1 to compensate)
+						int segmentsWaited = (downloadTime / TIMELIMIT) + 1; //how many 1/3 of a second did it take to download? (int division rounds down answer, +1 to compensate)
 						int newSegments = 0;
-						if(thirdsUsed > 1) //if it took more than 1, 1/3 of need to skip segments
+						if(segmentsWaited > OVERTIME_TOLERATE) //audio was just too late even allowing some margin of error
 						{
-							newSegments = newSegments + thirdsUsed;
+							newSegments = newSegments + segmentsWaited;
+							consecutiveOk = SEGMENT_TIME_CHECK;
+							Log.d(tag, "Skipping due too late by " + segmentsWaited + " to " + newSegments + " diff: " + downloadTime);
 						}
-						skipCount = skipCount + newSegments;
-						if(newSegments > 1) //if new segments are skipped update counters
+						else
 						{
-							Utils.logcat(Const.LOGD, tag, "Skip count increased by " + newSegments + " to " + skipCount);
+							//willing to tolerate some lateness and correct it later to avoid an unnecessarily broken up conversation
+							if(segmentsWaited == OVERTIME_TOLERATE)
+							{
+								errorTime = errorTime + downloadTime;
+								uncorrectedErrors++;
+								Log.d(tag, "tolerating: " + downloadTime + " total: " + errorTime);
+							}
+						}
+
+						//after a while, need to correct for tolerated errors
+						if((consecutiveOk >= SEGMENT_TIME_CHECK) && (uncorrectedErrors > 0))
+						{
+							int calculatedTime = uncorrectedErrors*TIMELIMIT;
+							int overTime = errorTime - calculatedTime;
+							int correction = (overTime/TIMELIMIT)+1;
+							newSegments = newSegments + correction;
+
+							String logString = "uncorrected: " + uncorrectedErrors + " calculatedTime: " + calculatedTime
+									+ " errorTime: " + errorTime + " overTime: " + overTime + " --> " + correction;
+							Log.d(tag, logString);
+
+							//reset uncorrected error variables
+							uncorrectedErrors = 0;
+							errorTime = 0;
+						}
+
+						skipCount = skipCount + newSegments;
+						if(newSegments > 0) //if new segments are skipped update counters
+						{
+							Log.d(tag, "Skip count increased by " + newSegments + " to " + skipCount);
 							lifetimeSkip = lifetimeSkip + newSegments;
 							consecutiveOk = 0;
 						}
 
 						if(skipCount == 0)
 						{//must start and stop the wave player so it only plays when amr is being decoded to prevent buffer underrun delays
+							accumulatorPosition = 0;
 							wavPlayer.play();
 							while (accumulatorPosition < ACCUMULATORSIZE)
 							{//break up accumulator into amr sized chunks
@@ -694,7 +735,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							skipCount--;
 							consecutiveOk = 0;
 						}
-						accumulatorPosition = 0;
 					}
 					catch (Exception i) //io or null pointer depending on when the connection dies
 					{
