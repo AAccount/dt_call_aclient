@@ -307,7 +307,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		if(Vars.state == CallState.NONE)
 		{
 			new CommandEndAsync().execute();
-			Arrays.fill(Vars.aesKey, (byte)0); //any secretly detained packets are now forever gibberish
 
 			//for cases when you make a call but decide you don't want to anymore
 			try
@@ -431,6 +430,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private void uiCallMode()
 	{
 		aesKeyObj = new SecretKeySpec(Vars.aesKey, "AES");
+		Arrays.fill(Vars.aesKey, (byte)0); //any secretly detained packets will forever be gibberish after the call is over
 		try
 		{
 			dialTone.stop();
