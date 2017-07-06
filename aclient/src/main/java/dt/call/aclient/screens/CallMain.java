@@ -83,8 +83,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private int min=0, sec=0;
 	private Timer counter = new Timer();
 	private BroadcastReceiver myReceiver;
-	private int lifetimeSkip=0, tx=0, rx=0;
-	private String skipLabel, txLabel, rxLabel;
+	private int lifetimeSkip=0, garbage=0, tx=0, rx=0;
+	private String skipLabel, garbageLabel, txLabel, rxLabel;
 	private boolean showStats = false;
 
 	//proximity sensor stuff
@@ -99,8 +99,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private AudioTrack dialTone = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, DIAL_TONE_SIZE, AudioTrack.MODE_STATIC);
 
 	private Key aesKeyObj;
-
-	private boolean firstEncode = true, firstDecode = true;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -185,7 +183,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				if(showStats)
 				{
 					String rxDisp=formatInternetMeteric(rx), txDisp=formatInternetMeteric(tx);
-					final String latestStats = skipLabel + ": " + lifetimeSkip + "\n" +rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp;
+					final String latestStats = skipLabel + ": " + lifetimeSkip + " " + garbageLabel + ": " + garbage + "\n"
+							+rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp;
 					runOnUiThread(new Runnable()
 					{
 						@Override
@@ -203,6 +202,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		skipLabel = getString(R.string.call_main_stat_skip);
 		txLabel = getString(R.string.call_main_stat_tx);
 		rxLabel = getString(R.string.call_main_stat_rx);
+		garbageLabel = getString(R.string.call_main_stat_garbage);
+
 		if(!Vars.SHOUDLOG)
 		{
 			stats.setVisibility(View.INVISIBLE);
@@ -562,7 +563,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						{
 							accumulatorPosition = 0;
 							byte[] enc = encrypt(accumulator);
-							DatagramPacket packet = new DatagramPacket(enc, enc.length, Vars.callServer, Vars.mediaPort);
+							DatagramPacket packet = new DatagramPacket(enc, enc.length);
 							Vars.mediaUdp.send(packet);
 							tx = tx + enc.length;
 						}
@@ -643,36 +644,36 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						int diff = (int)(SystemClock.elapsedRealtime() - start);
 
 						//decrypt
+						rx = rx + received.getLength();
 						byte[] inputTrimmed = new byte[received.getLength()];
 						System.arraycopy(received.getData(), 0, inputTrimmed, 0, received.getLength());
 						accumulator = decrypt(inputTrimmed);
 						if(accumulator == null)
 						{
-							Utils.logcat(Const.LOGD, tag, "tossing 1");
+							Utils.logcat(Const.LOGD, tag, "Invalid decryption");
 							continue;
 						}
 						//https://stackoverflow.com/questions/20852412/does-int-vs-long-comparison-hurt-performance-in-java
 						//http://nicolas.limare.net/pro/notes/2014/12/12_arit_speed/
-						rx = rx + received.getLength();
 
 						/*
 						 * AMR data is sent every 1/3 of a second in MediaEncoder. If it takes longer than 1/3 of a
 						 * second to receive, the conversation will lag too far compared to what is happening in real time.
+						 * Still an issue (but much less) with UDP because the wifi router may attempt to retry failed transmissions.
 						 */
-//						int oldCount = skipCount; //log the old skip counter to know if it was changed
-//						int thirdsUsed = (diff / 333) + 1; //how many 1/3 of a second did it take to download? (int division rounds down answer, +1 to compensate)
-//						int newSegments = 0;
-//						if(thirdsUsed > 1) //if it took more than 1, 1/3 of need to skip segments
-//						{
-//							newSegments = newSegments + thirdsUsed;
-//						}
-//						skipCount = skipCount + newSegments;
-//						if(skipCount != oldCount) //if new segments are skipped update counters
-//						{
-//							Utils.logcat(Const.LOGD, tag, "Skip count increased by " + newSegments + " to " + skipCount);
-//							lifetimeSkip = lifetimeSkip + newSegments;
-//							consecutiveOk = 0;
-//						}
+						int thirdsUsed = (diff / 333) + 1; //how many 1/3 of a second did it take to download? (int division rounds down answer, +1 to compensate)
+						int newSegments = 0;
+						if(thirdsUsed > 1) //if it took more than 1, 1/3 of need to skip segments
+						{
+							newSegments = newSegments + thirdsUsed;
+						}
+						skipCount = skipCount + newSegments;
+						if(newSegments > 1) //if new segments are skipped update counters
+						{
+							Utils.logcat(Const.LOGD, tag, "Skip count increased by " + newSegments + " to " + skipCount);
+							lifetimeSkip = lifetimeSkip + newSegments;
+							consecutiveOk = 0;
+						}
 
 						if(skipCount == 0)
 						{//must start and stop the wave player so it only plays when amr is being decoded to prevent buffer underrun delays
@@ -779,12 +780,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			result[0] = (byte)init.length;
 			System.arraycopy(init, 0, result, 1, init.length);
 			System.arraycopy(enc, 0, result, 1 + init.length, enc.length);
-			if(firstEncode)
-			{
-				System.out.println("enc");
-				firstEncode = false;
-				dumpBytes(result);
-			}
 			return result;
 		}
 		catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e)
@@ -796,12 +791,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private byte[] decrypt(byte[] in)
 	{
-		if(firstDecode)
-		{
-			firstDecode = false;
-			System.out.println("dec");
-			dumpBytes(in);
-		}
 		try
 		{
 			Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
@@ -813,6 +802,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		catch (NoSuchAlgorithmException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | NoSuchPaddingException | InvalidAlgorithmParameterException e)
 		{
 			Utils.dumpException(tag, e);
+			garbage++;
 		}
 
 		return null;
@@ -820,7 +810,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private String formatInternetMeteric(int n)
 	{
-		DecimalFormat decimalFormat = new DecimalFormat("#.##");
+		DecimalFormat decimalFormat = new DecimalFormat("#.###");
 		if(n > 1000000)
 		{
 			return decimalFormat.format((float)n / (float)1000000) + "M";
