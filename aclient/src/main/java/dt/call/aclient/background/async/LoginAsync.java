@@ -137,7 +137,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 				return false;
 			}
 
-			Vars.sessionid = answerResponseContents[2];
+			Vars.sessionKey = answerResponseContents[2];
 
 			Intent cmdListenerIntent = new Intent(Vars.applicationContext, CmdListener.class);
 			Vars.applicationContext.startService(cmdListenerIntent);

@@ -24,7 +24,7 @@ public class CommandCallAsync extends AsyncTask<String, String, Boolean>
 	@Override
 	protected Boolean doInBackground(String... params)
 	{
-		String request = Utils.currentTimeSeconds() + "|call|" + who.getName() + "|" + Vars.sessionid;
+		String request = Utils.currentTimeSeconds() + "|call|" + who.getName() + "|" + Vars.sessionKey;
 		Utils.logcat(Const.LOGD, tag, "Call request: " + request);
 		try
 		{

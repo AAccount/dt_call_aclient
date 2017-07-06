@@ -27,12 +27,11 @@ public class Vars
 {
 	public static boolean SHOUDLOG = true;
 
-	public static String sessionid = "";
+	public static String sessionKey = "";
 
 	//2 sockets
 	public static SSLSocket commandSocket = null;
 	public static DatagramSocket mediaUdp = null;
-	public static InetAddress callServer = null;
 
 	//call related information
 	public volatile static CallState state = CallState.NONE;

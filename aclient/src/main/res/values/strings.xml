@@ -72,6 +72,7 @@
     <string name="call_main_stat_skip">Skip</string>
     <string name="call_main_stat_tx">Out</string>
     <string name="call_main_stat_rx">In</string>
+    <string name="call_main_stat_garbage">Garbage</string>
 
     <!-- Incoming call screen -->
     <string name="call_incoming_title">Incoming Call</string>
@@ -94,7 +95,7 @@
     <string name="about_compile_label">Git:</string>
     <string name="about_compile_revision">1e7eab15864f4b8645814a32b1d947039f9685c6</string>
     <string name="about_version_label">Version:</string>
-    <string name="about_version_number">1.1</string> <!-- do not translate. it's just a number -->
+    <string name="about_version_number">1.2</string> <!-- do not translate. it's just a number -->
     <string name="about_by_label">Credits:</string>
     <string name="about_people">
         Daniel Tjandra (main)\n
