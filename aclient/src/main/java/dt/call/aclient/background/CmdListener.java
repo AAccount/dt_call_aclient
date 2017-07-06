@@ -191,7 +191,7 @@ public class CmdListener extends IntentService
 
 						//send the aes key
 						String passthrough = Utils.currentTimeSeconds() + "|passthrough|" + involved + "|" + aesEncryptedString + "|" + Vars.sessionKey;
-						logd = logd + "passthrough of aes key " + passthrough + "\n";
+						logd = logd + "passthrough of aes key " + passthrough.replace(aesEncryptedString, Const.AES_PLACEHOLDER) + "\n";
 						try
 						{
 							Vars.commandSocket.getOutputStream().write(passthrough.getBytes());
@@ -281,11 +281,13 @@ public class CmdListener extends IntentService
 				{
 					Cipher rsa = Cipher.getInstance(Const.RSA_PKCS1_OAEP_PADDING);
 					rsa.init(Cipher.DECRYPT_MODE, Vars.privateKey);
-					String aesEncB64ed = respContents[2];
-					byte[] aesEncBytes = Utils.destringify(aesEncB64ed, true);
+					String aesEnc = respContents[2];
+					byte[] aesEncBytes = Utils.destringify(aesEnc, true);
 					Vars.aesKey = rsa.doFinal(aesEncBytes);
 					haveAesKey = true;
 					sendReady();
+
+					logd = "Server response raw: " + fromServer.replace(aesEnc, Const.AES_PLACEHOLDER) + "\n";
 				}
 				else if(command.equals("invalid"))
 				{

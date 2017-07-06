@@ -102,6 +102,7 @@ public class Const
 	public static final int UDP_RETRIES = 10;
 	public static final int UDP_ACK_TIMEOUT = 100; //in milliseconds
 	public static final int DSCP_EXPEDITED_FWD = (0x2E << 2);
+	public static final String AES_PLACEHOLDER = "ENCRYPTED_AES_KEY_HERE";
 
 	//rsa padding scheme
 	//(same name as openssl constant used in server)
