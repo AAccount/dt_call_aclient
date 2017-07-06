@@ -120,10 +120,6 @@ public class Utils
 			socket.setEnabledProtocols(new String[]{"TLSv1.2"});
 			socket.setEnabledCipherSuites(new String[]{"TLS_DHE_RSA_WITH_AES_256_GCM_SHA384"});
 			socket.startHandshake();
-			if(port == Vars.mediaPort)
-			{
-				socket.setTrafficClass(0xB8); //Expedited forwarding (EF) 0x2E << 2
-			}
 			return socket;
 		}
 		catch (Exception e)

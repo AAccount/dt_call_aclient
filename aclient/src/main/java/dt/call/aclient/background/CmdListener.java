@@ -5,7 +5,6 @@ import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
 import android.os.PowerManager;
-import android.provider.ContactsContract;
 import android.util.Base64;
 
 import java.io.ByteArrayInputStream;
@@ -19,9 +18,7 @@ import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.concurrent.TimeoutException;
 
 import javax.crypto.Cipher;
 
@@ -64,11 +61,11 @@ public class CmdListener extends IntentService
 		while(inputValid)
 		{
 			//responses from the server command connection will always be in text format
-			//timestamp|available|tried_to_call
+			//timestamp|available|other_person
 			//timestamp|incoming|trying_to_call
-			//timestamp|start|with
+			//timestamp|start|other_person
 			//timestamp|end|other_person
-			//timestamp|prepare|(optionally public key),other_person
+			//timestamp|prepare|(optionally public key|),other_person
 			//timestamp|direct|(encrypted aes key)|other_person
 			//timestamp|invalid
 
@@ -84,12 +81,12 @@ public class CmdListener extends IntentService
 				}
 				String fromServer = new String(rawString, 0, length);
 				String[] respContents = fromServer.split("\\|");
-				logd = logd +  "Server response raw: " + fromServer + "\n";
+				logd = "Server response raw: " + fromServer + "\n";
 
 				//check for properly formatted command
 				if(respContents.length > Const.COMMAND_MAX_SEGMENTS)
 				{
-					Utils.logcat(Const.LOGW, tag, "invalid server response");
+					Utils.logcat(Const.LOGW, tag, logd+"command has too many segments to be valid");
 					continue;
 				}
 
@@ -97,7 +94,7 @@ public class CmdListener extends IntentService
 				long ts = Long.valueOf(respContents[0]);
 				if(!Utils.validTS(ts))
 				{
-					Utils.logcat(Const.LOGW, tag, "Rejecting server response for bad timestamp");
+					Utils.logcat(Const.LOGW, tag, logd+"Rejecting server response for bad timestamp");
 					continue;
 				}
 
@@ -105,6 +102,7 @@ public class CmdListener extends IntentService
 				String command = respContents[1];
 				String involved = respContents[respContents.length-1];
 
+				//"incoming" has no "other person you're in a call with" to verify because incoming defines who that other person is
 				if (command.equals("incoming"))
 				{
 					//wake up the cell phone
@@ -112,12 +110,10 @@ public class CmdListener extends IntentService
 					Vars.wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE, Const.WAKELOCK_TAG);
 					Vars.wakeLock.acquire();
 
-					logd = logd + "Incoming call from: " + involved + "\n";
 					Vars.state = CallState.INIT;
 					isCallInitiator = false;
 					haveAesKey = false;
-					Contact contact = new Contact(involved, Vars.contactTable.get(involved));
-					Vars.callWith = contact;
+					Vars.callWith = new Contact(involved, Vars.contactTable.get(involved));
 
 					//launch the incoming call screen
 					Utils.setNotification(R.string.state_popup_incoming, R.color.material_light_blue, Vars.go2CallIncomingPending);
@@ -127,32 +123,30 @@ public class CmdListener extends IntentService
 					continue;
 				}
 
+				//for all commands except "incoming", need to verify that the other person the command says you're in a call with
+				//	is really the other person you're in a call with
 				if (!involved.equals(Vars.callWith.getName()))
 				{
-					Utils.logcat(Const.LOGW, tag, "Erroneous command involving: " + involved + " instead of: " + Vars.callWith);
+					Utils.logcat(Const.LOGW, tag, logd+"Erroneous command involving: " + involved + " instead of: " + Vars.callWith);
 					continue;
 				}
 
 				if(command.equals("available"))
 				{
-					logd = logd + Vars.callWith + " is online. Ringing him/her now\n";
 					Vars.state = CallState.INIT;
 					isCallInitiator = true;
 					haveAesKey = true; //person who makes the call gets to choose the key
 					notifyCallStateChange(Const.BROADCAST_CALL_TRY);
 					Utils.setNotification(R.string.state_popup_init, R.color.material_light_blue, Vars.go2CallMainPending);
-					//if the person is online, the server will ring him
 				}
 				else if (command.equals("start"))
 				{
-					logd = logd + Vars.callWith + " picked up. Start talking.\n";
 					Vars.state = CallState.INCALL;
 					notifyCallStateChange(Const.BROADCAST_CALL_START);
 					Utils.setNotification(R.string.state_popup_incall, R.color.material_light_blue, Vars.go2CallMainPending);
 				}
 				else if (command.equals("end"))
 				{
-					logd = logd + Vars.callWith + " is ending the call.\n";
 					Vars.state = CallState.NONE;
 					Vars.callWith = Const.nobody;
 					notifyCallStateChange(Const.BROADCAST_CALL_END);
@@ -172,18 +166,18 @@ public class CmdListener extends IntentService
 						String userKeyDump = respContents[2];
 						userKeyDump = userKeyDump.replace("-----BEGIN PUBLIC KEY-----\n", "");
 						userKeyDump = userKeyDump.replace("-----END PUBLIC KEY-----", "");
-						byte[] dumpDecoded = Base64.decode(userKeyDump, Const.BASE64_Flags);
-						PublicKey publicKey = kf.generatePublic(new X509EncodedKeySpec(dumpDecoded));
+						byte[] userKeyBytes = Base64.decode(userKeyDump, Const.BASE64_Flags);
+						PublicKey userKey = kf.generatePublic(new X509EncodedKeySpec(userKeyBytes));
 
 						//encrypt the aes key: proof this app's end to end is the real deal (not even the call server knows the aes key)
-						Cipher rsa = Cipher.getInstance("RSA/NONE/OAEPWithSHA1AndMGF1Padding");
-						rsa.init(Cipher.ENCRYPT_MODE, publicKey);
-						byte[] encrypted = rsa.doFinal(Vars.aesKey);
-						String encString = Utils.stringify(encrypted, true);
+						Cipher rsa = Cipher.getInstance(Const.RSA_PKCS1_OAEP_PADDING);
+						rsa.init(Cipher.ENCRYPT_MODE, userKey);
+						byte[] aesEncrypted = rsa.doFinal(Vars.aesKey);
+						String aesEncryptedString = Utils.stringify(aesEncrypted, true); //inefficient but not nearly as moody and fiddly as base64 utils
 
 						//send the aes key
-						String passthrough = Utils.currentTimeSeconds() + "|passthrough|" + involved + "|" + encString + "|" + Vars.sessionid;
-						Utils.logcat(Const.LOGD, tag, passthrough);
+						String passthrough = Utils.currentTimeSeconds() + "|passthrough|" + involved + "|" + aesEncryptedString + "|" + Vars.sessionKey;
+						logd = logd + "passthrough of aes key " + passthrough + "\n";
 						try
 						{
 							Vars.commandSocket.getOutputStream().write(passthrough.getBytes());
@@ -196,36 +190,38 @@ public class CmdListener extends IntentService
 					}
 
 					//prepare the server's public key
-					int retries = 10;
-					boolean gotAck = false;
 					byte[] serverCertBytes = Base64.decode(Vars.certDump, Const.BASE64_Flags);
 					X509Certificate serverCert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(serverCertBytes));
 					PublicKey serverKey = serverCert.getPublicKey();
+
+					//setup the udp socket BEFORE using it
+					InetAddress callServer = InetAddress.getByName(Vars.serverAddress);
+					Vars.mediaUdp = new DatagramSocket();
+					Vars.mediaUdp.connect(callServer, Vars.mediaPort);
+					Vars.mediaUdp.setTrafficClass(Const.DSCP_EXPEDITED_FWD);
+					Vars.mediaUdp.setSoTimeout(Const.UDP_ACK_TIMEOUT);
+
+					//try to register media port
+					int retries = Const.UDP_RETRIES;
+					boolean gotAck = false;
 					while(!gotAck && retries > 0)
 					{
-						//setup the udp socket
-						Vars.callServer = InetAddress.getByName(Vars.serverAddress);
-						Vars.mediaUdp = new DatagramSocket();
-						Vars.mediaUdp.setTrafficClass(0xB8);
-
 						//encrypt the registration string
-						Cipher rsa = Cipher.getInstance("RSA/NONE/OAEPWithSHA1AndMGF1Padding");
+						Cipher rsa = Cipher.getInstance(Const.RSA_PKCS1_OAEP_PADDING);
 						rsa.init(Cipher.ENCRYPT_MODE, serverKey);
-						String register = Utils.currentTimeSeconds() + "|" + Vars.sessionid;
-						byte[] encrypted = rsa.doFinal(register.getBytes());
+						String registration = Utils.currentTimeSeconds() + "|" + Vars.sessionKey;
+						byte[] registrationEncrypted = rsa.doFinal(registration.getBytes());
 
 						//send the registration
-						DatagramPacket registration = new DatagramPacket(encrypted, encrypted.length, Vars.callServer, Vars.mediaPort);
-						Vars.mediaUdp.send(registration);
+						DatagramPacket registrationPacket = new DatagramPacket(registrationEncrypted, registrationEncrypted.length);
+						Vars.mediaUdp.send(registrationPacket);
 
 						//wait for media port registration ack
-						byte[] udpReceived = new byte[Const.STD_BUFFER];
-						DatagramPacket ack = new DatagramPacket(udpReceived, Const.STD_BUFFER);
+						byte[] ackBuffer = new byte[Const.STD_BUFFER];
+						DatagramPacket ack = new DatagramPacket(ackBuffer, Const.STD_BUFFER);
 						try
 						{
-							Vars.mediaUdp.setSoTimeout(Const.UDP_ACK_TIMEOUT);
 							Vars.mediaUdp.receive(ack);
-							Utils.logcat(Const.LOGD, tag, "udp " + ack.getLength());
 						}
 						catch (SocketTimeoutException t)
 						{
@@ -234,29 +230,23 @@ public class CmdListener extends IntentService
 							continue; //no response to parse
 						}
 
-						//check sender authenticity
-//						if(!ack.getAddress().equals(callServer) || ack.getPort() != Vars.mediaPort)
-//						{
-//							Utils.logcat(Const.LOGW, tag, "ack from unexpected server");
-//							continue;
-//						}
-
 						//extract ack response
-						byte[] ackBytes = new byte[ack.getLength()];
-						System.arraycopy(ack.getData(), 0, ackBytes, 0, ack.getLength());
+						byte[] ackEncBytes = new byte[ack.getLength()];
+						System.arraycopy(ack.getData(), 0, ackEncBytes, 0, ack.getLength());
 
 						//decrypt ack
 						rsa.init(Cipher.DECRYPT_MODE, Vars.privateKey);
-						byte[] decAck = rsa.doFinal(ackBytes);
+						byte[] decAck = rsa.doFinal(ackEncBytes);
 						String ackString = new String(decAck, "UTF-8");
+						logd = logd + "reply for media port ack registration: " + ackString + "\n";
 
 						//parse ack
 						String[] ackContents = ackString.split("\\|");
 						long ackts = Long.valueOf(ackContents[0]);
-						if(Utils.validTS(ackts) && ackContents[1].equals("ok"))
+						if(Utils.validTS(ackts) && ackContents[1].equals(Vars.sessionKey) && ackContents[2].equals("ok"))
 						{
 							gotAck = true;
-							break; //udp media port established
+							break; //udp media port established, no need to retry
 						}
 						retries--;
 					}
@@ -269,13 +259,13 @@ public class CmdListener extends IntentService
 					}
 					else
 					{
-						Utils.logcat(Const.LOGE, tag, "call preparations cannot complete");
-						new CommandEndAsync().doInForeground();
+						logd = logd + "call preparations cannot complete\n";
+						giveUp();
 					}
 				}
 				else if(command.equals("direct"))
 				{
-					Cipher rsa = Cipher.getInstance("RSA/NONE/OAEPWithSHA1AndMGF1Padding");
+					Cipher rsa = Cipher.getInstance(Const.RSA_PKCS1_OAEP_PADDING);
 					rsa.init(Cipher.DECRYPT_MODE, Vars.privateKey);
 					String aesEncB64ed = respContents[2];
 					byte[] aesEncBytes = Utils.destringify(aesEncB64ed, true);
@@ -285,11 +275,11 @@ public class CmdListener extends IntentService
 				}
 				else if(command.equals("invalid"))
 				{
-					Utils.logcat(Const.LOGE, tag, "android app sent an invalid command??!!");
+					logd = logd + "android app sent an invalid command??!!\n";
 				}
 				else
 				{
-					Utils.logcat(Const.LOGW, tag, "Unknown command: " + fromServer);
+					logd = logd + "Unknown command\n";
 				}
 
 				Utils.logcat(Const.LOGD, tag, logd);
@@ -297,26 +287,26 @@ public class CmdListener extends IntentService
 			catch (IOException e)
 			{
 				Utils.killSockets();
-				Utils.logcat(Const.LOGE, tag, "Command socket closed...\n"+logd);
+				Utils.logcat(Const.LOGE, tag, logd+"Command socket closed...");
 				Utils.dumpException(tag, e);
 				inputValid = false;
 			}
 			catch(NumberFormatException n)
 			{
-				Utils.logcat(Const.LOGE, tag, "string --> # error: \n"+logd);
+				Utils.logcat(Const.LOGE, tag, logd+"string --> # error: ");
 				Utils.dumpException(tag, n);
 			}
 			catch(NullPointerException n)
 			{
 				Utils.killSockets();
-				Utils.logcat(Const.LOGE, tag, "Command socket null pointer exception\n"+logd);
+				Utils.logcat(Const.LOGE, tag, logd+"Command socket null pointer exception");
 				Utils.dumpException(tag, n);
 				inputValid = false;
 			}
 			catch(Exception e)
 			{
 				Utils.killSockets();
-				Utils.logcat(Const.LOGE, tag, "Other exception\n"+logd);
+				Utils.logcat(Const.LOGE, tag, logd+"Other exception");
 				Utils.dumpException(tag, e);
 				inputValid = false;
 			}
@@ -360,12 +350,16 @@ public class CmdListener extends IntentService
 		sendBroadcast(stateChange);
 	}
 
+	/**
+	 * Try and tell the server you are ready to make a call. This function checks to make sure you
+	 * really are ready and will only send the command if you have the aes key and media port is established.
+	 */
 	private void sendReady()
 	{
 		Utils.logcat(Const.LOGD, tag, "key, prep " + haveAesKey + ","+preparationsComplete);
 		if(haveAesKey && preparationsComplete)
 		{
-			String ready = Utils.currentTimeSeconds() + "|ready|" + Vars.callWith.getName() + "|" + Vars.sessionid;
+			String ready = Utils.currentTimeSeconds() + "|ready|" + Vars.callWith.getName() + "|" + Vars.sessionKey;
 			Utils.logcat(Const.LOGD, tag, ready);
 			try
 			{
@@ -374,8 +368,18 @@ public class CmdListener extends IntentService
 			catch(Exception e)
 			{
 				Utils.dumpException(tag, e);
-				new CommandEndAsync().doInForeground();
+				giveUp();
 			}
 		}
+	}
+
+	/**
+	 * Send the call end to the server and to an android broadcast of call end.
+	 * Usually when it is not possible to setup the call.
+	 */
+	private void giveUp()
+	{
+		new CommandEndAsync().doInForeground();
+		notifyCallStateChange(Const.BROADCAST_CALL_END);
 	}
 }

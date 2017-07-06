@@ -90,7 +90,6 @@ public class Const
 
 	//timeout (IN SECONDS) before giving up on calling someone
 	public static final int CALL_TIMEOUT = 20;
-	public static final int UDP_ACK_TIMEOUT = 100; //in milliseconds
 
 	//wakelock tag
 	public static final String WAKELOCK_TAG = "dt.call.aclient.wakelock";
@@ -98,4 +97,13 @@ public class Const
 	//command maximum segments
 	public static final int COMMAND_MAX_SEGMENTS = 5;
 	public static final int LOGIN_MAX_SEGMENTS = 3;
+
+	//udp port related variables
+	public static final int UDP_RETRIES = 10;
+	public static final int UDP_ACK_TIMEOUT = 100; //in milliseconds
+	public static final int DSCP_EXPEDITED_FWD = (0x2E << 2);
+
+	//rsa padding scheme
+	//(same name as openssl constant used in server)
+	public static final String RSA_PKCS1_OAEP_PADDING = "RSA/NONE/OAEPWithSHA1AndMGF1Padding";
 }
