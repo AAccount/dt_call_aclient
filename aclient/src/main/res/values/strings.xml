@@ -91,15 +91,14 @@
 
     <!-- About this app screen -->
     <string name="about_title">App Info</string>
-    <string name="about_desc">Android client for Daniel Tjandra call server. Forces TLS 1.2, trusting only the supplied certificate regardless of its certificate chain. Uses amr narrow band @ 12.2kbit/s for voice.\nNew to v1.1: public key authentication.</string>
+    <string name="about_desc">Android client for Daniel Tjandra call server. Forces TLS 1.2, trusting only the supplied certificate regardless of its certificate chain. Uses amr wide band @ 23.85kbit/s for voice.</string>
     <string name="about_compile_label">Git:</string>
     <string name="about_compile_revision">1e7eab15864f4b8645814a32b1d947039f9685c6</string>
     <string name="about_version_label">Version:</string>
-    <string name="about_version_number">1.2</string> <!-- do not translate. it's just a number -->
+    <string name="about_version_number">1.3</string> <!-- do not translate. it's just a number -->
     <string name="about_by_label">Credits:</string>
     <string name="about_people">
         Daniel Tjandra (main)\n
-        https://github.com/kevinho/opencore-amr-android (amr narrow band library)\n
         https://material.io/icons/ (icons) \n
     </string>
 
