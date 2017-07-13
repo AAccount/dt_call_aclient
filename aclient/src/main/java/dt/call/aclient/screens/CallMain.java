@@ -636,7 +636,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				AmrWBDecoder.init();
 				while(Vars.state == CallState.INCALL)
 				{
-					int totalRead=0, dataRead;
 					try
 					{
 						//read into the accumulator
