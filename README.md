@@ -24,6 +24,8 @@ End note: there are no plans to make an iOS client because there are no good res
 ![In Call Screen](https://github.com/AAccount/dt_call_aclient/blob/master/screenshots/Main%20Call.png)
 
 ## Changelog
+**V 1.3:** improved voice quality using 23.85kbit/s AMR wideband
+
 **V 1.2:** voice over UDP with end to end AES256/GCM encryption.
 
 **V 1.1:** public key authentication.
