@@ -1,28 +1,34 @@
-apply plugin: 'com.android.application'
+apply plugin: 'com.android.model.application'
 
-android {
-    compileSdkVersion 25
-    buildToolsVersion "25.0.2"
+model {
+    android {
+        compileSdkVersion 25
+        buildToolsVersion "25.0.2"
 
-    defaultConfig {
-        applicationId "dt.call.aclient"
-        minSdkVersion 16
-        targetSdkVersion 25
-        versionCode 5
-        versionName "@string/about_version_number"
-    }
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        defaultConfig {
+            applicationId "dt.call.aclient"
+            minSdkVersion.apiLevel 16
+            targetSdkVersion.apiLevel 25
+            versionCode 5
+            versionName "@string/about_version_number"
+        }
+        buildTypes {
+            release {
+                minifyEnabled false
+                proguardFiles.add(file('proguard-android.txt'))
+            }
+        }
+
+        externalNativeBuild {
+            ndkBuild {
+                path "src/main/jni/Android.mk"
+            }
         }
     }
 }
-
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:25.3.1'
     compile 'com.android.support:design:25.3.1'
-    compile 'io.kvh:amr:1.1.1'//amr narrow band library
 }

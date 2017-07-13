@@ -117,6 +117,7 @@ public class Utils
 			context.init(new KeyManager[0], trustOnlyServerCert, new SecureRandom());
 			SSLSocketFactory mkssl = context.getSocketFactory();
 			socket = (SSLSocket)mkssl.createSocket(host, port);
+			socket.setTcpNoDelay(true); //for heartbeat to get instant ack
 			socket.setEnabledProtocols(new String[]{"TLSv1.2"});
 			socket.setEnabledCipherSuites(new String[]{"TLS_DHE_RSA_WITH_AES_256_GCM_SHA384"});
 			socket.startHandshake();

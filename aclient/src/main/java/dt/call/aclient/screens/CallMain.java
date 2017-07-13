@@ -53,26 +53,26 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
+import dt.call.aclient.amrwb.AmrWBDecoder;
+import dt.call.aclient.amrwb.AmrWBEncoder;
 import dt.call.aclient.background.async.CommandEndAsync;
-import io.kvh.media.amr.AmrDecoder;
-import io.kvh.media.amr.AmrEncoder;
 
 public class CallMain extends AppCompatActivity implements View.OnClickListener, SensorEventListener
 {
 	private static final String tag = "CallMain";
 
-	private static final int SAMPLESAMR = 8000;
+	private static final int SAMPLESAMR = 16000;
 	private static final int FORMAT = AudioFormat.ENCODING_PCM_16BIT;
 	private static final int STREAMCALL = AudioManager.STREAM_VOICE_CALL;
-	private static final int WAVBUFFERSIZE = 160;
-	private static final int AMRBUFFERSIZE = 32;
+	private static final int WAVBUFFERSIZE = 320;
+	private static final int AMRBUFFERSIZE = 61;
 	private static final int ACCUMULATORSIZE = AMRBUFFERSIZE*16;
 	private static final int DIAL_TONE_SIZE = 32000;
 
 	//realtime strategy variables
-	private static final int TIMELIMIT = 333;
+	private static final int TIMELIMIT = 328;
 	private static final int OVERTIME_TOLERATE = 2;
-	private static final int SEGMENT_TIME_CHECK = 30*3;
+	private static final int SEGMENT_TIME_CHECK = 2*60*3;
 
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
@@ -100,7 +100,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private AudioRecord wavRecorder = null;
 
 	//for dial tone when initiating a call
-	private AudioTrack dialTone = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, DIAL_TONE_SIZE, AudioTrack.MODE_STATIC);
+	private AudioTrack dialTone = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, FORMAT, DIAL_TONE_SIZE, AudioTrack.MODE_STATIC);
 
 	private Key aesKeyObj;
 
@@ -512,8 +512,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					endThread();
 				}
 
-				AmrEncoder.init(0);
-
+				AmrWBEncoder.init();
 				while (Vars.state == CallState.INCALL)
 				{
 
@@ -559,7 +558,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					 * chosen because that is the minimum offset it takes to notice audio/video out of sync when mixing
 					 * in english audio into hd anime files.
 					 */
-					int encodeLength = AmrEncoder.encode(AmrEncoder.Mode.MR122.ordinal(), wavbuffer, amrbuffer);
+					int encodeLength = AmrWBEncoder.encode(wavbuffer, amrbuffer);
 					System.arraycopy(amrbuffer, 0, accumulator, accumulatorPosition, encodeLength);
 					accumulatorPosition = accumulatorPosition + AMRBUFFERSIZE; //guarantee using 32byte chunks
 					try
@@ -585,8 +584,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						endThread();
 					}
 				}
-
-				AmrEncoder.exit();
+				AmrWBEncoder.exit();
 				wavRecorder.stop();
 				wavRecorder.release();
 				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has stopped");
@@ -635,7 +633,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				//setup the wave audio track with enhancements if available
 				AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, WAVBUFFERSIZE, AudioTrack.MODE_STREAM);
 
-				long amrstate = AmrDecoder.init();
+				AmrWBDecoder.init();
 				while(Vars.state == CallState.INCALL)
 				{
 					int totalRead=0, dataRead;
@@ -724,7 +722,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							{//break up accumulator into amr sized chunks
 								System.arraycopy(accumulator, accumulatorPosition, amrbuffer, 0, AMRBUFFERSIZE);
 								accumulatorPosition = accumulatorPosition + AMRBUFFERSIZE;
-								AmrDecoder.decode(amrstate, amrbuffer, wavbuffer);
+								AmrWBDecoder.decode(amrbuffer, wavbuffer);
 								wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
 							}
 							wavPlayer.pause();
@@ -760,7 +758,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						}
 					}
 				}
-				AmrDecoder.exit(amrstate);
+				AmrWBDecoder.exit();
 				wavPlayer.stop();
 				wavPlayer.flush(); //must flush after stop
 				wavPlayer.release(); //mandatory cleanup to prevent wavPlayer from outliving its usefulness
