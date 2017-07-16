@@ -9,7 +9,7 @@ gxx=$(ls $toolchain/bin | grep g++)
 prefix=${gxx::-4}
 export CC="$prefix"-gcc
 export CXX=$gxx
-export CFLAGS="-march=armv7a +fp" #even the tegra 2 can do vfpv3d16 BUT couldn't do neon so... no neon
+export CFLAGS="-march=armv7a+fp" #even the tegra 2 can do vfpv3d16 BUT couldn't do neon so... no neon
 cd $1
 echo $arch $toolchain $gxx $prefix
 rm -rf build-"$arch"
