@@ -629,7 +629,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				int skipCount=0, consecutiveOk=0, errorTime=0, uncorrectedErrors=0;
 
 				//setup the wave audio track with enhancements if available
-				AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLES, STEREOOUT, S16, WAVBUFFERSIZE, AudioTrack.MODE_STREAM);
+				AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLES, STEREOOUT, S16, WAVBUFFERSIZE*2*8, AudioTrack.MODE_STREAM);
 				wavPlayer.play();
 
 				while(Vars.state == CallState.INCALL)
