@@ -54,19 +54,19 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.amrwb.AmrWBDecoder;
-import dt.call.aclient.amrwb.AmrWBEncoder;
 import dt.call.aclient.background.async.CommandEndAsync;
+import dt.call.aclient.fdkaac.FdkAAC;
 
 public class CallMain extends AppCompatActivity implements View.OnClickListener, SensorEventListener
 {
 	private static final String tag = "CallMain";
 
-	private static final int SAMPLESAMR = 16000;
-	private static final int FORMAT = AudioFormat.ENCODING_PCM_16BIT;
+	private static final int SAMPLES = 44100;
+	private static final int S16 = AudioFormat.ENCODING_PCM_16BIT;
 	private static final int STREAMCALL = AudioManager.STREAM_VOICE_CALL;
-	private static final int WAVBUFFERSIZE = 320;
-	private static final int AMRBUFFERSIZE = 61;
-	private static final int ACCUMULATORSIZE = AMRBUFFERSIZE*16;
+
+	private static final int WAVBUFFERSIZE = FdkAAC.getWavFrameSize();
+	private static final int AACBUFFERSIZE = 1000; //extra big just to be safe
 	private static final int DIAL_TONE_SIZE = 32000;
 
 	//realtime strategy variables
@@ -100,7 +100,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private AudioRecord wavRecorder = null;
 
 	//for dial tone when initiating a call
-	private AudioTrack dialTone = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, FORMAT, DIAL_TONE_SIZE, AudioTrack.MODE_STATIC);
+	private AudioTrack dialTone = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, S16, DIAL_TONE_SIZE, AudioTrack.MODE_STATIC);
 
 	private Key aesKeyObj;
 
@@ -224,9 +224,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					min = 0;
 					sec = 0;
-					uiCallMode();
-					startMediaDecodeThread();
-					startMediaEncodeThread();
+					changeToCallMode();
 				}
 				else if(response.equals(Const.BROADCAST_CALL_END))
 				{
@@ -255,9 +253,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		//set the ui to call mode: if you got to this screen after accepting an incoming call
 		if(Vars.state == CallState.INCALL)
 		{
-			uiCallMode();
-			startMediaDecodeThread();
-			startMediaEncodeThread();
+			changeToCallMode();
 		}
 		else //otherwise you're the one placing a call. play a dial tone for user feedback
 		{
@@ -431,7 +427,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		}
 	}
 
-	private void uiCallMode()
+	private void changeToCallMode()
 	{
 		aesKeyObj = new SecretKeySpec(Vars.aesKey, "AES");
 		Arrays.fill(Vars.aesKey, (byte)0); //any secretly detained packets will forever be gibberish after the call is over
@@ -470,6 +466,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		speaker.setEnabled(true);
 		noiseReduction.setEnabled(true);
 		echoCancel.setEnabled(true);
+
+		//must init the encoder first so the decoder has its seed information
+		FdkAAC.initEncoder();
+		FdkAAC.initDecoder();
+
+		startMediaEncodeThread();
+		startMediaDecodeThread();
 	}
 
 	private void startMediaEncodeThread()
@@ -478,18 +481,19 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		{
 			private static final String tag = "EncodingThread";
 
+			private static final int STEREOIN = AudioFormat.CHANNEL_IN_STEREO;
+			private static final int MIC = MediaRecorder.AudioSource.DEFAULT;
+
 			@Override
 			public void run()
 			{
 				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has started");
 
-				byte[] amrbuffer = new byte[AMRBUFFERSIZE];
+				byte[] aacbuffer = new byte[AACBUFFERSIZE];
 				short[] wavbuffer = new short[WAVBUFFERSIZE];
-				byte[] accumulator = new byte[ACCUMULATORSIZE];
-				int accumulatorPosition = 0;
 
 				//setup the wave audio recorder. since it is released and restarted, it needs to be setup here and not onCreate
-				wavRecorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, SAMPLESAMR, AudioFormat.CHANNEL_IN_MONO, FORMAT, WAVBUFFERSIZE);
+				wavRecorder = new AudioRecord(MIC, SAMPLES, STEREOIN, S16, WAVBUFFERSIZE);
 				wavRecorder.startRecording();
 
 				//my dying i9300 on CM12.1 sometimes can't get the audio record on its first try
@@ -498,7 +502,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					wavRecorder.stop();
 					wavRecorder.release();
-					wavRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLESAMR, AudioFormat.CHANNEL_IN_MONO, FORMAT, WAVBUFFERSIZE);
+					wavRecorder = new AudioRecord(MIC, SAMPLES, STEREOIN, S16, WAVBUFFERSIZE);
 					wavRecorder.startRecording();
 					Utils.logcat(Const.LOGW, tag, "audiorecord failed to initialized. retried");
 					recorderRetries--;
@@ -512,7 +516,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					endThread();
 				}
 
-				AmrWBEncoder.init();
 				while (Vars.state == CallState.INCALL)
 				{
 
@@ -558,23 +561,19 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					 * chosen because that is the minimum offset it takes to notice audio/video out of sync when mixing
 					 * in english audio into hd anime files.
 					 */
-					int encodeLength = AmrWBEncoder.encode(wavbuffer, amrbuffer);
-					System.arraycopy(amrbuffer, 0, accumulator, accumulatorPosition, encodeLength);
-					accumulatorPosition = accumulatorPosition + AMRBUFFERSIZE; //guarantee using 32byte chunks
+					int encodeLength = FdkAAC.encode(wavbuffer, aacbuffer);
+					byte[] aacTrimmed = new byte[encodeLength];
+					System.arraycopy(aacbuffer, 0, aacTrimmed, 0, encodeLength);
 					try
 					{
-						if(accumulatorPosition >= ACCUMULATORSIZE)
-						{
-							accumulatorPosition = 0;
-							byte[] enc = encrypt(accumulator);
-							DatagramPacket packet = new DatagramPacket(enc, enc.length);
-							Vars.mediaUdp.send(packet);
-							tx = tx + enc.length;
-						}
+						byte[] enc = encrypt(aacTrimmed);
+						DatagramPacket packet = new DatagramPacket(enc, enc.length);
+						Vars.mediaUdp.send(packet);
+						tx = tx + enc.length;
 					}
 					catch (Exception e)
 					{
-						Utils.logcat(Const.LOGE, tag, "Cannot send amr out the media socket");
+						Utils.logcat(Const.LOGE, tag, "Cannot send aac out the media socket");
 						Utils.dumpException(tag, e);
 
 						//if the socket died it's impossible to continue the call.
@@ -584,7 +583,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						endThread();
 					}
 				}
-				AmrWBEncoder.exit();
+				FdkAAC.closeEncoder();
 				wavRecorder.stop();
 				wavRecorder.release();
 				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has stopped");
@@ -617,28 +616,27 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		Thread playbackThread = new Thread(new Runnable()
 		{
 			private static final String tag = "DecodingThread";
+			private static final int STEREOOUT = AudioFormat.CHANNEL_OUT_STEREO;
 
 			@Override
 			public void run()
 			{
 				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has started");
-				byte[] amrbuffer = new byte[AMRBUFFERSIZE];
 				short[] wavbuffer = new short[WAVBUFFERSIZE];
-				byte[] accumulator;
-				int accumulatorPosition = 0;
+				byte[] aacbuffer;
 
 				//variables for keeping the conversation in close to real time
 				int skipCount=0, consecutiveOk=0, errorTime=0, uncorrectedErrors=0;
 
 				//setup the wave audio track with enhancements if available
-				AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLESAMR, AudioFormat.CHANNEL_OUT_MONO, FORMAT, WAVBUFFERSIZE, AudioTrack.MODE_STREAM);
+				AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLES, STEREOOUT, S16, WAVBUFFERSIZE, AudioTrack.MODE_STREAM);
+				wavPlayer.play();
 
-				AmrWBDecoder.init();
 				while(Vars.state == CallState.INCALL)
 				{
 					try
 					{
-						//read into the accumulator
+						//read encrypted aac
 						byte[] inputBuffer = new byte[Const.STD_BUFFER];
 						DatagramPacket received = new DatagramPacket(inputBuffer, Const.STD_BUFFER);
 						long start = SystemClock.elapsedRealtime();
@@ -649,8 +647,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						rx = rx + received.getLength();
 						byte[] inputTrimmed = new byte[received.getLength()];
 						System.arraycopy(received.getData(), 0, inputTrimmed, 0, received.getLength());
-						accumulator = decrypt(inputTrimmed);
-						if(accumulator == null)
+						aacbuffer = decrypt(inputTrimmed);
+						if(aacbuffer == null)
 						{
 							Utils.logcat(Const.LOGD, tag, "Invalid decryption");
 							continue;
@@ -715,16 +713,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 						if(skipCount == 0)
 						{//must start and stop the wave player so it only plays when amr is being decoded to prevent buffer underrun delays
-							accumulatorPosition = 0;
-							wavPlayer.play();
-							while (accumulatorPosition < ACCUMULATORSIZE)
-							{//break up accumulator into amr sized chunks
-								System.arraycopy(accumulator, accumulatorPosition, amrbuffer, 0, AMRBUFFERSIZE);
-								accumulatorPosition = accumulatorPosition + AMRBUFFERSIZE;
-								AmrWBDecoder.decode(amrbuffer, wavbuffer);
-								wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
-							}
-							wavPlayer.pause();
+							FdkAAC.decode(aacbuffer, wavbuffer);
+							wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
 							consecutiveOk++;
 						}
 						else
@@ -757,7 +747,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						}
 					}
 				}
-				AmrWBDecoder.exit();
+				FdkAAC.closeDecoder();
 				wavPlayer.stop();
 				wavPlayer.flush(); //must flush after stop
 				wavPlayer.release(); //mandatory cleanup to prevent wavPlayer from outliving its usefulness
@@ -861,15 +851,5 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		{
 			return Integer.toString(n);
 		}
-	}
-
-	private void dumpBytes(byte[] param)
-	{
-		String dump = "";
-		for(int i=0; i<param.length; i++)
-		{
-			dump = dump + String.valueOf(param[i]) + " ";
-		}
-		System.out.println(dump);
 	}
 }

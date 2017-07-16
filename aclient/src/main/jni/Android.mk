@@ -9,7 +9,7 @@ LOCAL_PATH := $(call my-dir)
 LOCAL_MODULE := libopencore-amrwb
 LOCAL_MODULE_FILENAME := libopencore-amrwb
 LOCAL_SRC_FILES := prebuild/$(TARGET_ARCH_ABI)/libopencore-amrwb.a
-LOCAL_EXPORT_C_INCLUDES := prebuild/include/opencore-amrwb
+LOCAL_EXPORT_C_INCLUDES := include/opencore-amrwb
 include $(PREBUILT_STATIC_LIBRARY)
 
 # opencore amr wideband decoder wrapper
@@ -27,7 +27,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := libvo-amrwbenc
 LOCAL_MODULE_FILENAME := libvo-amrwbenc
 LOCAL_SRC_FILES := prebuild/$(TARGET_ARCH_ABI)/libvo-amrwbenc.a
-LOCAL_EXPORT_C_INCLUDES := prebuild/include/vo-amrwbenc
+LOCAL_EXPORT_C_INCLUDES := include/vo-amrwbenc
 include $(PREBUILT_STATIC_LIBRARY)
 
 # visual-on amr wideband encoder wrapper
@@ -37,4 +37,23 @@ LOCAL_MODULE    := libamrwb-enc
 LOCAL_MODULE_FILENAME    := libamrwb-enc
 LOCAL_SRC_FILES := amrwb-enc.c
 LOCAL_STATIC_LIBRARIES := libvo-amrwbenc
+include $(BUILD_SHARED_LIBRARY)
+
+# fdk aac precompiled static library
+# http://downloads.sourceforge.net/opencore-amr/fdk-aac-0.1.5.tar.gz
+include $(CLEAR_VARS)
+LOCAL_MODULE := libfdkaac
+LOCAL_MODULE_FILENAME := libfdkaac
+LOCAL_SRC_FILES := prebuild/$(TARGET_ARCH_ABI)/libfdk-aac.a
+LOCAL_EXPORT_C_INCLUDES := include/fdk-aac
+include $(PREBUILT_STATIC_LIBRARY)
+
+# aac codec wrapper
+include $(CLEAR_VARS)
+LOCAL_C_INCLUDES += include/fdk-aac
+LOCAL_MODULE    := libfdkaac-aclient
+LOCAL_MODULE_FILENAME    := libfdkaac-aclient
+LOCAL_SRC_FILES := fdkaac-jni.c
+LOCAL_STATIC_LIBRARIES := libfdkaac
+LOCAL_LDLIBS := -llog
 include $(BUILD_SHARED_LIBRARY)

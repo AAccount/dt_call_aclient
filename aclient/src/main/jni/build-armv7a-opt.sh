@@ -11,9 +11,8 @@ export CC="$prefix"-gcc
 export CXX=$gxx
 export CFLAGS="-march=armv7a+fp" #even the tegra 2 can do vfpv3d16 BUT couldn't do neon so... no neon
 cd $1
-echo $arch $toolchain $gxx $prefix
+make clean
 rm -rf build-"$arch"
 ./configure --prefix=$(pwd)/build-"$arch-v7a" --host=$prefix --disable-shared
-make clean
 make -j16
 make install
