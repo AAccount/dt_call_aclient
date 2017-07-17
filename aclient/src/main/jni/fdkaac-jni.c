@@ -6,6 +6,7 @@
 
 #define TAG "aac-jni"
 #define WAVFRAME_SZ 4096 //figured out by experimentation
+#define TRANSPORT TT_MP4_ADIF
 
 HANDLE_AACENCODER encInternals;
 HANDLE_AACDECODER decInternals;
@@ -35,7 +36,7 @@ Java_dt_call_aclient_fdkaac_FdkAAC_initEncoder(JNIEnv *env, jclass type)
     result = result + aacEncoder_SetParam(encInternals, AACENC_BITRATE, 32000);
     result = result + aacEncoder_SetParam(encInternals, AACENC_CHANNELMODE, MODE_2);
     result = result + aacEncoder_SetParam(encInternals, AACENC_BITRATEMODE, 0);
-    result = result + aacEncoder_SetParam(encInternals, AACENC_TRANSMUX, TT_MP4_ADIF); //!!!DO NOT!!! USE RAW:: IT NEVER WORKS
+    result = result + aacEncoder_SetParam(encInternals, AACENC_TRANSMUX, TRANSPORT); //!!!DO NOT!!! USE RAW:: IT NEVER WORKS
     result = result + aacEncoder_SetParam(encInternals, AACENC_AFTERBURNER, TRUE);
     if(result != AACENC_OK) //adding any number of 0s is still 0
     {
@@ -86,7 +87,7 @@ Java_dt_call_aclient_fdkaac_FdkAAC_encode(JNIEnv *env, jclass type, jshortArray 
     output.bufElSizes = &outputSampleSize;
     AACENC_OutArgs outArgs;
 
-    aacEncEncode(encInternals, &input, &output, &inArgs, &outArgs);
+    int result = aacEncEncode(encInternals, &input, &output, &inArgs, &outArgs);
     (*env)->SetByteArrayRegion(env, aac_, 0, outArgs.numOutBytes, outputBuffer);
 
     (*env)->ReleaseShortArrayElements(env, wav_, wav, 0);
@@ -103,7 +104,7 @@ Java_dt_call_aclient_fdkaac_FdkAAC_closeEncoder(JNIEnv *env, jclass type)
 JNIEXPORT void JNICALL
 Java_dt_call_aclient_fdkaac_FdkAAC_initDecoder(JNIEnv *env, jclass type)
 {
-    decInternals = aacDecoder_Open(TT_MP4_ADIF, 1);
+    decInternals = aacDecoder_Open(TRANSPORT, 1);
 
     //it's the same program, compiled with the same static library with the same jni on both ends.
     // ok to cheat a little and use your own AACENC_InfoStruct for somebody else's voice
