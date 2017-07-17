@@ -43,16 +43,16 @@ Java_dt_call_aclient_fdkaac_FdkAAC_initEncoder(JNIEnv *env, jclass type)
         __android_log_print(ANDROID_LOG_ERROR, TAG, "problems setting encoder options");
     }
 
-    result = aacEncInfo(encInternals, &encInfo);
-    if(result != AACENC_OK)
-    {
-        __android_log_print(ANDROID_LOG_ERROR, TAG, "could not retrieve encoding seed information");
-    }
-
     result = aacEncEncode(encInternals, NULL, NULL, NULL, NULL);
     if(result != AACENC_OK)
     {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "problems initialize encoder");
+    }
+
+    result = aacEncInfo(encInternals, &encInfo);
+    if(result != AACENC_OK)
+    {
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "could not retrieve encoding seed information");
     }
 }
 
