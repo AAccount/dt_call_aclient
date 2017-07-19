@@ -38,7 +38,7 @@ public class Const
 	//Java 1byte workaround
 	public static final String JBYTE = "D";
 	public static final int COMMAND_SIZE = 2048;
-	public static final int STD_BUFFER = 1024; //maximum size for command buffer. same name and size as seen in server's const.h
+	public static final int MEDIA_SIZE = 1200;
 
 	//nobody: the default value for when not in a call
 	public static final Contact nobody = new Contact("(nobody)");

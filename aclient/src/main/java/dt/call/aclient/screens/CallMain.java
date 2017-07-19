@@ -18,7 +18,6 @@ import android.media.audiofx.AcousticEchoCanceler;
 import android.media.audiofx.NoiseSuppressor;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -53,13 +52,14 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.amrwb.AmrWBDecoder;
 import dt.call.aclient.background.async.CommandEndAsync;
 import dt.call.aclient.fdkaac.FdkAAC;
 
 public class CallMain extends AppCompatActivity implements View.OnClickListener, SensorEventListener
 {
 	private static final String tag = "CallMain";
+
+	private static final int HEADERS = 52;
 
 	private static final int SAMPLES = 44100;
 	private static final int S16 = AudioFormat.ENCODING_PCM_16BIT;
@@ -68,11 +68,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final int WAVBUFFERSIZE = FdkAAC.getWavFrameSize();
 	private static final int AACBUFFERSIZE = 1000; //extra big just to be safe
 	private static final int DIAL_TONE_SIZE = 32000;
-
-	//realtime strategy variables
-	private static final int TIMELIMIT = 328;
-	private static final int OVERTIME_TOLERATE = 2;
-	private static final int SEGMENT_TIME_CHECK = 2*60*3;
 
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
@@ -87,8 +82,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private int min=0, sec=0;
 	private Timer counter = new Timer();
 	private BroadcastReceiver myReceiver;
-	private int lifetimeSkip=0, garbage=0, tx=0, rx=0;
-	private String skipLabel, garbageLabel, txLabel, rxLabel;
+	private int garbage=0, tx=0, rx=0, txCount=0, rxCount=0;
+	private String missingLabel, garbageLabel, txLabel, rxLabel;
 	private boolean showStats = false;
 
 	//proximity sensor stuff
@@ -187,7 +182,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				if(showStats)
 				{
 					String rxDisp=formatInternetMeteric(rx), txDisp=formatInternetMeteric(tx);
-					final String latestStats = skipLabel + ": " + lifetimeSkip + " " + garbageLabel + ": " + garbage + "\n"
+					int missing = txCount-rxCount;
+					final String latestStats = missingLabel + ": " + missing + " " + garbageLabel + ": " + garbage + "\n"
 							+rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp;
 					runOnUiThread(new Runnable()
 					{
@@ -203,7 +199,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		counter.schedule(counterTask, 0, 1000);
 
 		//Setup the strings for displaying tx rx skip stats
-		skipLabel = getString(R.string.call_main_stat_skip);
+		missingLabel = getString(R.string.call_main_stat_mia);
 		txLabel = getString(R.string.call_main_stat_tx);
 		rxLabel = getString(R.string.call_main_stat_rx);
 		garbageLabel = getString(R.string.call_main_stat_garbage);
@@ -489,9 +485,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			{
 				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has started");
 
-				byte[] aacbuffer = new byte[AACBUFFERSIZE];
-				short[] wavbuffer = new short[WAVBUFFERSIZE];
-
 				//setup the wave audio recorder. since it is released and restarted, it needs to be setup here and not onCreate
 				wavRecorder = new AudioRecord(MIC, SAMPLES, STEREOIN, S16, WAVBUFFERSIZE);
 				wavRecorder.startRecording();
@@ -516,8 +509,12 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					endThread();
 				}
 
+				byte[] accumulator = new byte[Const.MEDIA_SIZE-200];
+				int accPos = 0;
 				while (Vars.state == CallState.INCALL)
 				{
+					byte[] aacbuffer = new byte[AACBUFFERSIZE];
+					short[] wavbuffer = new short[WAVBUFFERSIZE];
 
 					if (micStatusNew)
 					{
@@ -555,33 +552,47 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					}
 
 					/**
-					 * Send data in 512byte chunks ~ 1/3 of a second. Sending too many 32 byte amr packets
-					 * wastes tons of space in tcp+ip+hardware headers. Also greatly increases the chances of
-					 * packets coming out of order which will increase latency due to reordering fixing. 1/3 of a second
-					 * chosen because that is the minimum offset it takes to notice audio/video out of sync when mixing
-					 * in english audio into hd anime files.
+					 *Avoid sending tons of tiny packets wasting resources for headers.
 					 */
 					int encodeLength = FdkAAC.encode(wavbuffer, aacbuffer);
-					byte[] aacTrimmed = new byte[encodeLength];
-					System.arraycopy(aacbuffer, 0, aacTrimmed, 0, encodeLength);
-					try
-					{
-						byte[] enc = encrypt(aacTrimmed);
-						DatagramPacket packet = new DatagramPacket(enc, enc.length);
-						Vars.mediaUdp.send(packet);
-						tx = tx + enc.length;
-					}
-					catch (Exception e)
-					{
-						Utils.logcat(Const.LOGE, tag, "Cannot send aac out the media socket");
-						Utils.dumpException(tag, e);
 
-						//if the socket died it's impossible to continue the call.
-						//the other person will get a dropped call and you can start the call again.
-						//
-						//kill the sockets so that UserHome's crash recovery will reinitialize them
-						endThread();
+					//if the current aac chunk won't fit in the accumulator, send the packet and restart the accumulator
+					if((accPos + 2 + encodeLength) > accumulator.length)
+					{
+						try
+						{
+							byte[] accumulatorTrimmed = new byte[accPos];
+							System.arraycopy(accumulator, 0, accumulatorTrimmed, 0, accPos);
+							byte[] accumulatorEncrypted = encrypt(accumulatorTrimmed);
+
+							DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length);
+							Vars.mediaUdp.send(packet);
+							tx = tx + accumulatorEncrypted.length + HEADERS;
+							txCount++;
+						}
+						catch (Exception e)
+						{
+							Utils.logcat(Const.LOGE, tag, "Cannot send aac out the media socket");
+							Utils.dumpException(tag, e);
+
+							//if the socket died it's impossible to continue the call.
+							//the other person will get a dropped call and you can start the call again.
+							//
+							//kill the sockets so that UserHome's crash recovery will reinitialize them
+							endThread();
+						}
+						accPos = 0;
+						Arrays.fill(accumulator, (byte)0);
 					}
+
+					//write the aac chunk size as a "header" before writing the actual aac data
+					byte first = (byte)(encodeLength >> 7);
+					byte second = (byte)(encodeLength & Byte.MAX_VALUE);
+					accumulator[accPos] = first;
+					accumulator[accPos+1] = second;
+					System.arraycopy(aacbuffer, 0 , accumulator, accPos+2, encodeLength);
+					accPos = accPos + 2 + encodeLength;
+
 				}
 				FdkAAC.closeEncoder();
 				wavRecorder.stop();
@@ -618,109 +629,55 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			private static final String tag = "DecodingThread";
 			private static final int STEREOOUT = AudioFormat.CHANNEL_OUT_STEREO;
 
+			//realtime strategy variables
+			private final int BUFFER = AudioTrack.getMinBufferSize(SAMPLES, STEREOOUT, S16);
+
 			@Override
 			public void run()
 			{
 				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has started");
-				short[] wavbuffer = new short[WAVBUFFERSIZE];
-				byte[] aacbuffer;
-
-				//variables for keeping the conversation in close to real time
-				int skipCount=0, consecutiveOk=0, errorTime=0, uncorrectedErrors=0;
+				Log.d(tag, "recommended buffer size: " + BUFFER);
 
 				//setup the wave audio track with enhancements if available
-				AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLES, STEREOOUT, S16, WAVBUFFERSIZE*2*8, AudioTrack.MODE_STREAM);
+				AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLES, STEREOOUT, S16, BUFFER, AudioTrack.MODE_STREAM);
 				wavPlayer.play();
 
 				while(Vars.state == CallState.INCALL)
 				{
+					short[] wavbuffer = new short[WAVBUFFERSIZE];
 					try
 					{
 						//read encrypted aac
-						byte[] inputBuffer = new byte[Const.STD_BUFFER];
-						DatagramPacket received = new DatagramPacket(inputBuffer, Const.STD_BUFFER);
-						long start = SystemClock.elapsedRealtime();
+						byte[] inputBuffer = new byte[Const.MEDIA_SIZE];
+						DatagramPacket received = new DatagramPacket(inputBuffer, Const.MEDIA_SIZE);
 						Vars.mediaUdp.receive(received);
-						int downloadTime = (int)(SystemClock.elapsedRealtime() - start);
 
 						//decrypt
-						rx = rx + received.getLength();
-						byte[] inputTrimmed = new byte[received.getLength()];
-						System.arraycopy(received.getData(), 0, inputTrimmed, 0, received.getLength());
-						aacbuffer = decrypt(inputTrimmed);
-						if(aacbuffer == null)
+						rx = rx + received.getLength() + HEADERS;
+						rxCount++;
+						byte[] accumulator = new byte[received.getLength()];
+						System.arraycopy(received.getData(), 0, accumulator, 0, received.getLength());
+						byte[] accumulatorDec = decrypt(accumulator);
+						if(accumulatorDec == null)
 						{
 							Utils.logcat(Const.LOGD, tag, "Invalid decryption");
 							continue;
 						}
-						//https://stackoverflow.com/questions/20852412/does-int-vs-long-comparison-hurt-performance-in-java
-						//http://nicolas.limare.net/pro/notes/2014/12/12_arit_speed/
 
-						/*
-						 * --------------Realtime Strategy---------------
-						 * AMR data is sent every 1/3 of a second in MediaEncoder.
-						 * -Time how long it takes to download a packet.
-						 * -If it took over 1/3 of a second, see how much over 1/3 it was.
-						 * -If it was over by an allowable margin of error, allow it but increase the error counters.
-						 * -If it was over by too much, figure out how many thirds of a second it took and skip that many new packets
-						 * -After a while, check how much time has accumulated in the error time counter
-						 * -Determine the amount of thirds to skip from the accumulated errors.
-						 * -(Accumulated errors also calculated when force skipping above)
-						 */
-						int segmentsWaited = (downloadTime / TIMELIMIT) + 1; //how many 1/3 of a second did it take to download? (int division rounds down answer, +1 to compensate)
-						int newSegments = 0;
-						if(segmentsWaited > OVERTIME_TOLERATE) //audio was just too late even allowing some margin of error
+						int readPos = 0;
+						while(readPos < accumulatorDec.length)
 						{
-							newSegments = newSegments + segmentsWaited;
-							consecutiveOk = SEGMENT_TIME_CHECK;
-							Log.d(tag, "Skipping due too late by " + segmentsWaited + " to " + newSegments + " diff: " + downloadTime);
-						}
-						else
-						{
-							//willing to tolerate some lateness and correct it later to avoid an unnecessarily broken up conversation
-							if(segmentsWaited == OVERTIME_TOLERATE)
+							int aacLength = (accumulatorDec[readPos] << 7) + (accumulatorDec[readPos+1]);
+							byte[] aacbuffer = new byte[aacLength];
+							System.arraycopy(accumulatorDec, readPos+2, aacbuffer, 0, aacLength);
+							int error = FdkAAC.decode(aacbuffer, wavbuffer);
+							if(error != 0)
 							{
-								errorTime = errorTime + downloadTime;
-								uncorrectedErrors++;
-								Log.d(tag, "tolerating: " + downloadTime + " total: " + errorTime);
+								Utils.logcat(Const.LOGW, tag, "aac jni decoder error of: " + error);
+								break;
 							}
-						}
-
-						//after a while, need to correct for tolerated errors
-						if((consecutiveOk >= SEGMENT_TIME_CHECK) && (uncorrectedErrors > 0))
-						{
-							int calculatedTime = uncorrectedErrors*TIMELIMIT;
-							int overTime = errorTime - calculatedTime;
-							int correction = (overTime/TIMELIMIT)+1;
-							newSegments = newSegments + correction;
-
-							String logString = "uncorrected: " + uncorrectedErrors + " calculatedTime: " + calculatedTime
-									+ " errorTime: " + errorTime + " overTime: " + overTime + " --> " + correction;
-							Log.d(tag, logString);
-
-							//reset uncorrected error variables
-							uncorrectedErrors = 0;
-							errorTime = 0;
-						}
-
-						skipCount = skipCount + newSegments;
-						if(newSegments > 0) //if new segments are skipped update counters
-						{
-							Log.d(tag, "Skip count increased by " + newSegments + " to " + skipCount);
-							lifetimeSkip = lifetimeSkip + newSegments;
-							consecutiveOk = 0;
-						}
-
-						if(skipCount == 0)
-						{//must start and stop the wave player so it only plays when amr is being decoded to prevent buffer underrun delays
-							FdkAAC.decode(aacbuffer, wavbuffer);
 							wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
-							consecutiveOk++;
-						}
-						else
-						{
-							skipCount--;
-							consecutiveOk = 0;
+							readPos = readPos + 2 + aacLength;
 						}
 					}
 					catch (Exception i) //io or null pointer depending on when the connection dies
@@ -818,11 +775,17 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	}
 
 	private byte[] decrypt(byte[] in)
-	{
+	{//udp packet: [nonce length (byte 0) | nonce (byte 1 --> L)| aes payload (bytes L+1 --> end)]
 		try
 		{
 			Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-			byte[] init = new byte[in[0]];
+			byte initLength = in[0];
+			if(initLength < 1)
+			{
+				throw new InvalidAlgorithmParameterException("Garbage udp packet");
+			}
+
+			byte[] init = new byte[initLength];
 			System.arraycopy(in, 1, init, 0, in[0]);
 			cipher.init(Cipher.DECRYPT_MODE, aesKeyObj, new IvParameterSpec(init));
 			return cipher.doFinal(in, init.length+1, in.length-init.length-1);

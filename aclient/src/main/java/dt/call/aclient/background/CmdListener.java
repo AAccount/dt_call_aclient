@@ -231,8 +231,8 @@ public class CmdListener extends IntentService
 						Vars.mediaUdp.send(registrationPacket);
 
 						//wait for media port registration ack
-						byte[] ackBuffer = new byte[Const.STD_BUFFER];
-						DatagramPacket ack = new DatagramPacket(ackBuffer, Const.STD_BUFFER);
+						byte[] ackBuffer = new byte[Const.MEDIA_SIZE];
+						DatagramPacket ack = new DatagramPacket(ackBuffer, Const.MEDIA_SIZE);
 						try
 						{
 							Vars.mediaUdp.receive(ack);
