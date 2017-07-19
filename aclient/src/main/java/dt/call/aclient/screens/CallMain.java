@@ -586,7 +586,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					}
 
 					//write the aac chunk size as a "header" before writing the actual aac data
-					byte first = (byte)(encodeLength >> 7);
+					byte first = (byte)(encodeLength >> 7); //split up large numbers like 1234 into 12, 34
 					byte second = (byte)(encodeLength & Byte.MAX_VALUE);
 					accumulator[accPos] = first;
 					accumulator[accPos+1] = second;
@@ -657,7 +657,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						rxCount++;
 						byte[] accumulator = new byte[received.getLength()];
 						System.arraycopy(received.getData(), 0, accumulator, 0, received.getLength());
-						byte[] accumulatorDec = decrypt(accumulator);
+						byte[] accumulatorDec = decrypt(accumulator); //contents [size1|aac chunk 1|size2|aac chunk 2|...|sizeN|aac chunk N]
 						if(accumulatorDec == null)
 						{
 							Utils.logcat(Const.LOGD, tag, "Invalid decryption");
@@ -667,9 +667,14 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						int readPos = 0;
 						while(readPos < accumulatorDec.length)
 						{
+							//retrieve the size from the first 2 bytes
 							int aacLength = (accumulatorDec[readPos] << 7) + (accumulatorDec[readPos+1]);
+
+							//extract the aac chunk
 							byte[] aacbuffer = new byte[aacLength];
 							System.arraycopy(accumulatorDec, readPos+2, aacbuffer, 0, aacLength);
+
+							//decode aac chunk
 							int error = FdkAAC.decode(aacbuffer, wavbuffer);
 							if(error != 0)
 							{
@@ -677,6 +682,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 								break;
 							}
 							wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
+
+							//advance the accumulator read position
 							readPos = readPos + 2 + aacLength;
 						}
 					}
