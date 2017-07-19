@@ -12,8 +12,6 @@
 
     <dimen name="row_log_viewer_cell_padding">8dp</dimen>
 
-    <dimen name="about_info_padding">40dp</dimen>
-
     <dimen name="history_spacer">8dp</dimen>
 
 </resources>

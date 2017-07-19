@@ -8,7 +8,5 @@
 
     <dimen name="row_log_viewer_cell_padding">2dp</dimen>
 
-    <dimen name="about_info_padding">10dp</dimen>
-
     <dimen name="history_spacer">8dp</dimen>
 </resources>
