@@ -21,4 +21,5 @@ LOCAL_MODULE_FILENAME    := libfdkaac-aclient
 LOCAL_SRC_FILES := fdkaac-jni.c
 LOCAL_STATIC_LIBRARIES := libfdkaac
 LOCAL_LDLIBS := -llog
+LOCAL_CFLAGS += -O2
 include $(BUILD_SHARED_LIBRARY)

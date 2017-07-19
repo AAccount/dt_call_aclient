@@ -10,11 +10,13 @@ do
 	export PATH=$toolchain/bin:$PATH
 	gxx=$(ls $toolchain/bin | grep g++)
 	prefix=${gxx::-4}
-	export CC="$prefix"-gcc
-	export CXX=$gxx
-	cd $1
+	export CC="$prefix-gcc"
+	export CXX="$gxx"
+	export CFLAGS="-O2"
+	cd "$1"
 	rm -rf build-"$arch"
-	./configure --prefix=$(pwd)/build-"$arch" --host=$prefix --disable-shared
+	rm Makefile
+	./configure --prefix=$(pwd)/build-"$arch" --host="$prefix" --disable-shared
 	make clean
 	make -j16
 	make install
