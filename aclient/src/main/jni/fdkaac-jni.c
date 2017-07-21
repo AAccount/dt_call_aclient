@@ -10,7 +10,6 @@
 
 HANDLE_AACENCODER encInternals;
 HANDLE_AACDECODER decInternals;
-AACENC_InfoStruct encInfo;
 
 JNIEXPORT jint JNICALL
 Java_dt_call_aclient_fdkaac_FdkAAC_getWavFrameSize(JNIEnv *env, jclass type)
@@ -19,8 +18,13 @@ Java_dt_call_aclient_fdkaac_FdkAAC_getWavFrameSize(JNIEnv *env, jclass type)
 }
 
 JNIEXPORT void JNICALL
-Java_dt_call_aclient_fdkaac_FdkAAC_initEncoder(JNIEnv *env, jclass type)
+Java_dt_call_aclient_fdkaac_FdkAAC_initAAC(JNIEnv *env, jclass type)
 {
+    //initialize encoder and decoder in the same function because the decoder needs encoder information
+    //  therefore order matters when initializing the encoder and decoder: 1--> encoder 2-->decoder
+    //  take the human error out of it
+
+    //create the aac encoder internal guts
     uint32_t AAC_MODULE = 0x01;
     uint32_t SBR_MODULE = 0x02;
     uint32_t STEREO = 2;
@@ -30,6 +34,7 @@ Java_dt_call_aclient_fdkaac_FdkAAC_initEncoder(JNIEnv *env, jclass type)
         __android_log_print(ANDROID_LOG_ERROR, TAG, "problems creating encoder");
     }
 
+    //setup the aac encoder parameters
     uint32_t TRUE = 1;
     result = aacEncoder_SetParam(encInternals, AACENC_AOT, AOT_ER_AAC_ELD);
     result = result + aacEncoder_SetParam(encInternals, AACENC_SAMPLERATE, 44100);
@@ -43,21 +48,33 @@ Java_dt_call_aclient_fdkaac_FdkAAC_initEncoder(JNIEnv *env, jclass type)
         __android_log_print(ANDROID_LOG_ERROR, TAG, "problems setting encoder options");
     }
 
+    //initialized the param-ed guts
     result = aacEncEncode(encInternals, NULL, NULL, NULL, NULL);
     if(result != AACENC_OK)
     {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "problems initialize encoder");
     }
 
+    //get the initialized encoder configuration
+    AACENC_InfoStruct encInfo;
     result = aacEncInfo(encInternals, &encInfo);
     if(result != AACENC_OK)
     {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "could not retrieve encoding seed information");
     }
+
+    //setup the decoder
+    decInternals = aacDecoder_Open(TRANSPORT, 1);
+
+    //it's the same program, compiled with the same static library with the same jni on both ends.
+    // ok to cheat a little and use your own AACENC_InfoStruct for somebody else's voice
+    UCHAR *info = (UCHAR*)&encInfo;
+    UINT infoSz = sizeof(AACENC_InfoStruct);
+    aacDecoder_ConfigRaw(decInternals, &info, &infoSz);
 }
 
 JNIEXPORT jint JNICALL
-Java_dt_call_aclient_fdkaac_FdkAAC_encode(JNIEnv *env, jclass type, jshortArray wav_, jbyteArray aac_)
+Java_dt_call_aclient_fdkaac_FdkAAC_encode(JNIEnv *env, jclass type, jshortArray wav_, jbyteArray aac_, jint error_)
 {
     jshort *wav = (*env)->GetShortArrayElements(env, wav_, NULL);
 
@@ -88,6 +105,7 @@ Java_dt_call_aclient_fdkaac_FdkAAC_encode(JNIEnv *env, jclass type, jshortArray 
     AACENC_OutArgs outArgs;
 
     int result = aacEncEncode(encInternals, &input, &output, &inArgs, &outArgs);
+    error_ = result;
     (*env)->SetByteArrayRegion(env, aac_, 0, outArgs.numOutBytes, outputBuffer);
 
     (*env)->ReleaseShortArrayElements(env, wav_, wav, 0);
@@ -99,18 +117,6 @@ JNIEXPORT void JNICALL
 Java_dt_call_aclient_fdkaac_FdkAAC_closeEncoder(JNIEnv *env, jclass type)
 {
     aacEncClose(&encInternals);
-}
-
-JNIEXPORT void JNICALL
-Java_dt_call_aclient_fdkaac_FdkAAC_initDecoder(JNIEnv *env, jclass type)
-{
-    decInternals = aacDecoder_Open(TRANSPORT, 1);
-
-    //it's the same program, compiled with the same static library with the same jni on both ends.
-    // ok to cheat a little and use your own AACENC_InfoStruct for somebody else's voice
-    UCHAR *info = (UCHAR*)&encInfo;
-    UINT infoSz = sizeof(AACENC_InfoStruct);
-    aacDecoder_ConfigRaw(decInternals, &info, &infoSz);
 }
 
 JNIEXPORT jint JNICALL

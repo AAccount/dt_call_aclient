@@ -463,10 +463,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		noiseReduction.setEnabled(true);
 		echoCancel.setEnabled(true);
 
-		//must init the encoder first so the decoder has its seed information
-		FdkAAC.initEncoder();
-		FdkAAC.initDecoder();
-
+		//initialize the aac library before creating the threads so it will be ready when the threads start
+		FdkAAC.initAAC();
 		startMediaEncodeThread();
 		startMediaDecodeThread();
 	}
@@ -479,6 +477,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 			private static final int STEREOIN = AudioFormat.CHANNEL_IN_STEREO;
 			private static final int MIC = MediaRecorder.AudioSource.DEFAULT;
+			volatile int error = 0; //java never sees this change because the jni does it. mark it volatile to prevent false assumptions
 
 			@Override
 			public void run()
@@ -509,7 +508,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					endThread();
 				}
 
-				byte[] accumulator = new byte[Const.MEDIA_SIZE-200];
+				byte[] accumulator = new byte[Const.MEDIA_SIZE-100];
 				int accPos = 0;
 				while (Vars.state == CallState.INCALL)
 				{
@@ -554,7 +553,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					/**
 					 *Avoid sending tons of tiny packets wasting resources for headers.
 					 */
-					int encodeLength = FdkAAC.encode(wavbuffer, aacbuffer);
+					int encodeLength = FdkAAC.encode(wavbuffer, aacbuffer, error);
+					if(error != 0)
+					{
+						Log.d(tag, "encoding error of: " + error);
+					}
 
 					//if the current aac chunk won't fit in the accumulator, send the packet and restart the accumulator
 					if((accPos + 2 + encodeLength) > accumulator.length)
@@ -592,7 +595,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					accumulator[accPos+1] = second;
 					System.arraycopy(aacbuffer, 0 , accumulator, accPos+2, encodeLength);
 					accPos = accPos + 2 + encodeLength;
-
 				}
 				FdkAAC.closeEncoder();
 				wavRecorder.stop();
@@ -679,9 +681,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							if(error != 0)
 							{
 								Utils.logcat(Const.LOGW, tag, "aac jni decoder error of: " + error);
-								break;
 							}
-							wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
+							else
+							{
+								wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
+							}
 
 							//advance the accumulator read position
 							readPos = readPos + 2 + aacLength;
