@@ -183,7 +183,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					String rxDisp=formatInternetMeteric(rx), txDisp=formatInternetMeteric(tx);
 					int missing = txCount-rxCount;
-					final String latestStats = missingLabel + ": " + missing + " " + garbageLabel + ": " + garbage + "\n"
+					final String latestStats = missingLabel + ": " + (missing > 0 ? missing : 0) + " " + garbageLabel + ": " + garbage + "\n"
 							+rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp;
 					runOnUiThread(new Runnable()
 					{
