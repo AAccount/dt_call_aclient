@@ -477,7 +477,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 			private static final int STEREOIN = AudioFormat.CHANNEL_IN_STEREO;
 			private static final int MIC = MediaRecorder.AudioSource.DEFAULT;
-			volatile int error = 0; //java never sees this change because the jni does it. mark it volatile to prevent false assumptions
+			private volatile int error = 0; //java never sees this change because the jni does it. mark it volatile to prevent false assumptions
 
 			@Override
 			public void run()

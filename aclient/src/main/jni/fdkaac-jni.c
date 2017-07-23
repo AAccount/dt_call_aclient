@@ -26,7 +26,7 @@ Java_dt_call_aclient_fdkaac_FdkAAC_initAAC(JNIEnv *env, jclass type)
 
     //create the aac encoder internal guts
     uint32_t AAC_MODULE = 0x01;
-    uint32_t SBR_MODULE = 0x02;
+    uint32_t SBR_MODULE = 0x02; //to use aac eld you MUST have this module for the encoder to initialize
     uint32_t STEREO = 2;
     int result = aacEncOpen(&encInternals, AAC_MODULE | SBR_MODULE, STEREO);
     if(result != AACENC_OK)
@@ -41,7 +41,8 @@ Java_dt_call_aclient_fdkaac_FdkAAC_initAAC(JNIEnv *env, jclass type)
     result = result + aacEncoder_SetParam(encInternals, AACENC_BITRATE, 32000);
     result = result + aacEncoder_SetParam(encInternals, AACENC_CHANNELMODE, MODE_2);
     result = result + aacEncoder_SetParam(encInternals, AACENC_TRANSMUX, TRANSPORT); //!!!DO NOT!!! USE RAW:: IT NEVER WORKS
-    result = result + aacEncoder_SetParam(encInternals, AACENC_SBR_MODE, -1);
+    result = result + aacEncoder_SetParam(encInternals, AACENC_SBR_MODE, 1);
+    result = result + aacEncoder_SetParam(encInternals, AACENC_SBR_RATIO, 2);
     result = result + aacEncoder_SetParam(encInternals, AACENC_AFTERBURNER, TRUE);
     if(result != AACENC_OK) //adding any number of 0s is still 0
     {
@@ -52,7 +53,7 @@ Java_dt_call_aclient_fdkaac_FdkAAC_initAAC(JNIEnv *env, jclass type)
     result = aacEncEncode(encInternals, NULL, NULL, NULL, NULL);
     if(result != AACENC_OK)
     {
-        __android_log_print(ANDROID_LOG_ERROR, TAG, "problems initialize encoder");
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "problems initializing encoder");
     }
 
     //get the initialized encoder configuration
