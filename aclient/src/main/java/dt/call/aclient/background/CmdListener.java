@@ -209,9 +209,8 @@ public class CmdListener extends IntentService
 					PublicKey serverKey = serverCert.getPublicKey();
 
 					//setup the udp socket BEFORE using it
-					InetAddress callServer = InetAddress.getByName(Vars.serverAddress);
+					Vars.callServer = InetAddress.getByName(Vars.serverAddress);
 					Vars.mediaUdp = new DatagramSocket();
-					Vars.mediaUdp.connect(callServer, Vars.mediaPort);
 					Vars.mediaUdp.setTrafficClass(Const.DSCP_EXPEDITED_FWD);
 					Vars.mediaUdp.setSoTimeout(Const.UDP_ACK_TIMEOUT);
 
@@ -227,7 +226,7 @@ public class CmdListener extends IntentService
 						byte[] registrationEncrypted = rsa.doFinal(registration.getBytes());
 
 						//send the registration
-						DatagramPacket registrationPacket = new DatagramPacket(registrationEncrypted, registrationEncrypted.length);
+						DatagramPacket registrationPacket = new DatagramPacket(registrationEncrypted, registrationEncrypted.length, Vars.callServer, Vars.mediaPort);
 						Vars.mediaUdp.send(registrationPacket);
 
 						//wait for media port registration ack

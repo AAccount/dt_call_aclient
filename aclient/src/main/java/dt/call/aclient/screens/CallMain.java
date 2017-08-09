@@ -568,7 +568,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							System.arraycopy(accumulator, 0, accumulatorTrimmed, 0, accPos);
 							byte[] accumulatorEncrypted = encrypt(accumulatorTrimmed);
 
-							DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length);
+							DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length, Vars.callServer, Vars.mediaPort);
 							Vars.mediaUdp.send(packet);
 							tx = tx + accumulatorEncrypted.length + HEADERS;
 							txCount++;
