@@ -216,7 +216,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 					/*
 					 * Not verifying the server you're connecting to defeats the purpose of call encryption.
 					 */
-					Utils.quit();
+					Utils.quit(this);
 				}
 			}
 		}

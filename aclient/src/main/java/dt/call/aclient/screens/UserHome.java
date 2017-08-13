@@ -361,7 +361,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 							@Override
 							public void onClick(DialogInterface dialog, int which)
 							{
-								Utils.quit();
+								Utils.quit(UserHome.this);
 							}
 						})
 						.setNegativeButton(getString(R.string.alert_no), new DialogInterface.OnClickListener()
@@ -499,7 +499,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_DENIED)
 				{
 					//with mic denied, this app can't do anything useful
-					Utils.quit();
+					Utils.quit(this);
 				}
 			}
 			case Const.STORAGE_PERM:

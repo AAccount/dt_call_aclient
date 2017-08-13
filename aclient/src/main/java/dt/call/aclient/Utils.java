@@ -16,8 +16,8 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Process;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
 import android.util.Log;
 
@@ -258,7 +258,7 @@ public class Utils
 		}
 	}
 
-	public static void quit()
+	public static void quit(AppCompatActivity caller)
 	{
 		//get rid of the status notification if it's running
 		if(Vars.notificationManager != null)
@@ -290,14 +290,8 @@ public class Utils
 		killSockets.setName("Utils.quit.killSockets");
 		killSockets.start();
 
-		//https://stackoverflow.com/questions/3226495/android-exit-application-code
-		//basically a way to get out of aclient
-		Intent intent = new Intent(Intent.ACTION_MAIN);
-		intent.addCategory(Intent.CATEGORY_HOME);
-		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		Vars.applicationContext.startActivity(intent);
-		Process.killProcess(Process.myPid()); //using System.exit(0) produces weird crashes when restarting from java socket stupidities
-											//https://stackoverflow.com/questions/6609414/how-to-programatically-restart-android-app
+		//properly kill the app
+		caller.finishAffinity();
 	}
 
 	public static boolean hasInternet()

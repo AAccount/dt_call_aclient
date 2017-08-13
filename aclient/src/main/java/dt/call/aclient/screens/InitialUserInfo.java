@@ -226,7 +226,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 					 * If you can't even read your own private key, there's no way to log in.
 					 * Exit the app like a sore loser.
 					 */
-					Utils.quit();
+					Utils.quit(this);
 				}
 			}
 		}
