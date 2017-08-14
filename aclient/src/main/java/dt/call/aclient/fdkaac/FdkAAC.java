@@ -11,7 +11,7 @@ public class FdkAAC
 		System.loadLibrary("fdkaac-aclient");
 	}
 
-	//for consistency in java and C, keep the scared numbers in 1 place
+	//for consistency in java and C, keep the sacred numbers in 1 place
 	public static native int getWavFrameSize();
 
 	//setup for 32kbit/s stereo @ 44100hz, CBR
