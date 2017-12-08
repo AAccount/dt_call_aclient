@@ -68,6 +68,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final int WAVBUFFERSIZE = FdkAAC.getWavFrameSize();
 	private static final int AACBUFFERSIZE = 1000; //extra big just to be safe
 	private static final int DIAL_TONE_SIZE = 32000;
+	private static final int END_TONE_SIZE = 10858;
+	private static final int WAV_FILE_HEADER = 44; //.wav files actually have a 44 byte header
 
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
@@ -227,6 +229,38 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					//whether the call was rejected or time to end, it's the same result
 					//so share the same variable to avoid 2 sendBroadcast chunks of code that are almost the same
 
+					//play a notification tone when the call ends
+					try
+					{
+						final AudioTrack endTonePlayer = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, S16, 100, AudioTrack.MODE_STREAM);
+						byte[] endToneDump = new byte[END_TONE_SIZE]; //right click the file and get the exact size
+						InputStream endToneStream = getResources().openRawResource(R.raw.end8000);
+						int amount = endToneStream.read(endToneDump);
+						int actualSize = amount-WAV_FILE_HEADER;
+						endTonePlayer.write(endToneDump,WAV_FILE_HEADER,actualSize);
+						endTonePlayer.setNotificationMarkerPosition(actualSize/2);
+						endTonePlayer.setPlaybackPositionUpdateListener(new AudioTrack.OnPlaybackPositionUpdateListener()
+						{
+							@Override
+							public void onMarkerReached(AudioTrack track)
+							{//self release after finishing: don't leak memory, don't spin lock wait, and don't sleep on the main thread
+								endTonePlayer.stop();
+								endTonePlayer.release();
+							}
+
+							@Override
+							public void onPeriodicNotification(AudioTrack track)
+							{
+
+							}
+						});
+						endTonePlayer.play();
+					}
+					catch(Exception e)
+					{
+						//nothing useful you can do if the notification end tone fails to play
+					}
+
 					//media read/write are stopped in command listener when it got the call end
 					//Vars.state would've already been set by the server command that's broadcasting a call end
 					onStop();
@@ -258,8 +292,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			{
 				InputStream dialToneStream = getResources().openRawResource(R.raw.dialtone8000);
 				int amount = dialToneStream.read(dialToneDump);
-				dialTone.write(dialToneDump, 0, amount);
-				dialTone.setLoopPoints(0, DIAL_TONE_SIZE/2, -1);
+				int actualSize = amount-WAV_FILE_HEADER;
+				dialTone.write(dialToneDump, WAV_FILE_HEADER, actualSize);
+				dialTone.setLoopPoints(0, actualSize/2, -1);
 				dialTone.play();
 			}
 			catch (Exception e)
