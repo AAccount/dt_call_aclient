@@ -101,6 +101,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private Key aesKeyObj;
 
+	private boolean playedEndTone=false;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
 	{
@@ -229,38 +231,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					//whether the call was rejected or time to end, it's the same result
 					//so share the same variable to avoid 2 sendBroadcast chunks of code that are almost the same
 
-					//play a notification tone when the call ends
-					try
-					{
-						final AudioTrack endTonePlayer = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, S16, 100, AudioTrack.MODE_STREAM);
-						byte[] endToneDump = new byte[END_TONE_SIZE]; //right click the file and get the exact size
-						InputStream endToneStream = getResources().openRawResource(R.raw.end8000);
-						int amount = endToneStream.read(endToneDump);
-						int actualSize = amount-WAV_FILE_HEADER;
-						endTonePlayer.write(endToneDump,WAV_FILE_HEADER,actualSize);
-						endTonePlayer.setNotificationMarkerPosition(actualSize/2);
-						endTonePlayer.setPlaybackPositionUpdateListener(new AudioTrack.OnPlaybackPositionUpdateListener()
-						{
-							@Override
-							public void onMarkerReached(AudioTrack track)
-							{//self release after finishing: don't leak memory, don't spin lock wait, and don't sleep on the main thread
-								endTonePlayer.stop();
-								endTonePlayer.release();
-							}
-
-							@Override
-							public void onPeriodicNotification(AudioTrack track)
-							{
-
-							}
-						});
-						endTonePlayer.play();
-					}
-					catch(Exception e)
-					{
-						//nothing useful you can do if the notification end tone fails to play
-					}
-
 					//media read/write are stopped in command listener when it got the call end
 					//Vars.state would've already been set by the server command that's broadcasting a call end
 					onStop();
@@ -362,6 +332,42 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			catch (IllegalArgumentException i)
 			{
 				Utils.logcat(Const.LOGW, tag, "don't unregister you get a leak, do unregister you get an exception... ");
+			}
+
+			//play a notification tone when the call ends
+			if(!playedEndTone)
+			{
+				playedEndTone = true; //actually played twice: once for each media send and once for media receive's call to onStop
+				try
+				{
+					final AudioTrack endTonePlayer = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, S16, 100, AudioTrack.MODE_STREAM);
+					byte[] endToneDump = new byte[END_TONE_SIZE]; //right click the file and get the exact size
+					InputStream endToneStream = getResources().openRawResource(R.raw.end8000);
+					int amount = endToneStream.read(endToneDump);
+					int actualSize = amount - WAV_FILE_HEADER;
+					endTonePlayer.setNotificationMarkerPosition(actualSize / 2);
+					endTonePlayer.setPlaybackPositionUpdateListener(new AudioTrack.OnPlaybackPositionUpdateListener()
+					{
+						@Override
+						public void onMarkerReached(AudioTrack track)
+						{//self release after finishing: don't leak memory, don't spin lock wait, and don't sleep on the main thread
+							endTonePlayer.stop();
+							endTonePlayer.release();
+						}
+
+						@Override
+						public void onPeriodicNotification(AudioTrack track)
+						{
+
+						}
+					});
+					endTonePlayer.write(endToneDump, WAV_FILE_HEADER, actualSize);
+					endTonePlayer.play();
+				}
+				catch (Exception e)
+				{
+					//nothing useful you can do if the notification end tone fails to play
+				}
 			}
 
 			//go back to the home screen and clear the back history so there is no way to come back to
