@@ -84,8 +84,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private int min=0, sec=0;
 	private Timer counter = new Timer();
 	private BroadcastReceiver myReceiver;
-	private int garbage=0, tx=0, rx=0, txCount=0, rxCount=0;
-	private String missingLabel, garbageLabel, txLabel, rxLabel;
+	private int garbage=0, tx=0, rx=0, txCount=0, rxCount=0, rxSeq, txSeq, skipped=0;
+	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel;
 	private boolean showStats = false;
 
 	//proximity sensor stuff
@@ -188,7 +188,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					String rxDisp=formatInternetMeteric(rx), txDisp=formatInternetMeteric(tx);
 					int missing = txCount-rxCount;
 					final String latestStats = missingLabel + ": " + (missing > 0 ? missing : 0) + " " + garbageLabel + ": " + garbage + "\n"
-							+rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp;
+							+rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp + "\n"
+							+rxSeqLabel + ": " + ((long)rxSeq + (long)-1*(long)Integer.MIN_VALUE) + " " //to avoid seeing -723429346 as the sequence number, apply some cosmetic math
+							+ txSeqLabel + ": " + ((long)txSeq + (long)-1*(long)Integer.MIN_VALUE) + "\n" //huge negative numbers are scary!!!
+							+skippedLabel + ": " + skipped;
 					runOnUiThread(new Runnable()
 					{
 						@Override
@@ -207,6 +210,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		txLabel = getString(R.string.call_main_stat_tx);
 		rxLabel = getString(R.string.call_main_stat_rx);
 		garbageLabel = getString(R.string.call_main_stat_garbage);
+		rxSeqLabel = getString(R.string.call_main_stat_rx_seq);
+		txSeqLabel = getString(R.string.call_main_stat_tx_seq);
+		skippedLabel = getString(R.string.call_main_stat_skipped);
 
 		if(!Vars.SHOUDLOG)
 		{
@@ -550,7 +556,18 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				}
 
 				byte[] accumulator = new byte[Const.MEDIA_SIZE-100];
-				int accPos = 0;
+				int accPos = 4;
+
+				//put the first sequence number to detect duplicate or old voice packets
+				//integer broken up as: 12,345,678: [12,34,56,78.....voice....]
+				int sequence = Integer.MIN_VALUE;
+				txSeq = sequence;
+				accumulator[0] = (byte)(sequence >> 24);
+				accumulator[1] = (byte)((sequence >> 16) & Byte.MAX_VALUE);
+				accumulator[2] = (byte)((sequence >> 8) & Byte.MAX_VALUE);
+				accumulator[3] = (byte)(sequence & Byte.MAX_VALUE);
+				sequence++;
+
 				while (Vars.state == CallState.INCALL)
 				{
 					byte[] aacbuffer = new byte[AACBUFFERSIZE];
@@ -625,8 +642,16 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							//kill the sockets so that UserHome's crash recovery will reinitialize them
 							endThread();
 						}
-						accPos = 0;
+						accPos = 4;
 						Arrays.fill(accumulator, (byte)0);
+
+						//integer broken up as: 12,345,678: [12,34,56,78.....voice....]
+						txSeq = sequence;
+						accumulator[0] = (byte)(sequence >> 24);
+						accumulator[1] = (byte)((sequence >> 16) & Byte.MAX_VALUE);
+						accumulator[2] = (byte)((sequence >> 8) & Byte.MAX_VALUE);
+						accumulator[3] = (byte)(sequence & Byte.MAX_VALUE);
+						sequence++;
 					}
 
 					//write the aac chunk size as a "header" before writing the actual aac data
@@ -685,6 +710,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLES, STEREOOUT, S16, BUFFER, AudioTrack.MODE_STREAM);
 				wavPlayer.play();
 
+				Integer maxSequence = null; //use null as the initial state when no packet has been received yet
+
 				while(Vars.state == CallState.INCALL)
 				{
 					short[] wavbuffer = new short[WAVBUFFERSIZE];
@@ -707,7 +734,17 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							continue;
 						}
 
-						int readPos = 0;
+						int readPos = 4;
+						int sequence = (((int)accumulatorDec[0]) << 24) + (((int)accumulatorDec[1]) << 16)
+								+ (((int)accumulatorDec[2]) << 8) + (int)accumulatorDec[3];
+						rxSeq = sequence;
+						if(maxSequence != null && sequence <= maxSequence)
+						{
+							skipped++;
+							continue;
+						}
+						maxSequence = sequence;
+
 						while(readPos < accumulatorDec.length)
 						{
 							//retrieve the size from the first 2 bytes

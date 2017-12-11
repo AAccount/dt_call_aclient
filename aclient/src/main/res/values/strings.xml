@@ -73,6 +73,9 @@
     <string name="call_main_stat_tx">Out</string>
     <string name="call_main_stat_rx">In</string>
     <string name="call_main_stat_garbage">Garbage</string>
+    <string name="call_main_stat_tx_seq">Out#</string>
+    <string name="call_main_stat_rx_seq">In#</string>
+    <string name="call_main_stat_skipped">Skipped</string>
 
     <!-- Incoming call screen -->
     <string name="call_incoming_title">Incoming Call</string>
