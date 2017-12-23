@@ -2,13 +2,13 @@ apply plugin: 'com.android.model.application'
 
 model {
     android {
-        compileSdkVersion 25
-        buildToolsVersion "25.0.2"
+        compileSdkVersion 26
+        buildToolsVersion "27.0.3"
 
         defaultConfig {
             applicationId "dt.call.aclient"
             minSdkVersion.apiLevel 16
-            targetSdkVersion.apiLevel 25
+            targetSdkVersion.apiLevel 26
             versionCode 5
             versionName "@string/about_version_number"
         }
@@ -29,6 +29,6 @@ model {
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:25.3.1'
-    compile 'com.android.support:design:25.3.1'
+    compile 'com.android.support:appcompat-v7:26.1.0'
+    compile 'com.android.support:design:26.1.0'
 }
