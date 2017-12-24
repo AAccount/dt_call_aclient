@@ -100,7 +100,7 @@
     <string name="about_compile_label">Git:</string>
     <string name="about_compile_revision">(FILL IN GIT REVISION HERE)</string>
     <string name="about_version_label">Version:</string>
-    <string name="about_version_number" translatable="false">1.5</string> <!-- do not translate. it's just a number -->
+    <string name="about_version_number">1.5</string> <!-- do not translate. it's just a number -->
     <string name="about_by_label">Credits:</string>
     <string name="about_people">
         Daniel Tjandra (main)\n

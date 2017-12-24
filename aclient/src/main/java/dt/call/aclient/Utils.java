@@ -2,7 +2,7 @@ package dt.call.aclient;
 
 import android.app.AlarmManager;
 import android.app.AlertDialog;
-import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ComponentName;
@@ -16,6 +16,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
+import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
@@ -118,8 +119,6 @@ public class Utils
 			SSLSocketFactory mkssl = context.getSocketFactory();
 			socket = (SSLSocket)mkssl.createSocket(host, port);
 			socket.setTcpNoDelay(true); //for heartbeat to get instant ack
-			socket.setEnabledProtocols(new String[]{"TLSv1.2"});
-			socket.setEnabledCipherSuites(new String[]{"TLS_DHE_RSA_WITH_AES_256_GCM_SHA384"});
 			socket.startHandshake();
 			return socket;
 		}
@@ -200,29 +199,37 @@ public class Utils
 		//if the ongoing notification is not setup, then set it up first
 		if(Vars.stateNotificationBuilder == null || Vars.notificationManager == null)
 		{
-			Vars.stateNotificationBuilder = new Notification.Builder(Vars.applicationContext)
+			Vars.stateNotificationBuilder = new NotificationCompat.Builder(Vars.applicationContext, Const.STATE_NOTIFICATION_CHANNEL)
 					.setContentTitle(Vars.applicationContext.getString(R.string.app_name))
 					.setContentText(Vars.applicationContext.getString(stringRes))
 					.setSmallIcon(R.drawable.ic_vpn_lock_white_48dp)
 					.setContentIntent(Vars.go2HomePending)
-					.setOngoing(true);
-			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-			{//only apply color if android >= 5.0 unfortunately
-				Vars.stateNotificationBuilder.setColor(ContextCompat.getColor(Vars.applicationContext, colorRes));
-			}
+					.setColor(ContextCompat.getColor(Vars.applicationContext, colorRes))
+					.setColorized(true)
+					.setOngoing(true)
+					.setChannelId(Const.STATE_NOTIFICATION_CHANNEL);
 			Vars.notificationManager = (NotificationManager) Vars.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE);
-			Vars.notificationManager.notify(Const.stateNotificationId, Vars.stateNotificationBuilder.build());
+
+			//setup channel for android 8.0+
+			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+			{
+				NotificationChannel stateNotificationChannel = new NotificationChannel(Const.STATE_NOTIFICATION_CHANNEL, Const.STATE_NOTIFICATION_NAME, NotificationManager.IMPORTANCE_DEFAULT);
+				stateNotificationChannel.setSound(null, null); //no sound when launching the app
+				stateNotificationChannel.setShowBadge(false);
+				Vars.notificationManager.createNotificationChannel(stateNotificationChannel);
+			}
+
+			Vars.notificationManager.notify(Const.STATE_NOTIFICATION_ID, Vars.stateNotificationBuilder.build());
 		}
 		else
 		{
 			Vars.stateNotificationBuilder
 					.setContentText(Vars.applicationContext.getString(stringRes))
+					.setColor(ContextCompat.getColor(Vars.applicationContext, colorRes))
+					.setColorized(true)
+					.setChannelId(Const.STATE_NOTIFICATION_CHANNEL)
 					.setContentIntent(go2);
-			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-			{
-				Vars.stateNotificationBuilder.setColor(ContextCompat.getColor(Vars.applicationContext, colorRes));
-			}
-			Vars.notificationManager.notify(Const.stateNotificationId, Vars.stateNotificationBuilder.build());
+			Vars.notificationManager.notify(Const.STATE_NOTIFICATION_ID, Vars.stateNotificationBuilder.build());
 		}
 	}
 
@@ -264,15 +271,32 @@ public class Utils
 		if(Vars.notificationManager != null)
 		{
 			Vars.notificationManager.cancelAll();
+
+			//clean up after itself
+			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+			{
+				Vars.notificationManager.deleteNotificationChannel(Const.STATE_NOTIFICATION_CHANNEL);
+			}
 		}
+
+		//surprisingly does not turn to null after quitting.
+		//"hand null" so that the notification channel is built when the app is launched again
+		Vars.stateNotificationBuilder = null;
+		Vars.notificationManager = null;
 
 		//Kill alarms
 		if(Vars.pendingHeartbeat != null && Vars.pendingRetries != null)
 		{
 			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
 			manager.cancel(Vars.pendingHeartbeat);
+			manager.cancel(Vars.pendingHeartbeat2ndary);
 			manager.cancel(Vars.pendingRetries);
+			manager.cancel(Vars.pendingRetries2ndary);
 		}
+		Vars.pendingHeartbeat = null;
+		Vars.pendingHeartbeat2ndary = null;
+		Vars.pendingRetries = null;
+		Vars.pendingRetries2ndary = null;
 
 		//prevent background manager from restarting command listener when sockets kill async is called
 		ComponentName backgroundManager = new ComponentName(Vars.applicationContext, BackgroundManager.class);

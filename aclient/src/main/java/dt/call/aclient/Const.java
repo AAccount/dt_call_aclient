@@ -79,7 +79,9 @@ public class Const
 	public static final String EXTRA_LOG = "log_obj";
 
 	//persistent notification id
-	public static final int stateNotificationId = 1;
+	public static final int STATE_NOTIFICATION_ID = 1;
+	public static final String STATE_NOTIFICATION_CHANNEL = "dt.call.aclient.state";
+	public static final String STATE_NOTIFICATION_NAME = "AClient_State";
 
 	//related to alarm receiver and alarm stuff
 	public static final int ALARM_RETRY_ID = 1234;
