@@ -223,6 +223,7 @@ public class Utils
 		}
 		else
 		{
+			Vars.notificationManager.cancel(Const.STATE_NOTIFICATION_ID);
 			Vars.stateNotificationBuilder
 					.setContentText(Vars.applicationContext.getString(stringRes))
 					.setColor(ContextCompat.getColor(Vars.applicationContext, colorRes))

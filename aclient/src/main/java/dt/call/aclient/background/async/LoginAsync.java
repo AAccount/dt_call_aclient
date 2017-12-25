@@ -16,6 +16,7 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
+import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.background.CmdListener;
 
 /**
@@ -171,6 +172,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		//it needs to try again. background will rebroadcast to the ui. if no ui is listening no harm.
 		Intent loginResult = new Intent(Const.BROADCAST_LOGIN);
 		loginResult.putExtra(Const.BROADCAST_LOGIN_RESULT, result);
+		loginResult.setClass(Vars.applicationContext, BackgroundManager.class);
 		Vars.applicationContext.sendBroadcast(loginResult);
 
 		//update the persistent notification with the login results

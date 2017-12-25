@@ -348,6 +348,7 @@ public class CmdListener extends IntentService
 			//	just part of the normal shutdown procedure. no reason to panic
 		}
 		Intent deadBroadcast = new Intent(Const.BROADCAST_RELOGIN);
+		deadBroadcast.setClass(Vars.applicationContext, BackgroundManager.class);
 		sendBroadcast(deadBroadcast);
 	}
 
