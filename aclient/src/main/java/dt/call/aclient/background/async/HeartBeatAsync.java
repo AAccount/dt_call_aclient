@@ -8,6 +8,7 @@ import android.os.AsyncTask;
 import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
+import dt.call.aclient.background.BackgroundManager;
 
 /**
  * Created by Daniel on 4/17/16.
@@ -39,6 +40,7 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 			//if idling for a long time, killing sockets will not trigger command listener to broadcast a (formerly) command listener dead
 			// (now called relogin). do it here too.
 			Intent relogin = new Intent(Const.BROADCAST_RELOGIN);
+			relogin.setClass(Vars.applicationContext, BackgroundManager.class);
 			Vars.applicationContext.sendBroadcast(relogin);
 			return false;
 		}
