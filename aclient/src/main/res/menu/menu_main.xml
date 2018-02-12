@@ -6,13 +6,6 @@
 
     <!--Hard code titles for always show as they'll never be seen-->
     <item
-        android:id="@+id/menu_main_history"
-        android:icon="@drawable/ic_history_white_48dp"
-        android:title="@string/menu_main_history"
-        app:showAsAction="always"
-        />
-
-    <item
         android:id="@+id/menu_main_exit"
         android:icon="@drawable/ic_exit_to_app_white_48dp"
         android:title="@string/menu_main_exit"

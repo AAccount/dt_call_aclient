@@ -37,7 +37,6 @@ import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.CommandCallAsync;
 import dt.call.aclient.background.async.LoginAsync;
 import dt.call.aclient.sqlite.Contact;
-import dt.call.aclient.sqlite.History;
 import dt.call.aclient.sqlite.SQLiteDb;
 
 public class UserHome extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener
@@ -289,12 +288,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 
 			Contact contact = new Contact(who, Vars.contactTable.get(who));
 			new CommandCallAsync(contact).execute();
-			long now = System.currentTimeMillis();
-			//don't need the nickname because sqliteDb only records user name
-			//	sqliteDb doesn' need to record nickname because it will be figured out when drawing the history table
-			History history = new History(now, contact, Const.CALLOUTGOING);
-			sqliteDb.insertHistory(history);
-
 		}
 	}
 
@@ -349,9 +342,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		{
 			case R.id.menu_main_dblogs:
 				startActivity(new Intent(this, LogViewer.class));
-				return true;
-			case R.id.menu_main_history:
-				startActivity(new Intent(this, HistoryUI.class));
 				return true;
 			case R.id.menu_main_exit:
 				AlertDialog.Builder mkDialog = new AlertDialog.Builder(UserHome.this);

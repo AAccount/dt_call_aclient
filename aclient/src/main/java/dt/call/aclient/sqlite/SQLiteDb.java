@@ -21,23 +21,12 @@ public class SQLiteDb extends SQLiteOpenHelper
 	private static final String colName = "name";
 	private static final String colNick = "nickname";
 
-	private static final String tableHistory = "history";
-	private static final String colHistoryTs = "timestamp";
-	private static final String colWho = "who";
-	private static final String colType = "call_type";
-
 	private static final String tableLogs = "logs";
 	private static final String colId = "id";
 	private static final String colLogTs = "timestamp";
 	private static final String colTag = "tag";
 	private static final String colMessage = "message";
 
-	private final String mkhistory = "create table " + tableHistory + " " +
-			"(" +
-			colHistoryTs + " integer primary key, " +
-			colWho + " text, " +
-			colType + " integer " +
-			")";
 	private final String mkcontacts = "create table " + tableContacts + " " +
 			"(" +
 			colName +" text primary key," +
@@ -73,7 +62,6 @@ public class SQLiteDb extends SQLiteOpenHelper
 	public void onCreate(SQLiteDatabase db)
 	{
 		db.execSQL(mkcontacts);
-		db.execSQL(mkhistory);
 		db.execSQL(mklogs);
 	}
 
@@ -132,39 +120,6 @@ public class SQLiteDb extends SQLiteOpenHelper
 			String fromRowNick = cursor.getString(cursor.getColumnIndex(colNick));
 			Contact fromRow = new Contact(fromRowName, fromRowNick);
 			result.add(fromRow);
-			cursor.moveToNext();
-		}
-		cursor.close();
-		return result;
-	}
-
-	public void insertHistory(History history)
-	{
-		ContentValues newHistory = new ContentValues();
-		newHistory.put(colHistoryTs, history.getTimestamp());
-		newHistory.put(colWho, history.getWho().getName());
-		newHistory.put(colType, history.getType());
-		appdb.insert(tableHistory, null, newHistory);
-	}
-
-	public ArrayList<History> getCallHistory()
-	{
-		ArrayList<History> result = new ArrayList<History>();
-		final String query = "select timestamp, who, nickname, call_type\n" +
-				"from history left join contacts\n" +
-				"on history.who = contacts.name\n" +
-				"order by timestamp desc";
-		Cursor cursor = appdb.rawQuery(query, null);
-		cursor.moveToFirst();
-		while(!cursor.isAfterLast())
-		{
-			long ts = cursor.getLong(cursor.getColumnIndex(colHistoryTs));
-			int type = cursor.getInt(cursor.getColumnIndex(colType));
-			String name = cursor.getString(cursor.getColumnIndex(colWho));
-			String nickname = cursor.getString(cursor.getColumnIndex(colNick));
-			Contact contact = new Contact(name, nickname);
-			History history = new History(ts, contact, type);
-			result.add(history);
 			cursor.moveToNext();
 		}
 		cursor.close();

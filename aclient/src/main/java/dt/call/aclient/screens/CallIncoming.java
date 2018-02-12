@@ -26,7 +26,6 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.CommandAcceptAsync;
 import dt.call.aclient.background.async.CommandEndAsync;
-import dt.call.aclient.sqlite.History;
 import dt.call.aclient.sqlite.SQLiteDb;
 
 public class CallIncoming extends AppCompatActivity implements View.OnClickListener
@@ -110,8 +109,6 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 			{
 				counter.cancel(); //it's served its purpose
 				counter = null;
-				SQLiteDb sqLiteDb = SQLiteDb.getInstance(getApplicationContext());
-				sqLiteDb.insertHistory(new History(System.currentTimeMillis(), Vars.callWith, Const.CALLMISSED));
 				onStop();
 				goHome();
 			}
@@ -192,7 +189,6 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 		//the reject and accept's common stuff no matter what. there will also every only be 1 click
 		//(can't reject and change your mind you actually wanted to accpet)
 		SQLiteDb sqLiteDb = SQLiteDb.getInstance(getApplicationContext());
-		sqLiteDb.insertHistory(new History(System.currentTimeMillis(), Vars.callWith, Const.CALLINCOMING));
 		if(counter != null)
 		{
 			counter.cancel(); //stop the "minute to answer" counter

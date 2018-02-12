@@ -129,14 +129,6 @@
         </activity>
 
         <!-- Call history screen -->
-        <activity
-            android:name=".screens.HistoryUI"
-            android:label="@string/history_title"
-            android:parentActivityName=".screens.UserHome">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="dt.call.aclient.screens.UserHome"/>
-        </activity>
 
         <!-- DTSettings screen -->
         <activity

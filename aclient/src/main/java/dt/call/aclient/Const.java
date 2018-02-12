@@ -52,11 +52,6 @@ public class Const
 	//when cmd listener dies
 	public static final String BROADCAST_RELOGIN = "dt.call.aclient.relogin";
 
-	//call history types
-	public static final int CALLOUTGOING = 1;
-	public static final int CALLINCOMING = 2;
-	public static final int CALLMISSED = 3;
-
 	//broadcast intent shared by call main and incoming call screen
 	//both need the call end signal
 	// (either the person hung or changed his mind and cancelled before you answered)
