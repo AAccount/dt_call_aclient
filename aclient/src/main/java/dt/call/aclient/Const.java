@@ -3,8 +3,6 @@ package dt.call.aclient;
 import android.os.Build;
 import android.util.Base64;
 
-import dt.call.aclient.sqlite.Contact;
-
 /**
  * Created by Daniel on 1/17/16.
  *
@@ -41,7 +39,7 @@ public class Const
 	public static final int MEDIA_SIZE = 1200;
 
 	//nobody: the default value for when not in a call
-	public static final Contact nobody = new Contact("(nobody)");
+	public static final String nobody = "(nobody)";
 
 	//log.e/d/i wrapper to avoid wasting cpu for logging
 	public static final int LOGE = 1;

@@ -131,7 +131,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		status = (TextView)findViewById(R.id.call_main_status); //by default ringing. change it when in a call
 		callerid = (TextView) findViewById(R.id.call_main_callerid);
 		time = (TextView)findViewById(R.id.call_main_time);
-		callerid.setText(Vars.callWith.toString());
+		callerid.setText(Utils.getCallerID(Vars.callWith));
 
 		/**
 		 * The stuff under here might look like a lot which has the potential to seriously slow down onCreate()
@@ -453,7 +453,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			else
 			{
 				stats.setTextColor(ContextCompat.getColor(this, android.R.color.white));
-				callerid.setText(Vars.callWith.toString());
+				callerid.setText(Utils.getCallerID(Vars.callWith));
 			}
 		}
 	}

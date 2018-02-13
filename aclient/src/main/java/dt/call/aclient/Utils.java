@@ -534,4 +534,15 @@ public class Utils
 		}
 		return result;
 	}
+
+	public static String getCallerID(String userName)
+	{
+		//if the person is a registered contact, display the nickname. otherwise just use the user account name
+		String result = Vars.contactTable.get(userName);
+		if(result == null)
+		{
+			result = userName;
+		}
+		return result;
+	}
 }

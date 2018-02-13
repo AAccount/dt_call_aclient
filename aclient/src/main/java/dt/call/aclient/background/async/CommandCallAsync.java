@@ -6,7 +6,6 @@ import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.sqlite.Contact;
 
 /**
  * Created by Daniel on 1/24/16.
@@ -14,17 +13,12 @@ import dt.call.aclient.sqlite.Contact;
 public class CommandCallAsync extends AsyncTask<String, String, Boolean>
 {
 	private static final String tag = "CommandCallAsync";
-	private Contact who;
-
-	public CommandCallAsync(Contact cwho)
-	{
-		who = cwho;
-	}
 
 	@Override
 	protected Boolean doInBackground(String... params)
 	{
-		String request = Utils.currentTimeSeconds() + "|call|" + who.getName() + "|" + Vars.sessionKey;
+		String who = params[0];
+		String request = Utils.currentTimeSeconds() + "|call|" + who + "|" + Vars.sessionKey;
 		Utils.logcat(Const.LOGD, tag, "Call request: " + request);
 		try
 		{

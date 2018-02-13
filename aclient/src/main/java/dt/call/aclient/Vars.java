@@ -14,8 +14,6 @@ import java.util.HashMap;
 
 import javax.net.ssl.SSLSocket;
 
-import dt.call.aclient.sqlite.Contact;
-
 /**
  * Created by Daniel on 1/18/16.
  *
@@ -36,12 +34,12 @@ public class Vars
 
 	//call related information
 	public volatile static CallState state = CallState.NONE;
-	public static Contact callWith;
+	public static String callWith;
 	public static PowerManager.WakeLock wakeLock = null;
 	public static byte[] aesKey = new byte[256/8];
 
 	//contacts hash table to avoid having to lookup the db for incoming calls
-	public static HashMap<String, String> contactTable = null;
+	public static HashMap<String, String> contactTable = new HashMap<String, String>();
 
 	//server information
 	public static String serverAddress;

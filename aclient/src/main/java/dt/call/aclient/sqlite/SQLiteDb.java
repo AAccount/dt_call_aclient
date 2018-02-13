@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import dt.call.aclient.Const;
 import dt.call.aclient.Vars;
@@ -71,19 +72,19 @@ public class SQLiteDb extends SQLiteOpenHelper
 
 	}
 
-	public void insertContact(Contact contact)
+	public void insertContact(String userName, String nickName)
 	{
 		ContentValues newContact = new ContentValues();
-		newContact.put(colName, contact.getName());
-		newContact.put(colNick, contact.getNickname());
+		newContact.put(colName, userName);
+		newContact.put(colNick, nickName);
 		appdb.insert(tableContacts, null, newContact);
 	}
 
-	public boolean contactExists(Contact contact)
+	public boolean contactExists(String userName)
 	{
 		String[] columnToReturn = {colName};
 		String selection = colName + "=?";
-		String[] selectionArgs = {contact.getName()};
+		String[] selectionArgs = {userName};
 		Cursor cursor = appdb.query(tableContacts, columnToReturn, selection, selectionArgs, null, null, null);
 		if(cursor.moveToFirst())
 		{
@@ -97,33 +98,33 @@ public class SQLiteDb extends SQLiteOpenHelper
 		}
 	}
 
-	public void deleteContact(Contact contact)
+	public void deleteContact(String userName)
 	{
-		appdb.delete(tableContacts, "name=?", new String[]{contact.getName()});
+		appdb.delete(tableContacts, "name=?", new String[]{userName});
 	}
 
-	public void changeNickname(Contact contact)
+	public void changeNickname(String userName, String nickName)
 	{
 		ContentValues chNick = new ContentValues();
-		chNick.put(colNick, contact.getNickname());
-		appdb.update(tableContacts, chNick, "name=?", new String[]{contact.getName()});
+		chNick.put(colNick, nickName);
+		appdb.update(tableContacts, chNick, "name=?", new String[]{userName});
 	}
 
-	public ArrayList<Contact> getContacts()
+	public void populateContacts()
 	{
-		ArrayList<Contact> result = new ArrayList<Contact>();
+		//create the "nobody" entry
+		Vars.contactTable = new HashMap<String, String>();
+		Vars.contactTable.put(Const.nobody, Const.nobody);
 		Cursor cursor = appdb.rawQuery("select * from contacts", null);
 		cursor.moveToFirst();
 		while(!cursor.isAfterLast())
 		{
 			String fromRowName = cursor.getString(cursor.getColumnIndex(colName));
 			String fromRowNick = cursor.getString(cursor.getColumnIndex(colNick));
-			Contact fromRow = new Contact(fromRowName, fromRowNick);
-			result.add(fromRow);
+			Vars.contactTable.put(fromRowName, fromRowNick);
 			cursor.moveToNext();
 		}
 		cursor.close();
-		return result;
 	}
 
 	public void insertLog(DBLog log)

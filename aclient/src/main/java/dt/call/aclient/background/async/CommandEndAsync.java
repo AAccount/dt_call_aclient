@@ -36,7 +36,7 @@ public class CommandEndAsync extends AsyncTask<String, String, Boolean>
 			{
 				return true;
 			}
-			String end = Utils.currentTimeSeconds() + "|end|" + Vars.callWith.getName() + "|" + Vars.sessionKey;
+			String end = Utils.currentTimeSeconds() + "|end|" + Vars.callWith + "|" + Vars.sessionKey;
 			Vars.commandSocket.getOutputStream().write(end.getBytes());
 			result = true;
 		}

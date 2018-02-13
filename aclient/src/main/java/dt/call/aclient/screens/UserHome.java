@@ -36,7 +36,6 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.CommandCallAsync;
 import dt.call.aclient.background.async.LoginAsync;
-import dt.call.aclient.sqlite.Contact;
 import dt.call.aclient.sqlite.SQLiteDb;
 
 public class UserHome extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener
@@ -49,7 +48,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	private FloatingActionButton call, add;
 	private LinearLayout contactList;
 	private boolean inEdit = false;
-	private Contact contactInEdit; //whenever renaming a contact just change its nickname here and pass around this object
+	private String contactInEdit; //whenever renaming a contact just change its nickname here and pass around this object
 	private SQLiteDb sqliteDb;
 	private BroadcastReceiver myReceiver;
 	private ProgressDialog loginProgress = null;
@@ -77,12 +76,10 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		//build the contacts list if it doesn't already exist
 		if(Vars.contactTable == null)
 		{
-			ArrayList<Contact> allContacts = sqliteDb.getContacts();
-			Vars.contactTable = new HashMap<String, String>();
-			for (Contact contact : allContacts)
+			sqliteDb.populateContacts();
+			for (String userName : Vars.contactTable.keySet())
 			{
-				addToContactList(contact);
-				Vars.contactTable.put(contact.getName(), contact.getNickname());
+				addToContactList(userName, Vars.contactTable.get(userName));
 			}
 		}
 
@@ -230,7 +227,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			Utils.logcat(Const.LOGD, tag, "contacts list linear layout is empty. repopulating contacts");
 			for(String key : Vars.contactTable.keySet())
 			{
-				addToContactList(new Contact(key, Vars.contactTable.get(key)));
+				addToContactList(key, Vars.contactTable.get(key));
 			}
 		}
 	}
@@ -249,13 +246,12 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	{
 		if(v instanceof Button) //any of the contact buttons. The FABs don't count as regular buttons
 		{
-			Contact contact = (Contact)v.getTag();
-			actionbox.setText(contact.getName());
+			String userName = (String)v.getTag();
+			actionbox.setText(userName);
 		}
 		else if (v == add)
 		{
 			String actionBoxName = actionbox.getText().toString();
-			Contact actionBoxContact = new Contact(actionBoxName);
 
 			//check to see if anything was entered in the action box to begin with
 			if(actionbox.getText().toString().equals(""))
@@ -264,7 +260,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			}
 
 			//check to see if the new contact to add already exists
-			if(sqliteDb.contactExists(actionBoxContact))
+			if(sqliteDb.contactExists(actionBoxName))
 			{
 				Utils.showOk(this, getString(R.string.alert_user_home_duplicate));
 				actionbox.setText("");
@@ -272,10 +268,11 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			}
 			else
 			{
-				sqliteDb.insertContact(actionBoxContact);
-				addToContactList(actionBoxContact);
+				//default nickname is the actual user name
+				sqliteDb.insertContact(actionBoxName, actionBoxName);
+				addToContactList(actionBoxName, actionBoxName);
 				actionbox.setText("");
-				Vars.contactTable.put(actionBoxName, "");
+				Vars.contactTable.put(actionBoxName, actionBoxName);
 			}
 		}
 		else if (v == call)
@@ -286,8 +283,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				return;
 			}
 
-			Contact contact = new Contact(who, Vars.contactTable.get(who));
-			new CommandCallAsync(contact).execute();
+			new CommandCallAsync().execute(who);
 		}
 	}
 
@@ -297,7 +293,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		if(v instanceof Button)
 		{
 			inEdit = true;
-			contactInEdit = (Contact)v.getTag(); //for prefilling in the edit popup with the current nickname
+			contactInEdit = (String)v.getTag(); //for prefilling in the edit popup with the current nickname
 			invalidateOptionsMenu();
 		}
 		return false;
@@ -379,9 +375,8 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				//This popup is more than just your average Show OK popup
 
 				//setup the change nickname popup strings
-				String name = contactInEdit.getName();
-				String currentNick = contactInEdit.getNickname();
-				String instructions = getString(R.string.alert_user_home_rename_instructions).replace("CONTACT", name);
+				String currentNick = Vars.contactTable.get(contactInEdit);
+				String instructions = getString(R.string.alert_user_home_rename_instructions).replace("CONTACT", contactInEdit);
 
 				//setup the nickname popup
 				View alertCustom = View.inflate(this, R.layout.alert_rename_contact, null);
@@ -399,15 +394,17 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 							public void onClick(DialogInterface dialog, int which)
 							{
 								String newNick = chNick.getText().toString();
-								contactInEdit.setNickname(newNick);
-								sqliteDb.changeNickname(contactInEdit);
-								refreshContacts(CHRENAME, contactInEdit);
+								if(newNick.equals(""))
+								{
+									newNick = contactInEdit; //no nickname, display the user name
+								}
+								sqliteDb.changeNickname(contactInEdit, newNick);
+								refreshContacts(CHRENAME, contactInEdit, newNick);
 								inEdit = false;
 								invalidateOptionsMenu();
 
 								//don't forget to update the in memory contact list
-								Vars.contactTable.remove(contactInEdit.getName());
-								Vars.contactTable.put(contactInEdit.getName(), contactInEdit.getNickname());
+								Vars.contactTable.put(contactInEdit, newNick);
 							}
 						})
 						.setNegativeButton(R.string.alert_user_home_rename_button_nvm, new DialogInterface.OnClickListener()
@@ -425,7 +422,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				return true;
 			case R.id.menu_edit_rm:
 				sqliteDb.deleteContact(contactInEdit);
-				refreshContacts(CHRM, contactInEdit);
+				refreshContacts(CHRM, contactInEdit, contactInEdit); //doesn't matter what the nickname is. this contact is going away
 				inEdit = false;
 				invalidateOptionsMenu();
 				return true;
@@ -435,32 +432,31 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	}
 
 	//adds a new row to the contacts table view
-	private void addToContactList(Contact contact)
+	private void addToContactList(String userName, String nickName)
 	{
 		Button contactView = new Button(this);
 		contactView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
-		contactView.setText(contact.toString());
+		contactView.setText(nickName);
 		contactView.setAllCaps(false);
 		contactView.setOnClickListener(UserHome.this);
 		contactView.setOnLongClickListener(UserHome.this);
-		contactView.setTag(contact);
+		contactView.setTag(userName);
 		contactList.addView(contactView);
 	}
 
 	//updates the contact list after an edit or removal
 	//avoid just redoing the entire list. edit the one you already have
-	private void refreshContacts(int mode, Contact changed)
+	private void refreshContacts(int mode, String userName, String nickName)
 	{
 		for(int i=0; i < contactList.getChildCount(); i++)
 		{
 			Button childView = (Button)contactList.getChildAt(i);
-			Contact tag = (Contact)childView.getTag();
-			if(tag.equals(changed))
+			String tag = (String)childView.getTag();
+			if(tag.equals(userName))
 			{
 				if (mode == CHRENAME)
 				{
-					childView.setText(changed.toString());
-					childView.setTag(changed);
+					childView.setText(nickName);
 					return;
 				}
 				else if (mode == CHRM)

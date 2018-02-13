@@ -68,7 +68,8 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 		reject = (FloatingActionButton)findViewById(R.id.call_incoming_reject);
 		reject.setOnClickListener(this);
 		TextView callerid = (TextView) findViewById(R.id.call_incoming_callerid);
-		callerid.setText(Vars.callWith.toString());
+		callerid.setText(Utils.getCallerID(Vars.callWith));
+
 
 
 		//when someone calls you but then decides to cancel before you've picked up.

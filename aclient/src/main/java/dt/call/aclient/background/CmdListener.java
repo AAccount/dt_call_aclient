@@ -31,7 +31,6 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.CommandEndAsync;
 import dt.call.aclient.screens.CallIncoming;
-import dt.call.aclient.sqlite.Contact;
 import dt.call.aclient.sqlite.SQLiteDb;
 
 /**
@@ -116,18 +115,13 @@ public class CmdListener extends IntentService
 					//build the contacts list if it doesn't already exist
 					if(Vars.contactTable == null)
 					{
-						ArrayList<Contact> allContacts = SQLiteDb.getInstance(getApplication()).getContacts();
-						Vars.contactTable = new HashMap<String, String>();
-						for (Contact contact : allContacts)
-						{
-							Vars.contactTable.put(contact.getName(), contact.getNickname());
-						}
+						SQLiteDb.getInstance(getApplication()).populateContacts();
 					}
 
 					Vars.state = CallState.INIT;
 					isCallInitiator = false;
 					haveAesKey = false;
-					Vars.callWith = new Contact(involved, Vars.contactTable.get(involved));
+					Vars.callWith = involved;
 
 					//launch the incoming call screen
 					Utils.setNotification(R.string.state_popup_incoming, R.color.material_light_blue, Vars.go2CallIncomingPending);
@@ -139,7 +133,7 @@ public class CmdListener extends IntentService
 
 				//for all commands except "incoming", need to verify that the other person the command says you're in a call with
 				//	is really the other person you're in a call with
-				if (!involved.equals(Vars.callWith.getName()))
+				if (!involved.equals(Vars.callWith))
 				{
 					Utils.logcat(Const.LOGW, tag, logd+"Erroneous command involving: " + involved + " instead of: " + Vars.callWith);
 					continue;
@@ -382,7 +376,7 @@ public class CmdListener extends IntentService
 		Utils.logcat(Const.LOGD, tag, "key, prep " + haveAesKey + ","+preparationsComplete);
 		if(haveAesKey && preparationsComplete)
 		{
-			String ready = Utils.currentTimeSeconds() + "|ready|" + Vars.callWith.getName() + "|" + Vars.sessionKey;
+			String ready = Utils.currentTimeSeconds() + "|ready|" + Vars.callWith + "|" + Vars.sessionKey;
 			Utils.logcat(Const.LOGD, tag, ready);
 			try
 			{
