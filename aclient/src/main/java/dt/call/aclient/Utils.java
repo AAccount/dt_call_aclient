@@ -27,11 +27,13 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.security.KeyFactory;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
@@ -440,17 +442,34 @@ public class Utils
 		}
 	}
 
+	public static byte[] readKey(Uri uri, Context context)
+	{
+		try
+		{
+			//read the public key and convert to a string
+			ContentResolver resolver = context.getContentResolver();
+			InputStream userKeyStream = resolver.openInputStream(uri);
+			byte[] keyBytes = new byte[Const.COMMAND_SIZE];
+			int amountRead = userKeyStream.read(keyBytes);
+			userKeyStream.close();
+			byte[] result = new byte[amountRead];
+			System.arraycopy(keyBytes, 0, result, 0, amountRead);
+			return result;
+		}
+		catch(Exception e)
+		{
+			dumpException(tag, e);
+			return null;
+		}
+	}
+
 	//for dtsettings and initial user: read the user's private key and set it up for use
 	public static boolean readUserPrivateKey(Uri uri, Context context)
 	{
 		try
 		{
 			//read the private key and convert to a string
-			ContentResolver resolver = context.getContentResolver();
-			InputStream privateKeyStream = resolver.openInputStream(uri);
-			byte[] keyBytes = new byte[Const.COMMAND_SIZE];
-			privateKeyStream.read(keyBytes);
-			privateKeyStream.close();
+			byte[] keyBytes = readKey(uri, context);
 
 			//chop of header and footer
 			Vars.privateKeyDump = new String(keyBytes);
@@ -542,6 +561,26 @@ public class Utils
 		if(result == null)
 		{
 			result = userName;
+		}
+		return result;
+	}
+
+	public static PublicKey interpretDump(String dump)
+	{
+		PublicKey result = null;
+		dump = dump.replace(Const.CERT_HEADER, "");
+		dump = dump.replace(Const.CERT_FOOTER, "");
+		byte[] publicKeyBytes = Base64.decode(dump, Const.BASE64_Flags);
+
+		try
+		{
+			KeyFactory kf = KeyFactory.getInstance("RSA");
+			result = kf.generatePublic(new X509EncodedKeySpec(publicKeyBytes));
+		}
+		catch(Exception e)
+		{
+			dumpException(tag, e);
+			result = null;
 		}
 		return result;
 	}
