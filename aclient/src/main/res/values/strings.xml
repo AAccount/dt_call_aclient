@@ -23,7 +23,8 @@
     <string name="alert_no">No</string>
     <string name="alert_technical_difficulties">Currently experience technical difficulties. Check DB Logs if possible.</string>
     <string name="alert_corrupted_cert">Certificate file corrupted. Can\'t use.</string>
-    <string name="alert_storage_perm">Storage permission is required to open your private key to log on. Storage is also used to open the server\'s public key to verify you are connecting to the server you\'re expecting.</string>
+    <string name="alert_corrupted_key">Key file corrupted. Can\'t use.</string>
+    <string name="alert_storage_perm">Storage permission is required to open your private for logging on, the server\'s public key to verify it, and anybody else\'s public key you want to manually enter.</string>
 
     <!-- Dialog Messages (screen specific) -->
     <string name="alert_initial_server_no_caja">No file explorers installed on your device</string>
@@ -100,7 +101,7 @@
     <string name="about_compile_label">Git:</string>
     <string name="about_compile_revision">(FILL IN GIT REVISION HERE)</string>
     <string name="about_version_label">Version:</string>
-    <string name="about_version_number">1.5</string> <!-- do not translate. it's just a number -->
+    <string name="about_version_number" translatable="false">1.6</string> <!-- do not translate. it's just a number -->
     <string name="about_by_label">Credits:</string>
     <string name="about_people">
         Daniel Tjandra (main)\n
@@ -114,13 +115,14 @@
     <string name="menu_main_settings">Settings</string>
     <string name="menu_main_dblogs">DB Logs</string>
     <string name="menu_main_about">App Info</string>
+    <string name="menu_main_key_mgmt">Public Keys</string>
 
     <string name="menu_edit_ok">Save Changes</string>
     <string name="menu_edit_edit">Edit Contact</string>
     <string name="menu_edit_remove">Remove Contact</string>
 
     <!-- DTSettings stuff and its fragment -->
-    <string name="title_activity_settings">Settings</string>
+    <string name="settings_title">Settings</string>
     <string name="settings_server_title">Server Info</string>
     <string name="settings_server_addr_title">Address</string>
     <string name="settings_server_addr_summary">Call server\'s domain name or ip address</string>
@@ -135,5 +137,15 @@
     <string name="settings_user_uname_summary">CASE SENSITIVE user account name</string>
     <string name="settings_user_private_key_title">Private Key</string>
     <string name="settings_user_private_key_summary">Your private key for logging in</string>
+
+    <!-- User key management overview screen -->
+    <string name="public_key_mgmt_title">Public Key Management</string>
+
+    <!-- User key management details screen-->
+    <string name="public_key_deatils_title">Key Details</string>
+    <string name="public_key_details_none">No saved key for user</string>
+    <string name="public_key_details_saved">New key saved for </string>
+    <string name="public_key_details_noperm_fsread">No storage permission. Entering read-only.</string>
+    <string name="public_key_details_choose_cert">\'s public key</string>
 
 </resources>

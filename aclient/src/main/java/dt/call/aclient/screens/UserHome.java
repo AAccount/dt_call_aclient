@@ -77,6 +77,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		if(Vars.contactTable == null)
 		{
 			sqliteDb.populateContacts();
+			sqliteDb.populatePublicKeys();
 			for (String userName : Vars.contactTable.keySet())
 			{
 				addToContactList(userName, Vars.contactTable.get(userName));
@@ -366,6 +367,9 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				return true;
 			case R.id.menu_main_about:
 				startActivity(new Intent(this, About.class));
+				return true;
+			case R.id.menu_main_keymgmt:
+				startActivity(new Intent(this, PublicKeyManagement.class));
 				return true;
 			case R.id.menu_edit_done:
 				inEdit = false;

@@ -5,11 +5,17 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Base64;
 
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 import dt.call.aclient.Const;
+import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 
 /**
@@ -17,10 +23,14 @@ import dt.call.aclient.Vars;
  */
 public class SQLiteDb extends SQLiteOpenHelper
 {
+	private static final String TAG = "SQLiteDB";
+
 	private static final String dbname = "calldb";
 	private static final String tableContacts = "contacts";
+	private static final String tablePublicKeys = "publicKeys";
 	private static final String colName = "name";
 	private static final String colNick = "nickname";
+	private static final String colPublicKey = "publicKey";
 
 	private static final String tableLogs = "logs";
 	private static final String colId = "id";
@@ -32,6 +42,11 @@ public class SQLiteDb extends SQLiteOpenHelper
 			"(" +
 			colName +" text primary key," +
 			colNick +" text" +
+			")";
+	private final String mkPublicKeys = "create table " + tablePublicKeys + " " +
+			"(" +
+			colName +" text primary key," +
+			colPublicKey +" text" +
 			")";
 	//https://stackoverflow.com/questions/25562508/autoincrement-is-only-allowed-on-an-integer-primary-key-android
 	private final String mklogs = "create table " + tableLogs + " " +
@@ -64,6 +79,7 @@ public class SQLiteDb extends SQLiteOpenHelper
 	{
 		db.execSQL(mkcontacts);
 		db.execSQL(mklogs);
+		db.execSQL(mkPublicKeys);
 	}
 
 	@Override
@@ -122,6 +138,75 @@ public class SQLiteDb extends SQLiteOpenHelper
 			String fromRowName = cursor.getString(cursor.getColumnIndex(colName));
 			String fromRowNick = cursor.getString(cursor.getColumnIndex(colNick));
 			Vars.contactTable.put(fromRowName, fromRowNick);
+			cursor.moveToNext();
+		}
+		cursor.close();
+	}
+
+	public void insertPublicKey(String userName, String keydump)
+	{
+		String[] columnToReturn = {colName};
+		String selection = colName + "=?";
+		String[] selectionArgs = {userName};
+		Cursor cursor = appdb.query(tablePublicKeys, columnToReturn, selection, selectionArgs, null, null, null);
+		if(cursor.moveToFirst())
+		{
+			//public key exists, update it
+			ContentValues chKey = new ContentValues();
+			chKey.put(colPublicKey, keydump);
+			appdb.update(tablePublicKeys, chKey, colName+"=?", new String[]{userName});
+		}
+		else
+		{
+			//first time entry for this user, create a new record
+			ContentValues newPublicKeyRecord = new ContentValues();
+			newPublicKeyRecord.put(colName, userName);
+			newPublicKeyRecord.put(colPublicKey, keydump);
+			appdb.insert(tablePublicKeys, null, newPublicKeyRecord);
+		}
+		cursor.close();
+	}
+
+	public void deletePublicKey(String userName)
+	{
+		appdb.delete(tablePublicKeys, colName+"=?", new String[]{userName});
+	}
+
+	public void populatePublicKeys()
+	{
+		//create once at the beginning to avoid wasting time creating this every time in the while loop
+		KeyFactory kf;
+		try
+		{
+			kf = KeyFactory.getInstance("RSA");
+		}
+		catch (NoSuchAlgorithmException e)
+		{
+			Utils.dumpException(TAG, e);
+			return;
+		}
+
+		Vars.publicKeyTable = new HashMap<String, PublicKey>();
+		Vars.publicKeyDumps = new HashMap<String, String>();
+		Cursor cursor = appdb.rawQuery("select * from " + tablePublicKeys, null);
+		cursor.moveToFirst();
+		while(!cursor.isAfterLast())
+		{
+			String fromRowName = cursor.getString(cursor.getColumnIndex(colName));
+			String fromPublicKey = cursor.getString(cursor.getColumnIndex(colPublicKey));
+
+			byte[] userKeyBytes = Base64.decode(fromPublicKey, Const.BASE64_Flags);
+			try
+			{
+				PublicKey userKey = kf.generatePublic(new X509EncodedKeySpec(userKeyBytes));
+				Vars.publicKeyTable.put(fromRowName, userKey);
+				Vars.publicKeyDumps.put(fromRowName, fromPublicKey);
+			}
+			catch (Exception e)
+			{
+				Utils.dumpException(TAG, e);
+			}
+
 			cursor.moveToNext();
 		}
 		cursor.close();

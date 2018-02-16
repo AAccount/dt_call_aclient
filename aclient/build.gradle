@@ -9,7 +9,7 @@ model {
             applicationId "dt.call.aclient"
             minSdkVersion.apiLevel 16
             targetSdkVersion.apiLevel 26
-            versionCode 5
+            versionCode 6
             versionName "@string/about_version_number"
         }
         buildTypes {

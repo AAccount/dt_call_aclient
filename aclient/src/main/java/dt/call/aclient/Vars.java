@@ -10,6 +10,7 @@ import android.support.v4.app.NotificationCompat;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.HashMap;
 
 import javax.net.ssl.SSLSocket;
@@ -40,6 +41,8 @@ public class Vars
 
 	//contacts hash table to avoid having to lookup the db for incoming calls
 	public static HashMap<String, String> contactTable = new HashMap<String, String>();
+	public static HashMap<String, PublicKey> publicKeyTable = new HashMap<String, PublicKey>();
+	public static HashMap<String, String> publicKeyDumps = new HashMap<String, String>();
 
 	//server information
 	public static String serverAddress;

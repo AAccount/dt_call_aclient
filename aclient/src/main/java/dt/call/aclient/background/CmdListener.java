@@ -16,12 +16,10 @@ import java.net.SocketTimeoutException;
 import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.Signature;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.ArrayList;
-import java.util.HashMap;
-
 import javax.crypto.Cipher;
 
 import dt.call.aclient.CallState;
@@ -67,7 +65,7 @@ public class CmdListener extends IntentService
 			//timestamp|incoming|trying_to_call
 			//timestamp|start|other_person
 			//timestamp|end|other_person
-			//timestamp|prepare|(optionally public key|),other_person
+			//timestamp|prepare|public key|other_person
 			//timestamp|direct|(encrypted aes key)|other_person
 			//timestamp|invalid
 
@@ -116,6 +114,7 @@ public class CmdListener extends IntentService
 					if(Vars.contactTable == null)
 					{
 						SQLiteDb.getInstance(getApplication()).populateContacts();
+						SQLiteDb.getInstance(getApplication()).populatePublicKeys();
 					}
 
 					Vars.state = CallState.INIT;
@@ -162,30 +161,58 @@ public class CmdListener extends IntentService
 				}
 				else if(command.equals("prepare"))
 				{
+					//prepare the server's presentation of the person's public key for use
+					String receivedKeyDump = respContents[2];
+					PublicKey receivedUserKey = Utils.interpretDump(receivedKeyDump);
+					PublicKey expectedUserKey = Vars.publicKeyTable.get(Vars.callWith);
+
+					//if this person's public key is known, sanity check the server to make sure it sent the right one
+					if(expectedUserKey != null)
+					{
+						if(!receivedUserKey.equals(expectedUserKey))
+						{
+							//if the server presented a mismatched key stop the process.
+							//either you didn't know about the key change or something is very wrong
+							Utils.logcat(Const.LOGE, tag, "Server sent a MISMATCHED public key for " + Vars.callWith + " . It was:\n" + receivedKeyDump);
+							giveUp();
+							continue;
+						}
+					}
+					else
+					{
+						//with nothing else to go on, assume this really is the person's key
+						expectedUserKey = receivedUserKey;
+						Vars.publicKeyTable.put(Vars.callWith, receivedUserKey);
+						Vars.publicKeyDumps.put(Vars.callWith, receivedKeyDump);
+						SQLiteDb.getInstance(getApplication()).insertPublicKey(Vars.callWith, receivedKeyDump);
+					}
+
 					//first person gets to choose the disposable 256bit aes key for the call
-					KeyFactory kf = KeyFactory.getInstance("RSA");
 					if(isCallInitiator)
 					{
 						//choose aes key
 						SecureRandom srand = new SecureRandom();
 						srand.nextBytes(Vars.aesKey);
 
-						//prepare the other person's public key for use
-						String userKeyDump = respContents[2];
-						userKeyDump = userKeyDump.replace("-----BEGIN PUBLIC KEY-----\n", "");
-						userKeyDump = userKeyDump.replace("-----END PUBLIC KEY-----", "");
-						byte[] userKeyBytes = Base64.decode(userKeyDump, Const.BASE64_Flags);
-						PublicKey userKey = kf.generatePublic(new X509EncodedKeySpec(userKeyBytes));
+						//attach signed hash of disposable aes256 key to confirm it's me
+						Signature signature = Signature.getInstance("SHA512withRSA");
+						signature.initSign(Vars.privateKey);
+						signature.update(Vars.aesKey);
+						byte[] signedHash = signature.sign();
+						byte[] aesAndSignedHash = new byte[256/8 + signedHash.length];
+						System.arraycopy(Vars.aesKey, 0, aesAndSignedHash, 0, 256/8);
+						System.arraycopy(signedHash, 0, aesAndSignedHash, 256/8, signedHash.length);
+						//array to be encrypted: [aes256 key, rsa signed sha512 of key]
 
-						//encrypt the aes key: proof this app's end to end is the real deal (not even the call server knows the aes key)
+						//encrypt the aes key and its sha512 signature: proof this app's end to end is the real deal (not even the call server knows the aes key)
 						Cipher rsa = Cipher.getInstance(Const.RSA_PKCS1_OAEP_PADDING);
-						rsa.init(Cipher.ENCRYPT_MODE, userKey);
-						byte[] aesEncrypted = rsa.doFinal(Vars.aesKey);
-						String aesEncryptedString = Utils.stringify(aesEncrypted, true); //inefficient but not nearly as moody and fiddly as base64 utils
+						rsa.init(Cipher.ENCRYPT_MODE, expectedUserKey);
+						byte[] aesAndSignedHashEncrypted = rsa.doFinal(aesAndSignedHash);
+						String finalEncryptedString = Utils.stringify(aesAndSignedHashEncrypted, true); //inefficient but not nearly as moody and fiddly as base64 utils
 
 						//send the aes key
-						String passthrough = Utils.currentTimeSeconds() + "|passthrough|" + involved + "|" + aesEncryptedString + "|" + Vars.sessionKey;
-						logd = logd + "passthrough of aes key " + passthrough.replace(aesEncryptedString, Const.AES_PLACEHOLDER) + "\n";
+						String passthrough = Utils.currentTimeSeconds() + "|passthrough|" + involved + "|" + finalEncryptedString + "|" + Vars.sessionKey;
+						logd = logd + "passthrough of aes key " + passthrough.replace(finalEncryptedString, Const.AES_PLACEHOLDER) + "\n";
 						try
 						{
 							Vars.commandSocket.getOutputStream().write(passthrough.getBytes());
@@ -268,19 +295,39 @@ public class CmdListener extends IntentService
 					{
 						logd = logd + "call preparations cannot complete\n";
 						giveUp();
+						continue;
 					}
 				}
 				else if(command.equals("direct"))
 				{
+					//decrypt the disposable aes256 key
 					Cipher rsa = Cipher.getInstance(Const.RSA_PKCS1_OAEP_PADDING);
 					rsa.init(Cipher.DECRYPT_MODE, Vars.privateKey);
-					String aesEnc = respContents[2];
-					byte[] aesEncBytes = Utils.destringify(aesEnc, true);
-					Vars.aesKey = rsa.doFinal(aesEncBytes);
-					haveAesKey = true;
-					sendReady();
+					String aesAndSignedHashString = respContents[2];
+					byte[] aesAndSignedHashEnc = Utils.destringify(aesAndSignedHashString, true);
+					byte[] aesAndSignedHash = rsa.doFinal(aesAndSignedHashEnc);
 
-					logd = "Server response raw: " + fromServer.replace(aesEnc, Const.AES_PLACEHOLDER) + "\n";
+					//verify the authenticity of the sender
+					//decrypted array: [aes256 key, rsa signed sha512 of key]
+					System.arraycopy(aesAndSignedHash, 0, Vars.aesKey, 0, 256/8);
+					byte[] signedHash = new byte[aesAndSignedHash.length - 256/8];
+					System.arraycopy(aesAndSignedHash,256/8, signedHash, 0, signedHash.length);
+					Signature verifier = Signature.getInstance("SHA512withRSA");
+					verifier.initVerify(Vars.publicKeyTable.get(Vars.callWith));
+					verifier.update(Vars.aesKey);
+					if(verifier.verify(signedHash))
+					{
+						haveAesKey = true;
+						sendReady();
+					}
+					else
+					{
+						Utils.logcat(Const.LOGE, tag, "Received an aes256 key that doesn't appear to be signed by: " + Vars.callWith);
+						giveUp();
+						continue;
+					}
+
+					logd = "Server response raw: " + fromServer.replace(aesAndSignedHashString, Const.AES_PLACEHOLDER) + "\n";
 				}
 				else if(command.equals("invalid"))
 				{

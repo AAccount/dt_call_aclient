@@ -13,6 +13,11 @@
         />
 
     <item
+        android:id="@+id/menu_main_keymgmt"
+        android:title="@string/menu_main_key_mgmt"
+        app:showAsAction="never"
+        />
+    <item
         android:id="@+id/menu_main_dblogs"
         android:title="@string/menu_main_dblogs"
         app:showAsAction="never"
