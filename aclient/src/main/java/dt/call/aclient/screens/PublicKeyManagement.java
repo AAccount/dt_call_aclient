@@ -26,10 +26,13 @@ public class PublicKeyManagement extends AppCompatActivity implements View.OnCli
 		mainLayout = (LinearLayout)findViewById(R.id.public_key_mgmt_layout);
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-		HashSet<String> contactHasPublicKey = new HashSet<String>();
 
-		//create a button for every user with a known public key
-		for(String user : Vars.publicKeyTable.keySet())
+		//create a button for every user with a known public key and all contacts
+		HashSet<String> userSet = new HashSet<String>();
+		userSet.addAll(Vars.publicKeyTable.keySet());
+		userSet.addAll(Vars.contactTable.keySet()); //hash set won't add duplicates
+
+		for(String user : userSet)
 		{
 			Button userButton = new Button(this);
 			userButton.setTag(user);
@@ -41,30 +44,19 @@ public class PublicKeyManagement extends AppCompatActivity implements View.OnCli
 				//no nick name? just use the account name
 				nickname = user;
 			}
-			else
-			{
-				contactHasPublicKey.add(user);
-			}
 			userButton.setAllCaps(false);
 			userButton.setText(nickname);
 			userButton.setOnClickListener(this);
-			userButton.setTextColor(getResources().getColor(R.color.material_green));
-			mainLayout.addView(userButton);
-		}
 
-		//for contacts that don't have a known public key, put them in the list to encourage you to get it
-		for(String contact : Vars.contactTable.keySet())
-		{
-			if(!contactHasPublicKey.contains(contact))
+			if(Vars.publicKeyTable.containsKey(user))
 			{
-				Button contactButton = new Button(this);
-				contactButton.setAllCaps(false);
-				contactButton.setTag(contact);
-				contactButton.setText(Vars.contactTable.get(contact));
-				contactButton.setOnClickListener(this);
-				contactButton.setTextColor(getResources().getColor(R.color.material_red));
-				mainLayout.addView(contactButton);
+				userButton.setTextColor(getResources().getColor(R.color.material_green));
 			}
+			else
+			{
+				userButton.setTextColor(getResources().getColor(R.color.material_red));
+			}
+			mainLayout.addView(userButton);
 		}
 	}
 
