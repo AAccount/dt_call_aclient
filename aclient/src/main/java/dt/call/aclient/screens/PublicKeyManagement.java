@@ -58,6 +58,7 @@ public class PublicKeyManagement extends AppCompatActivity implements View.OnCli
 			if(!contactHasPublicKey.contains(contact))
 			{
 				Button contactButton = new Button(this);
+				contactButton.setAllCaps(false);
 				contactButton.setTag(contact);
 				contactButton.setText(Vars.contactTable.get(contact));
 				contactButton.setOnClickListener(this);
