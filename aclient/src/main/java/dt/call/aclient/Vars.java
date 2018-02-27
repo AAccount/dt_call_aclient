@@ -40,9 +40,9 @@ public class Vars
 	public static byte[] aesKey = new byte[256/8];
 
 	//contacts hash table to avoid having to lookup the db for incoming calls
-	public static HashMap<String, String> contactTable = new HashMap<String, String>();
-	public static HashMap<String, PublicKey> publicKeyTable = new HashMap<String, PublicKey>();
-	public static HashMap<String, String> publicKeyDumps = new HashMap<String, String>();
+	public static HashMap<String, String> contactTable = null;
+	public static HashMap<String, PublicKey> publicKeyTable = null;
+	public static HashMap<String, String> publicKeyDumps = null;
 
 	//server information
 	public static String serverAddress;
