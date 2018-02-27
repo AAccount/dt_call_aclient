@@ -45,6 +45,7 @@ public class PublicKeyManagement extends AppCompatActivity implements View.OnCli
 			{
 				contactHasPublicKey.add(user);
 			}
+			userButton.setAllCaps(false);
 			userButton.setText(nickname);
 			userButton.setOnClickListener(this);
 			userButton.setTextColor(getResources().getColor(R.color.material_green));
