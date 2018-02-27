@@ -109,7 +109,7 @@ public class PublicKeyDetails extends AppCompatActivity
 	public boolean onCreateOptionsMenu(Menu menu)
 	{
 		//reuse the contact edit menu
-		getMenuInflater().inflate(R.menu.menu_main, menu);
+		getMenuInflater().inflate(R.menu.menu_main_edit, menu);
 		if(readonly)
 		{
 			MenuItem editButton = menu.findItem(R.id.menu_edit_edit);
