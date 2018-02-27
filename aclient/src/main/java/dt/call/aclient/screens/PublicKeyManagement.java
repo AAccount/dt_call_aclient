@@ -24,6 +24,7 @@ public class PublicKeyManagement extends AppCompatActivity implements View.OnCli
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_public_key_management);
 		mainLayout = (LinearLayout)findViewById(R.id.public_key_mgmt_layout);
+		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
 		HashSet<String> contactHasPublicKey = new HashSet<String>();
 

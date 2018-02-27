@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.app.Activity;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
@@ -25,7 +26,7 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.sqlite.SQLiteDb;
 
-public class PublicKeyDetails extends Activity
+public class PublicKeyDetails extends AppCompatActivity
 {
 	private String correspondingUser;
 	private PublicKey newPublicKey = null;
@@ -38,7 +39,7 @@ public class PublicKeyDetails extends Activity
 	{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_public_key_details);
-		getActionBar().setDisplayHomeAsUpEnabled(true);
+		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
 		dumpArea = (TextView)findViewById(R.id.public_key_details_dump);
 		correspondingUser = getIntent().getStringExtra(Const.EXTRA_UNAME);
