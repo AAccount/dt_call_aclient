@@ -128,9 +128,7 @@ public class SQLiteDb extends SQLiteOpenHelper
 
 	public void populateContacts()
 	{
-		//create the "nobody" entry
 		Vars.contactTable = new HashMap<String, String>();
-		Vars.contactTable.put(Const.nobody, Const.nobody);
 		Cursor cursor = appdb.rawQuery("select * from contacts", null);
 		cursor.moveToFirst();
 		while(!cursor.isAfterLast())
