@@ -51,7 +51,7 @@ public class PublicKeyDetails extends AppCompatActivity
 		}
 		else
 		{
-			publickeyDump = Const.CERT_HEADER + certCore + Const.CERT_FOOTER;
+			publickeyDump = certCore;
 		}
 		dumpArea.setText(publickeyDump);
 
