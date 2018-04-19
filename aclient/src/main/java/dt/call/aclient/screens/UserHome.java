@@ -265,7 +265,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			{
 				Utils.showOk(this, getString(R.string.alert_user_home_duplicate));
 				actionbox.setText("");
-				return;
 			}
 			else
 			{

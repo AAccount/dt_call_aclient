@@ -24,6 +24,13 @@ public class PublicKeyManagement extends AppCompatActivity implements View.OnCli
 		setContentView(R.layout.activity_public_key_management);
 		mainLayout = (LinearLayout)findViewById(R.id.public_key_mgmt_layout);
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+	}
+
+	@Override
+	protected void onResume()
+	{
+		super.onResume();
+		mainLayout.removeAllViews();
 
 		//create a button for every user with a known public key and all contacts
 		HashSet<String> userSet = new HashSet<String>();
