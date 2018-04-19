@@ -67,7 +67,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
-	private Button noiseReduction, echoCancel, stats;
+	private Button stats;
 	private volatile boolean micMute = false;
 	private boolean micStatusNew = false;
 	private boolean onSpeaker = false;
@@ -113,10 +113,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		speaker = (FloatingActionButton)findViewById(R.id.call_main_spk);
 		speaker.setOnClickListener(this);
 		speaker.setEnabled(false);
-		noiseReduction = (Button)findViewById(R.id.call_main_noise_reduction);
-		noiseReduction.setOnClickListener(this);
-		echoCancel = (Button)findViewById(R.id.call_main_echo_cancel);
-		echoCancel.setOnClickListener(this);
 		stats = (Button)findViewById(R.id.call_main_stats);
 		stats.setOnClickListener(this);
 		status = (TextView)findViewById(R.id.call_main_status); //by default ringing. change it when in a call
@@ -412,32 +408,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				audioManager.setSpeakerphoneOn(false);
 			}
 		}
-		else if (v == noiseReduction)
-		{
-			if(NoiseSuppressor.isAvailable())
-			{
-				NoiseSuppressor.create(wavRecorder.getAudioSessionId());
-				noiseReduction.setTextColor(ContextCompat.getColor(this, R.color.material_green));
-			}
-			else
-			{
-				noiseReduction.setTextColor(ContextCompat.getColor(this, R.color.material_red));
-			}
-			noiseReduction.setEnabled(false);
-		}
-		else if (v == echoCancel)
-		{
-			if(AcousticEchoCanceler.isAvailable())
-			{
-				AcousticEchoCanceler.create(wavRecorder.getAudioSessionId());
-				echoCancel.setTextColor(ContextCompat.getColor(this, R.color.material_green));
-			}
-			else
-			{
-				echoCancel.setTextColor(ContextCompat.getColor(this, R.color.material_red));
-			}
-			echoCancel.setEnabled(false);
-		}
 		else if (v == stats)
 		{
 			showStats = !showStats;
@@ -500,8 +470,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		status.setText(getString(R.string.call_main_status_incall));
 		mic.setEnabled(true);
 		speaker.setEnabled(true);
-		noiseReduction.setEnabled(true);
-		echoCancel.setEnabled(true);
 
 		//initialize the aac library before creating the threads so it will be ready when the threads start
 		FdkAAC.initAAC();
