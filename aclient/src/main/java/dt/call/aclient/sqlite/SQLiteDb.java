@@ -5,12 +5,9 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.util.Base64;
 
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -184,27 +181,17 @@ public class SQLiteDb extends SQLiteOpenHelper
 			return;
 		}
 
-		Vars.publicKeyTable = new HashMap<String, PublicKey>();
-		Vars.publicKeyDumps = new HashMap<String, String>();
+		Vars.publicSodiumTable = new HashMap<String, byte[]>();
+		Vars.publicSodiumDumps = new HashMap<String, String>();
 		Cursor cursor = appdb.rawQuery("select * from " + tablePublicKeys, null);
 		cursor.moveToFirst();
 		while(!cursor.isAfterLast())
 		{
 			String fromRowName = cursor.getString(cursor.getColumnIndex(colName));
 			String fromPublicKey = cursor.getString(cursor.getColumnIndex(colPublicKey));
-
-			byte[] userKeyBytes = Base64.decode(fromPublicKey, Const.BASE64_Flags);
-			try
-			{
-				PublicKey userKey = kf.generatePublic(new X509EncodedKeySpec(userKeyBytes));
-				Vars.publicKeyTable.put(fromRowName, userKey);
-				Vars.publicKeyDumps.put(fromRowName, fromPublicKey);
-			}
-			catch (Exception e)
-			{
-				Utils.dumpException(TAG, e);
-			}
-
+			byte[] userKey = Utils.interpretSodiumPublicKey(fromPublicKey);
+			Vars.publicSodiumTable.put(fromRowName, userKey);
+			Vars.publicSodiumDumps.put(fromRowName, fromPublicKey);
 			cursor.moveToNext();
 		}
 		cursor.close();

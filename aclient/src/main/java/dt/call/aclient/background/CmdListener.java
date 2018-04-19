@@ -5,22 +5,14 @@ import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
 import android.os.PowerManager;
-import android.util.Base64;
 
-import java.io.ByteArrayInputStream;
+import org.libsodium.jni.Sodium;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
-import java.security.KeyFactory;
-import java.security.PublicKey;
-import java.security.SecureRandom;
-import java.security.Signature;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.security.spec.X509EncodedKeySpec;
-import javax.crypto.Cipher;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
@@ -73,7 +65,7 @@ public class CmdListener extends IntentService
 			try
 			{//the async magic here... it will patiently wait until something comes in
 
-				byte[] rawString = new byte[Const.COMMAND_SIZE];
+				byte[] rawString = new byte[Const.SIZE_COMMAND];
 				int length = Vars.commandSocket.getInputStream().read(rawString);
 				if(length < 0)
 				{
@@ -163,17 +155,17 @@ public class CmdListener extends IntentService
 				{
 					//prepare the server's presentation of the person's public key for use
 					String receivedKeyDump = respContents[2];
-					PublicKey receivedUserKey = Utils.interpretDump(receivedKeyDump);
-					PublicKey expectedUserKey = Vars.publicKeyTable.get(Vars.callWith);
+					String expectedKeyDump = Vars.publicSodiumDumps.get(Vars.callWith);
+					byte[] expectedKey = Vars.publicSodiumTable.get(Vars.callWith);
 
 					//if this person's public key is known, sanity check the server to make sure it sent the right one
-					if(expectedUserKey != null)
+					if(expectedKeyDump != null)
 					{
-						if(!receivedUserKey.equals(expectedUserKey))
+						if(!receivedKeyDump.equals(expectedKeyDump))
 						{
 							//if the server presented a mismatched key stop the process.
 							//either you didn't know about the key change or something is very wrong
-							Utils.logcat(Const.LOGE, tag, "Server sent a MISMATCHED public key for " + Vars.callWith + " . It was:\n" + receivedKeyDump);
+							Utils.logcat(Const.LOGE, tag, "Server sent a MISMATCHED public key for " + Vars.callWith + " . It was:\n" + receivedKeyDump + "\nBut expected: " + expectedKeyDump);
 							giveUp();
 							continue;
 						}
@@ -181,38 +173,29 @@ public class CmdListener extends IntentService
 					else
 					{
 						//with nothing else to go on, assume this really is the person's key
-						expectedUserKey = receivedUserKey;
-						Vars.publicKeyTable.put(Vars.callWith, receivedUserKey);
-						Vars.publicKeyDumps.put(Vars.callWith, receivedKeyDump);
+						expectedKeyDump = receivedKeyDump;
+						byte[] receivedUserKey = Utils.interpretSodiumPublicKey(receivedKeyDump);
+						Vars.publicSodiumTable.put(Vars.callWith, receivedUserKey);
+						Vars.publicSodiumDumps.put(Vars.callWith, receivedKeyDump);
 						SQLiteDb.getInstance(getApplication()).insertPublicKey(Vars.callWith, receivedKeyDump);
+						expectedKey = receivedUserKey;
 					}
 
-					//first person gets to choose the disposable 256bit aes key for the call
+					//first person gets to choose the key for the call
 					if(isCallInitiator)
 					{
-						//choose aes key
-						SecureRandom srand = new SecureRandom();
-						srand.nextBytes(Vars.aesKey);
+						//choose sodium key
+						Sodium.sodium_init();
+						Vars.sodiumSymmetricKey = new byte[Sodium.crypto_secretbox_keybytes()];
+						Sodium.randombytes_buf(Vars.sodiumSymmetricKey, Sodium.crypto_secretbox_keybytes());
 
-						//attach signed hash of disposable aes256 key to confirm it's me
-						Signature signature = Signature.getInstance("SHA512withRSA");
-						signature.initSign(Vars.privateKey);
-						signature.update(Vars.aesKey);
-						byte[] signedHash = signature.sign();
-						byte[] aesAndSignedHash = new byte[256/8 + signedHash.length];
-						System.arraycopy(Vars.aesKey, 0, aesAndSignedHash, 0, 256/8);
-						System.arraycopy(signedHash, 0, aesAndSignedHash, 256/8, signedHash.length);
-						//array to be encrypted: [aes256 key, rsa signed sha512 of key]
+						//have sodium encrypt its key
+						byte[] sodiumAsymmCrypted = Utils.sodiumAsymEncrypt(Vars.sodiumSymmetricKey, expectedKey);
+						String finalEncryptedString = Utils.stringify(sodiumAsymmCrypted, true);
 
-						//encrypt the aes key and its sha512 signature: proof this app's end to end is the real deal (not even the call server knows the aes key)
-						Cipher rsa = Cipher.getInstance(Const.RSA_PKCS1_OAEP_PADDING);
-						rsa.init(Cipher.ENCRYPT_MODE, expectedUserKey);
-						byte[] aesAndSignedHashEncrypted = rsa.doFinal(aesAndSignedHash);
-						String finalEncryptedString = Utils.stringify(aesAndSignedHashEncrypted, true); //inefficient but not nearly as moody and fiddly as base64 utils
-
-						//send the aes key
+						//send the sodium key
 						String passthrough = Utils.currentTimeSeconds() + "|passthrough|" + involved + "|" + finalEncryptedString + "|" + Vars.sessionKey;
-						logd = logd + "passthrough of aes key " + passthrough.replace(finalEncryptedString, Const.AES_PLACEHOLDER) + "\n";
+						logd = logd + "passthrough of sodium key " + passthrough.replace(finalEncryptedString, Const.SODIUM_PLACEHOLDER) + "\n";
 						try
 						{
 							Vars.commandSocket.getOutputStream().write(passthrough.getBytes());
@@ -223,11 +206,6 @@ public class CmdListener extends IntentService
 							new CommandEndAsync().doInForeground(); //can't send aes key, nothing left to continue
 						}
 					}
-
-					//prepare the server's public key
-					byte[] serverCertBytes = Base64.decode(Vars.certDump, Const.BASE64_Flags);
-					X509Certificate serverCert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(serverCertBytes));
-					PublicKey serverKey = serverCert.getPublicKey();
 
 					//setup the udp socket BEFORE using it
 					Vars.callServer = InetAddress.getByName(Vars.serverAddress);
@@ -240,19 +218,24 @@ public class CmdListener extends IntentService
 					boolean gotAck = false;
 					while(!gotAck && retries > 0)
 					{
-						//encrypt the registration string
-						Cipher rsa = Cipher.getInstance(Const.RSA_PKCS1_OAEP_PADDING);
-						rsa.init(Cipher.ENCRYPT_MODE, serverKey);
-						String registration = Utils.currentTimeSeconds() + "|" + Vars.sessionKey;
-						byte[] registrationEncrypted = rsa.doFinal(registration.getBytes());
+						String registration = String.valueOf(Utils.currentTimeSeconds());
+						byte[] sodiumAsymmedRegistration = Utils.sodiumAsymEncrypt(registration.getBytes(), Vars.serverPublicSodium);
+
+						//prepend user name so the server will know whose public key to use for authentication
+						byte[] nameLengthDisassembled = Utils.disassembleInt(Vars.uname.length(), Const.JAVA_MAX_PRECISION_INT);
+						byte[] unameBytes = Vars.uname.getBytes();
+						byte[] payload = new byte[Const.JAVA_MAX_PRECISION_INT+unameBytes.length+sodiumAsymmedRegistration.length];
+						System.arraycopy(nameLengthDisassembled, 0, payload, 0, Const.JAVA_MAX_PRECISION_INT);
+						System.arraycopy(unameBytes, 0, payload, Const.JAVA_MAX_PRECISION_INT, unameBytes.length);
+						System.arraycopy(sodiumAsymmedRegistration, 0, payload, Const.JAVA_MAX_PRECISION_INT+unameBytes.length, sodiumAsymmedRegistration.length);
 
 						//send the registration
-						DatagramPacket registrationPacket = new DatagramPacket(registrationEncrypted, registrationEncrypted.length, Vars.callServer, Vars.mediaPort);
+						DatagramPacket registrationPacket = new DatagramPacket(payload, payload.length, Vars.callServer, Vars.mediaPort);
 						Vars.mediaUdp.send(registrationPacket);
 
 						//wait for media port registration ack
-						byte[] ackBuffer = new byte[Const.MEDIA_SIZE];
-						DatagramPacket ack = new DatagramPacket(ackBuffer, Const.MEDIA_SIZE);
+						byte[] ackBuffer = new byte[Const.SIZE_MEDIA];
+						DatagramPacket ack = new DatagramPacket(ackBuffer, Const.SIZE_MEDIA);
 						try
 						{
 							Vars.mediaUdp.receive(ack);
@@ -269,15 +252,17 @@ public class CmdListener extends IntentService
 						System.arraycopy(ack.getData(), 0, ackEncBytes, 0, ack.getLength());
 
 						//decrypt ack
-						rsa.init(Cipher.DECRYPT_MODE, Vars.privateKey);
-						byte[] decAck = rsa.doFinal(ackEncBytes);
+						byte[] decAck = Utils.sodiumAsymDecrypt(ackEncBytes, Vars.serverPublicSodium);
+						if(decAck == null)
+						{
+							gotAck = false;
+							break;
+						}
 						String ackString = new String(decAck, "UTF-8");
-						logd = logd + "reply for media port ack registration: " + ackString + "\n";
 
-						//parse ack
-						String[] ackContents = ackString.split("\\|");
-						long ackts = Long.valueOf(ackContents[0]);
-						if(Utils.validTS(ackts) && ackContents[1].equals(Vars.sessionKey) && ackContents[2].equals("ok"))
+						//verify ack timestamp
+						long ackts = Long.valueOf(ackString);
+						if(Utils.validTS(ackts))
 						{
 							gotAck = true;
 							break; //udp media port established, no need to retry
@@ -300,34 +285,26 @@ public class CmdListener extends IntentService
 				}
 				else if(command.equals("direct"))
 				{
-					//decrypt the disposable aes256 key
-					Cipher rsa = Cipher.getInstance(Const.RSA_PKCS1_OAEP_PADDING);
-					rsa.init(Cipher.DECRYPT_MODE, Vars.privateKey);
-					String aesAndSignedHashString = respContents[2];
-					byte[] aesAndSignedHashEnc = Utils.destringify(aesAndSignedHashString, true);
-					byte[] aesAndSignedHash = rsa.doFinal(aesAndSignedHashEnc);
+					//decrypt the sodium symmetric key
+					String setupString = respContents[2];
+					byte[] setup = Utils.destringify(setupString, true);
+					Vars.sodiumSymmetricKey = null;
+					byte[] callWithKey = Vars.publicSodiumTable.get(involved);
+					Vars.sodiumSymmetricKey = Utils.sodiumAsymDecrypt(setup, callWithKey);
 
-					//verify the authenticity of the sender
-					//decrypted array: [aes256 key, rsa signed sha512 of key]
-					System.arraycopy(aesAndSignedHash, 0, Vars.aesKey, 0, 256/8);
-					byte[] signedHash = new byte[aesAndSignedHash.length - 256/8];
-					System.arraycopy(aesAndSignedHash,256/8, signedHash, 0, signedHash.length);
-					Signature verifier = Signature.getInstance("SHA512withRSA");
-					verifier.initVerify(Vars.publicKeyTable.get(Vars.callWith));
-					verifier.update(Vars.aesKey);
-					if(verifier.verify(signedHash))
+					if(Vars.sodiumSymmetricKey != null)
 					{
 						haveAesKey = true;
 						sendReady();
 					}
 					else
 					{
-						Utils.logcat(Const.LOGE, tag, "Received an aes256 key that doesn't appear to be signed by: " + Vars.callWith);
+						Utils.logcat(Const.LOGE, tag, "Passthrough of sodium symmetric key failed");
 						giveUp();
 						continue;
 					}
 
-					logd = "Server response raw: " + fromServer.replace(aesAndSignedHashString, Const.AES_PLACEHOLDER) + "\n";
+					logd = "Server response raw: " + fromServer.replace(setupString, Const.SODIUM_PLACEHOLDER) + "\n";
 				}
 				else if(command.equals("invalid"))
 				{

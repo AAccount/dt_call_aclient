@@ -13,47 +13,52 @@
     tools:context="dt.call.aclient.screens.DTSettings">
 
     <PreferenceCategory
-        android:title="@string/settings_server_title">
+        android:title="@string/initial_server_title">
         <EditTextPreference
             android:key="server_address"
-            android:title="@string/settings_server_addr_title"
+            android:title="@string/initial_server_addr_hint"
             android:summary="@string/settings_server_addr_summary"
-            android:dialogTitle="@string/settings_server_addr_title"
+            android:dialogTitle="@string/initial_server_addr_hint"
             />
         <EditTextPreference
             android:key="command_port"
-            android:title="@string/settings_server_cmd_title"
+            android:title="@string/initial_server_addr_command"
             android:summary="@string/settings_server_cmd_summary"
-            android:dialogTitle="@string/settings_server_cmd_title"
+            android:dialogTitle="@string/initial_server_addr_command"
             android:inputType="number"
             android:maxLength="5"
             />
         <EditTextPreference
             android:key="media_port"
-            android:title="@string/settings_server_media_title"
+            android:title="@string/initial_server_addr_media"
             android:summary="@string/settings_server_media_summary"
-            android:dialogTitle="@string/settings_server_media_title"
+            android:dialogTitle="@string/initial_server_addr_media"
             android:inputType="number"
             android:maxLength="5"
             />
         <Preference
             android:key="certificate_file_name"
-            android:title="@string/settings_server_cert_title"
+            android:title="@string/initial_server_pem_certificate"
             android:summary="@string/settings_server_cert_summary"
+            />
+        <Preference
+            android:key="server_sodium_public"
+            android:title="@string/initial_server_sodium_certificate"
+            android:summary="@string/settings_server_sodium_summary"
             />
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:title="@string/settings_user_title">
+        android:title="@string/initial_user_title">
         <EditTextPreference
             android:key="username"
-            android:title="@string/settings_user_uname_title"
+            android:title="@string/initial_user_uname_hint"
             android:summary="@string/settings_user_uname_summary"
-            android:dialogTitle="@string/settings_user_uname_title"
+            android:dialogTitle="@string/initial_user_uname_hint"
             />
         <Preference
             android:key="private_key"
-            android:title="@string/settings_user_private_key_title"
+            android:title="@string/initial_user_private_key_hint"
             android:summary="@string/settings_user_private_key_summary"
             />
     </PreferenceCategory>

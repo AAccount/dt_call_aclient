@@ -39,7 +39,7 @@ public class BackgroundManager extends BroadcastReceiver
 		Utils.initAlarmVars();
 		AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 
-		if(Vars.uname == null || Vars.privateKey == null || Vars.serverAddress == null)
+		if(Vars.uname == null || Vars.privateSodium == null || Vars.serverAddress == null)
 		{
 			//sometimes Vars.(prefs stuff) disappears after idling in the background for a while
 			Utils.logcat(Const.LOGW, tag, "Reinitializing Vars from prefs file");

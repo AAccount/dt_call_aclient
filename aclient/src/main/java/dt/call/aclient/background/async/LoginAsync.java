@@ -4,19 +4,26 @@ import android.app.AlarmManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
+import android.util.Base64;
 
+import java.security.SecureRandom;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-import javax.crypto.Cipher;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.background.CmdListener;
 
 /**
@@ -32,6 +39,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 {
 	private static final String tag = "Login Async Task";
 	private static final Object loginLock = new Object();
+	public static boolean noNotificationOnFail = false;
 	private static boolean tryingLogin;
 
 	@Override
@@ -56,12 +64,12 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			}
 
 			//request login challenge
-			Vars.commandSocket = Utils.mkSocket(Vars.serverAddress, Vars.commandPort, Vars.certDump);
+			Vars.commandSocket = mkSocket(Vars.serverAddress, Vars.commandPort, Vars.certDump);
 			String login = Utils.currentTimeSeconds() + "|login1|" + Vars.uname;
 			Vars.commandSocket.getOutputStream().write(login.getBytes());
 
 			//read in login challenge
-			byte[] responseRaw = new byte[Const.COMMAND_SIZE];
+			byte[] responseRaw = new byte[Const.SIZE_COMMAND];
 			int length = Vars.commandSocket.getInputStream().read(responseRaw);
 
 			//on the off chance the socket crapped out right from the get go, now you'll know
@@ -101,18 +109,16 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			//get the challenge
 			String challenge = loginChallengeContents[2];
-			byte[] challengeNumbers = Utils.destringify(challenge, false);
+			byte[] challengeBytes = Utils.destringify(challenge, false);
 
 			//answer the challenge
-			Cipher rsa = Cipher.getInstance(Const.RSA_PKCS1_OAEP_PADDING);
-			rsa.init(Cipher.DECRYPT_MODE, Vars.privateKey);
-			byte[] decrypted = rsa.doFinal(challengeNumbers);
+			byte[] decrypted = Utils.sodiumAsymDecrypt(challengeBytes, Vars.serverPublicSodium);
 			String challengeDec = new String(decrypted, "UTF8");
 			String loginChallengeResponse = Utils.currentTimeSeconds() + "|login2|" + Vars.uname + "|" + challengeDec;
 			Vars.commandSocket.getOutputStream().write(loginChallengeResponse.getBytes());
 
 			//see if the server liked the challenge response
-			byte[] answerResponseBuffer = new byte[Const.COMMAND_SIZE];
+			byte[] answerResponseBuffer = new byte[Const.SIZE_COMMAND];
 			length = Vars.commandSocket.getInputStream().read(answerResponseBuffer);
 			String answerResponse = new String(answerResponseBuffer, 0, length);
 
@@ -179,18 +185,86 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		Utils.logcat(Const.LOGD, tag, "Result of login: " + result + " @" + ts.format(new Date()));
 		if(result)
 		{
+			noNotificationOnFail = false;
 			Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
 		}
-		else
+		else if(!noNotificationOnFail) //don't show the notification for initial login fails
 		{
 			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
 			Utils.setExactWakeup(Vars.pendingRetries, Vars.pendingRetries2ndary);
 			//background manager will check if there is internet or not when the retry kicks in and will act accordingly
+
+			noNotificationOnFail = false; //reset
 		}
 
 		synchronized (loginLock)
 		{
 			tryingLogin = false;
+		}
+	}
+
+	private SSLSocket mkSocket(String host, int port, final String expected64) throws CertificateException
+	{
+		SSLSocket socket = null;
+		TrustManager[] trustOnlyServerCert = new TrustManager[]
+				{new X509TrustManager()
+				{
+					@Override
+					public void checkClientTrusted(X509Certificate[] chain, String alg)
+					{
+						//this IS the client. it's not going to be getting clients itself. nothing to see here
+					}
+
+					@Override
+					public void checkServerTrusted(X509Certificate[] chain, String alg) throws CertificateException
+					{
+						//Get the certificate encoded as ascii text. Normally a certificate can be opened
+						//	by a text editor anyways.
+						byte[] serverCertDump = chain[0].getEncoded();
+						String server64 = Base64.encodeToString(serverCertDump, Const.BASE64_Flags);
+
+						//Trim the expected and presented server ceritificate ascii representations to prevent false
+						//	positive of not matching because of randomly appended new lines or tabs or both.
+						server64 = server64.trim();
+						String expected64Trimmed = expected64.trim();
+						if(!expected64Trimmed.equals(server64))
+						{
+							throw new CertificateException("Server certificate does not match expected one.");
+						}
+
+					}
+
+					@Override
+					public X509Certificate[] getAcceptedIssuers()
+					{
+						return null;
+					}
+
+				}
+				};
+		try
+		{
+			SSLContext context;
+			context = SSLContext.getInstance("TLSv1.2");
+			context.init(new KeyManager[0], trustOnlyServerCert, new SecureRandom());
+			SSLSocketFactory mkssl = context.getSocketFactory();
+			socket = (SSLSocket)mkssl.createSocket(host, port);
+			socket.setTcpNoDelay(true); //for heartbeat to get instant ack
+			socket.startHandshake();
+			return socket;
+		}
+		catch (Exception e)
+		{
+			try
+			{
+				socket.close();
+			}
+			catch (Exception e1)
+			{
+				Utils.dumpException(tag, e1); //although there's nothing that can really be done at this point
+			}
+			Utils.dumpException(tag, e);
+			return null;
 		}
 	}
 }

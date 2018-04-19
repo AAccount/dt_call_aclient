@@ -1,34 +1,44 @@
-apply plugin: 'com.android.model.application'
+apply plugin: 'com.android.application'
 
-model {
-    android {
-        compileSdkVersion 26
-        buildToolsVersion "27.0.3"
 
-        defaultConfig {
-            applicationId "dt.call.aclient"
-            minSdkVersion.apiLevel 16
-            targetSdkVersion.apiLevel 26
-            versionCode 6
-            versionName "@string/about_version_number"
-        }
-        buildTypes {
-            release {
-                minifyEnabled false
-                proguardFiles.add(file('proguard-android.txt'))
-            }
-        }
+android {
+    compileSdkVersion 26
+    buildToolsVersion "27.0.3"
 
-        externalNativeBuild {
-            ndkBuild {
-                path "src/main/jni/Android.mk"
-            }
+    defaultConfig {
+        applicationId "dt.call.aclient"
+        minSdkVersion 16
+        targetSdkVersion 26
+        versionCode 6
+        versionName '1.6'
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles.add(file('proguard-android.txt'))
         }
     }
+
+    externalNativeBuild {
+        ndkBuild {
+            path "src/main/jni/Android.mk"
+        }
+    }
+    productFlavors {
+    }
+
+    packagingOptions {
+        exclude 'lib/armeabi/libsodiumjni.so'
+        exclude 'lib/mips/libsodiumjni.so'
+        exclude 'lib/mips64/libsodiumjni.so'
+
+    }
 }
+
 dependencies {
-    compile fileTree(include: ['*.jar'], dir: 'libs')
-    testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:26.1.0'
-    compile 'com.android.support:design:26.1.0'
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    testImplementation 'junit:junit:4.12'
+    implementation 'com.android.support:appcompat-v7:26.1.0'
+    implementation 'com.android.support:design:26.1.0'
+    implementation 'com.github.joshjdevl.libsodiumjni:libsodium-jni-aar:1.0.8'
 }

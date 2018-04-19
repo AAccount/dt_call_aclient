@@ -5,7 +5,8 @@
     <string name="initial_server_addr_hint">Server Address or Name</string>
     <string name="initial_server_addr_command">Command Port Number</string>
     <string name="initial_server_addr_media">Media Port Number</string>
-    <string name="initial_server_certificate">Choose Expected Certificate</string>
+    <string name="initial_server_pem_certificate">Server TLS Certificate</string>
+    <string name="initial_server_sodium_certificate">Server Sodium Public Key</string>
     <string name="initial_server_title">Server Information</string>
     <string name="initial_server_image_accessibility">Server picture from Fedora Linux</string>
 
@@ -14,6 +15,8 @@
 
     <!-- File picker messages -->
     <string name="file_picker_server_public">Server\'s Expected Public Key</string>
+    <string name="file_picker_server_sodium_public">Server\'s Expected Sodium Public Key</string>
+    <string name="file_picker_user_public">\'s Expected Public Key</string>
     <string name="file_picker_user_private">Your Private Key</string>
 
     <!-- Dialog Messages (not screen specific) -->
@@ -53,8 +56,8 @@
 
     <!-- Initial user setup -->
     <string name="initial_user_title">User Information</string>
-    <string name="initial_user_uname_hint">Name</string>
-    <string name="initial_user_private_key_hint">Choose Private Key</string>
+    <string name="initial_user_uname_hint">Name (CASE SENSITIVE)</string>
+    <string name="initial_user_private_key_hint">Private Sodium Key</string>
     <string name="initial_user_image_accessibility">Faceless user picture from Fedora Linux</string>
 
     <!-- User home screen -->
@@ -101,7 +104,7 @@
     <string name="about_compile_label">Git:</string>
     <string name="about_compile_revision">(FILL IN GIT REVISION HERE)</string>
     <string name="about_version_label">Version:</string>
-    <string name="about_version_number" translatable="false">1.6</string> <!-- do not translate. it's just a number -->
+    <string name="about_version_number" translatable="false">1.6</string>
     <string name="about_by_label">Credits:</string>
     <string name="about_people">
         Daniel Tjandra (main)\n
@@ -123,19 +126,12 @@
 
     <!-- DTSettings stuff and its fragment -->
     <string name="settings_title">Settings</string>
-    <string name="settings_server_title">Server Info</string>
-    <string name="settings_server_addr_title">Address</string>
     <string name="settings_server_addr_summary">Call server\'s domain name or ip address</string>
-    <string name="settings_server_cmd_title">Command Port</string>
     <string name="settings_server_cmd_summary">Port on the server for accepting call commands</string>
-    <string name="settings_server_media_title">Media Port</string>
     <string name="settings_server_media_summary">Port on the server for accepting call media data</string>
-    <string name="settings_server_cert_title">Certificate</string>
     <string name="settings_server_cert_summary">Server\'s public key file</string>
-    <string name="settings_user_title">User Account</string>
-    <string name="settings_user_uname_title">User Name</string>
+    <string name="settings_server_sodium_summary">Server\'s public sodium key file</string>
     <string name="settings_user_uname_summary">CASE SENSITIVE user account name</string>
-    <string name="settings_user_private_key_title">Private Key</string>
     <string name="settings_user_private_key_summary">Your private key for logging in</string>
 
     <!-- User key management overview screen -->

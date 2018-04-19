@@ -16,13 +16,9 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Base64;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-
-import java.security.KeyFactory;
-import java.security.spec.PKCS8EncodedKeySpec;
 
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
@@ -56,8 +52,8 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 		//load the saved information if it's there and preset the edittexts
 		SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, MODE_PRIVATE);
 		Vars.uname = sharedPreferences.getString(Const.PREF_UNAME, "");
-		Vars.privateKeyDump = sharedPreferences.getString(Const.PREF_PRIVATE_KEY_DUMP, "");
-		Vars.privateKeyName = sharedPreferences.getString(Const.PREF_PRIVATE_KEY_NAME, "");
+		Vars.privateSodiumDump = sharedPreferences.getString(Const.PREF_PRIVATE_KEY_DUMP, "");
+		Vars.privateSodiumName = sharedPreferences.getString(Const.PREF_PRIVATE_KEY_NAME, "");
 
 		if(!Vars.uname.equals(""))
 		{
@@ -66,25 +62,13 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 
 		//check if the private key dump is any good first. if it isn't, reset the saved private key info
 		//	because what is stored is unusable. need to get the private key again.
-		if(!Vars.privateKeyDump.equals(""))
+		if(!Vars.privateSodiumDump.equals(""))
 		{
-			try
-			{
-				byte[] keyDecoded = Base64.decode(Vars.privateKeyDump, Const.BASE64_Flags);
-				KeyFactory kf = KeyFactory.getInstance("RSA");
-				Vars.privateKey = kf.generatePrivate(new PKCS8EncodedKeySpec(keyDecoded));
-			}
-			catch(Exception e)
-			{
-				Utils.dumpException(tag, e);
-				Vars.privateKeyDump = null;
-				Vars.privateKeyName = null;
-				Vars.privateKey = null;
-			}
+			Vars.privateSodium = Utils.interpretSodiumPrivateKey(Vars.privateSodiumDump);
 		}
-		if(!Vars.privateKeyName.equals(""))
+		if(!Vars.privateSodiumName.equals(""))
 		{
-			privateKeyButton.setText(Vars.privateKeyName);
+			privateKeyButton.setText(Vars.privateSodiumName);
 		}
 
 
@@ -122,7 +106,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 						public void onClick(DialogInterface dialog, int which)
 						{
 							String[] perms = new String[]{Manifest.permission.READ_EXTERNAL_STORAGE};
-							ActivityCompat.requestPermissions(InitialUserInfo.this, perms, Const.STORAGE_PERM);
+							ActivityCompat.requestPermissions(InitialUserInfo.this, perms, Const.PERM_STORAGE);
 							dialog.cancel();
 						}
 					});
@@ -146,12 +130,13 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 			Vars.uname = uname.getText().toString();
 
 			//don't continue if the user name and password are missing
-			if(Vars.uname.equals("") || Vars.privateKey == null)
+			if(Vars.uname.equals("") || Vars.privateSodium == null)
 			{
 				Utils.showOk(this, getString(R.string.alert_initial_user_missing_uinfo));
 				return;
 			}
 
+			LoginAsync.noNotificationOnFail = true;
 			new LoginAsync().execute();
 		}
 		else if(v == privateKeyButton)
@@ -163,7 +148,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 			fileDialog.addCategory(Intent.CATEGORY_OPENABLE);
 			try
 			{
-				startActivityForResult(Intent.createChooser(fileDialog, getString(R.string.file_picker_user_private)), Const.PRIVATE_KEY_SELECT);
+				startActivityForResult(Intent.createChooser(fileDialog, getString(R.string.file_picker_user_private)), Const.SELECT_PRIVATE_SODIUM);
 			}
 			catch (ActivityNotFoundException a)
 			{
@@ -178,13 +163,17 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 	{
 		//Only attempt to get the private key file path if Intent data has stuff in it.
 		//	It won't have stuff in it if the user just clicks back.
-		if(requestCode == Const.PRIVATE_KEY_SELECT && data != null)
+		if(requestCode == Const.SELECT_PRIVATE_SODIUM && data != null)
 		{
 			Uri uri = data.getData();
 
-			if(Utils.readUserPrivateKey(uri, InitialUserInfo.this))
+			if(Utils.readUserSodiumPrivate(uri, InitialUserInfo.this))
 			{
-				privateKeyButton.setText(Vars.privateKeyName);
+				privateKeyButton.setText(Vars.privateSodiumName);
+			}
+			else
+			{
+				Utils.showOk(this, getString(R.string.alert_corrupted_key));
 			}
 		}
 	}
@@ -199,8 +188,8 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 			SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, MODE_PRIVATE);
 			SharedPreferences.Editor editor = sharedPreferences.edit();
 			editor.putString(Const.PREF_UNAME, enteredUname);
-			editor.putString(Const.PREF_PRIVATE_KEY_DUMP, Vars.privateKeyDump);
-			editor.putString(Const.PREF_PRIVATE_KEY_NAME, Vars.privateKeyName);
+			editor.putString(Const.PREF_PRIVATE_KEY_DUMP, Vars.privateSodiumDump);
+			editor.putString(Const.PREF_PRIVATE_KEY_NAME, Vars.privateSodiumName);
 			editor.apply();
 
 			//go to the user information screen
@@ -218,7 +207,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 	{
 		switch(requestCode)
 		{
-			case Const.STORAGE_PERM:
+			case Const.PERM_STORAGE:
 			{
 				if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_DENIED)
 				{

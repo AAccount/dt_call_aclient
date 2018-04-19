@@ -9,7 +9,6 @@ import android.support.v4.app.NotificationCompat;
 
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.HashMap;
 
@@ -37,12 +36,12 @@ public class Vars
 	public volatile static CallState state = CallState.NONE;
 	public static String callWith;
 	public static PowerManager.WakeLock wakeLock = null;
-	public static byte[] aesKey = new byte[256/8];
+	public static byte[] sodiumSymmetricKey = null;
 
 	//contacts hash table to avoid having to lookup the db for incoming calls
 	public static HashMap<String, String> contactTable = null;
-	public static HashMap<String, PublicKey> publicKeyTable = null;
-	public static HashMap<String, String> publicKeyDumps = null;
+	public static HashMap<String, byte[]> publicSodiumTable = null;
+	public static HashMap<String, String> publicSodiumDumps = null;
 
 	//server information
 	public static String serverAddress;
@@ -50,12 +49,16 @@ public class Vars
 	public static int mediaPort;
 	public static String certDump;
 	public static String certName;
+	public static PublicKey serverKey = null;
+	public static String serverPublicSodiumName;
+	public static String serverPublicSodiumDump;
+	public static byte[] serverPublicSodium = null;
 
 	//user information (to be filled in when available)
 	public static String uname = null;
-	public static PrivateKey privateKey = null;
-	public static String privateKeyDump = null;
-	public static String privateKeyName = null;
+	public static byte[] privateSodium = null;
+	public static String privateSodiumDump = null;
+	public static String privateSodiumName = null;
 
 	//Ongoing notification with state information
 	public static NotificationCompat.Builder stateNotificationBuilder = null;

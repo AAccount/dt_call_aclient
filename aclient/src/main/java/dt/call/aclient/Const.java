@@ -19,25 +19,28 @@ public class Const
 	public static final String PREF_MEDIAPORT = "media_port";
 	public static final String PREF_CERTDUMP = "certificate_getEncoded_string_base64";
 	public static final String PREF_CERTFNAME = "certificate_file_name";
+	public static final String PREF_SODIUM_DUMP = "server_sodium_public";
+	public static final String PREF_SODIUM_DUMP_NAME = "server_sodium_public_name";
 	public static final String PREF_UNAME = "username";
 	public static final String PREF_PRIVATE_KEY_DUMP = "private_key";
 	public static final String PREF_PRIVATE_KEY_NAME = "private_key_name";
 	public static final String PREF_LOG = "log";
 
 	//file selection codes
-	public static final int SERVER_CERT_SELECT= 1;
-	public static final int PRIVATE_KEY_SELECT = 2;
-	public static final int USER_PUBLIC_KEY_SELECT = 3;
+	public static final int SELECT_SERVER_SSLCERT = 1;
+	public static final int SELECT_PRIVATE_SODIUM = 2;
+	public static final int SELECT_USER_PUBLIC_SODIUM = 3;
+	public static final int SELECT_SERVER_PUBLIC_SODIUM = 4;
 	public static final int BASE64_Flags = Base64.NO_PADDING & Base64.NO_WRAP;
 
 	//android permission request codes
-	public static final int STORAGE_PERM = 1;
-	public static final int MIC_PERM = 2;
+	public static final int PERM_STORAGE = 1;
+	public static final int PERM_MIC = 2;
 
 	//heartbeat byte
 	public static final String JBYTE = "D";
-	public static final int COMMAND_SIZE = 2048;
-	public static final int MEDIA_SIZE = 1200;
+	public static final int SIZE_COMMAND = 2048;
+	public static final int SIZE_MEDIA = 1200;
 
 	//nobody: the default value for when not in a call
 	public static final String nobody = "(nobody)";
@@ -98,12 +101,14 @@ public class Const
 	public static final int UDP_RETRIES = 10;
 	public static final int UDP_ACK_TIMEOUT = 100; //in milliseconds
 	public static final int DSCP_EXPEDITED_FWD = (0x2E << 2);
-	public static final String AES_PLACEHOLDER = "SIGNED_ENCRYPTED_AES_KEY_HERE";
+	public static final String SODIUM_PLACEHOLDER = "SODIUM_SETUP_PLACEHOLDER";
 
-	//rsa padding scheme
-	//(same name as openssl constant used in server)
-	public static final String RSA_PKCS1_OAEP_PADDING = "RSA/NONE/OAEPWithSHA1AndMGF1Padding";
-	public static final String CERT_HEADER = "-----BEGIN PUBLIC KEY-----\n";
-	public static final String CERT_FOOTER = "-----END PUBLIC KEY-----";
+	//maximum disassembly accuracy for taking apart an int into signed chars
+	public static final int JAVA_MAX_PRECISION_INT = 5;
+	public static final int SIZEOF_USEBLE_JBYTE = 7; //8th bit for the sign
+
+
+	public static final String SODIUM_PUBLIC_HEADER = "SODIUM PUBLIC KEY\n";
+	public static final String SODIUM_PRIVATE_HEADER = "SODIUM PRIVATE KEY\n";
 	public static final String EXTRA_UNAME = "user_name_extra";
 }

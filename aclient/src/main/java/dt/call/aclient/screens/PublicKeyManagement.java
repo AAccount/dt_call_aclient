@@ -12,7 +12,6 @@ import java.util.HashSet;
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Vars;
-import dt.call.aclient.sqlite.DBLog;
 
 public class PublicKeyManagement extends AppCompatActivity implements View.OnClickListener
 {
@@ -26,10 +25,9 @@ public class PublicKeyManagement extends AppCompatActivity implements View.OnCli
 		mainLayout = (LinearLayout)findViewById(R.id.public_key_mgmt_layout);
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-
 		//create a button for every user with a known public key and all contacts
 		HashSet<String> userSet = new HashSet<String>();
-		userSet.addAll(Vars.publicKeyTable.keySet());
+		userSet.addAll(Vars.publicSodiumTable.keySet());
 		userSet.addAll(Vars.contactTable.keySet()); //hash set won't add duplicates
 
 		for(String user : userSet)
@@ -48,7 +46,7 @@ public class PublicKeyManagement extends AppCompatActivity implements View.OnCli
 			userButton.setText(nickname);
 			userButton.setOnClickListener(this);
 
-			if(Vars.publicKeyTable.containsKey(user))
+			if(Vars.publicSodiumTable.containsKey(user))
 			{
 				userButton.setTextColor(getResources().getColor(R.color.material_green));
 			}

@@ -31,7 +31,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 	private static final String tag = "Initial Server";
 
 	private EditText addr, commandPort, mediaPort;
-	private Button cert;
+	private Button cert, sodium;
 	private FloatingActionButton next;
 
     @Override
@@ -47,7 +47,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 
 		Utils.loadPrefs();
 
-		if(!Vars.uname.equals("") && !(Vars.privateKey == null))
+		if(!Vars.uname.equals("") && !(Vars.privateSodium == null))
 		{
 			Utils.logcat(Const.LOGD, tag, "Skipping to the home screen");
 
@@ -72,6 +72,9 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		cert = (Button)findViewById(R.id.initial_server_certificate);
 		cert.setOnClickListener(this);
 		cert.setAllCaps(false);
+		sodium = (Button)findViewById(R.id.initial_server_sodium);
+		sodium.setOnClickListener(this);
+		sodium.setAllCaps(false);
 		next = (FloatingActionButton)findViewById(R.id.initial_server_next);
 		next.setOnClickListener(this);
 
@@ -91,6 +94,10 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		{
 			cert.setText(Vars.certName);
 		}
+		if(!Vars.serverPublicSodiumName.equals("") && !Vars.serverPublicSodiumDump.equals(""))
+		{
+			sodium.setText(Vars.serverPublicSodiumName);
+		}
 	}
 
 	@Override
@@ -108,7 +115,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 						public void onClick(DialogInterface dialog, int which)
 						{
 							String[] perms = new String[]{Manifest.permission.READ_EXTERNAL_STORAGE};
-							ActivityCompat.requestPermissions(InitialServer.this, perms, Const.STORAGE_PERM);
+							ActivityCompat.requestPermissions(InitialServer.this, perms, Const.PERM_STORAGE);
 							dialog.cancel();
 						}
 					});
@@ -129,7 +136,23 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			fileDialog.addCategory(Intent.CATEGORY_OPENABLE);
 			try
 			{
-				startActivityForResult(Intent.createChooser(fileDialog, getString(R.string.file_picker_server_public)), Const.SERVER_CERT_SELECT);
+				startActivityForResult(Intent.createChooser(fileDialog, getString(R.string.file_picker_server_public)), Const.SELECT_SERVER_SSLCERT);
+			}
+			catch (ActivityNotFoundException a)
+			{
+				Utils.showOk(this, getString(R.string.alert_initial_server_no_caja));
+			}
+		}
+		if(v == sodium)
+		{
+			//https://stackoverflow.com/questions/7856959/android-file-chooser
+			// Open a file chooser dialog. Alert dialog if no file managers found
+			Intent fileDialog = new Intent(Intent.ACTION_GET_CONTENT);
+			fileDialog.setType("*/*");
+			fileDialog.addCategory(Intent.CATEGORY_OPENABLE);
+			try
+			{
+				startActivityForResult(Intent.createChooser(fileDialog, getString(R.string.file_picker_server_sodium_public)), Const.SELECT_SERVER_PUBLIC_SODIUM);
 			}
 			catch (ActivityNotFoundException a)
 			{
@@ -145,7 +168,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			mediaString = mediaPort.getText().toString();
 
 			//check to make sure all the required information is filled in
-			boolean allFilled = !Vars.serverAddress.equals("") && !commandString.equals("") && !mediaString.equals("") && !Vars.certDump.equals("");
+			boolean allFilled = !Vars.serverAddress.equals("") && !commandString.equals("") && !mediaString.equals("") && !Vars.certDump.equals("") && Vars.serverPublicSodium != null;
 			if(!allFilled)
 			{
 				Utils.showOk(this, getString(R.string.alert_initial_server_incomplete_server));
@@ -180,6 +203,8 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			editor.putString(Const.PREF_MEDIAPORT, mediaString);
 			editor.putString(Const.PREF_CERTDUMP, Vars.certDump);
 			editor.putString(Const.PREF_CERTFNAME, Vars.certName);
+			editor.putString(Const.PREF_SODIUM_DUMP, Vars.serverPublicSodiumDump);
+			editor.putString(Const.PREF_SODIUM_DUMP_NAME, Vars.serverPublicSodiumName);
 			editor.apply();
 
 			//go to the user information screen
@@ -194,12 +219,27 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 	{
 		//Only attempt to get the certificate file path if Intent data has stuff in it.
 		//	It won't have stuff in it if the user just clicks back.
-		if(requestCode == Const.SERVER_CERT_SELECT && data != null)
+		Uri uri = data.getData();
+		if(requestCode == Const.SELECT_SERVER_SSLCERT && data != null)
 		{
-			Uri uri = data.getData();
-			if(Utils.readServerPublicKey(uri, InitialServer.this))
+			if(Utils.readServerPublicKey(uri, this))
 			{
 				cert.setText(Vars.certName);
+			}
+			else
+			{
+				Utils.showOk(this, getString(R.string.alert_corrupted_cert));
+			}
+		}
+		else if(requestCode == Const.SELECT_SERVER_PUBLIC_SODIUM && data != null)
+		{
+			if(Utils.readServerSodiumPublic(uri, this))
+			{
+				sodium.setText(Vars.serverPublicSodiumName);
+			}
+			else
+			{
+				Utils.showOk(this, getString(R.string.alert_corrupted_cert));
 			}
 		}
 	}
@@ -209,7 +249,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 	{
 		switch(requestCode)
 		{
-			case Const.STORAGE_PERM:
+			case Const.PERM_STORAGE:
 			{
 				if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_DENIED)
 				{

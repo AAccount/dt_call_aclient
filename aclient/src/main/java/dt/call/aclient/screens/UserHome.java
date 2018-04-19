@@ -27,8 +27,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import org.libsodium.jni.Sodium;
 
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
@@ -70,6 +69,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		since the ongoing notification goes to this screen, make sure that when it comes back from the dead,
 		the annoying android context is available. be a good zombie coming back from the dead and not crash
 		*/
+		Sodium.sodium_init();
 		Vars.applicationContext = getApplicationContext();
 		sqliteDb = SQLiteDb.getInstance(getApplicationContext());
 
@@ -194,7 +194,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 						public void onClick(DialogInterface dialog, int which)
 						{
 							String[] perms = new String[]{Manifest.permission.RECORD_AUDIO};
-							ActivityCompat.requestPermissions(UserHome.this, perms, Const.MIC_PERM);
+							ActivityCompat.requestPermissions(UserHome.this, perms, Const.PERM_MIC);
 							dialog.cancel();
 						}
 					});
@@ -214,7 +214,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 						public void onClick(DialogInterface dialog, int which)
 						{
 							String[] perms = new String[]{Manifest.permission.READ_EXTERNAL_STORAGE};
-							ActivityCompat.requestPermissions(UserHome.this, perms, Const.STORAGE_PERM);
+							ActivityCompat.requestPermissions(UserHome.this, perms, Const.PERM_STORAGE);
 							dialog.cancel();
 						}
 					});
@@ -484,7 +484,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	{
 		switch(requestCode)
 		{
-			case Const.MIC_PERM:
+			case Const.PERM_MIC:
 			{
 				if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_DENIED)
 				{
@@ -492,7 +492,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 					Utils.quit(this);
 				}
 			}
-			case Const.STORAGE_PERM:
+			case Const.PERM_STORAGE:
 			{
 				if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_DENIED)
 				{

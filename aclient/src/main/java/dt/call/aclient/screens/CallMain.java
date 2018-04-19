@@ -29,23 +29,14 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.libsodium.jni.Sodium;
+
 import java.io.InputStream;
 import java.net.DatagramPacket;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.Key;
-import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
-
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
@@ -71,6 +62,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final int END_TONE_SIZE = 10858;
 	private static final int WAV_FILE_HEADER = 44; //.wav files actually have a 44 byte header
 
+	private static final int AAC_LENGTH_ACCURACY = 2;
+	private static final int SEQ_LENGTH_ACCURACY = 4;
+
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
 	private Button noiseReduction, echoCancel, stats;
@@ -84,7 +78,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private int min=0, sec=0;
 	private Timer counter = new Timer();
 	private BroadcastReceiver myReceiver;
-	private int garbage=0, tx=0, rx=0, txCount=0, rxCount=0, rxSeq=-1, txSeq=0, skipped=0;
+	private int garbage=0, tx=0, rx=0, txCount=0, rxCount=0, rxSeq=0, txSeq=0, skipped=0;
 	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel;
 	private boolean showStats = false;
 
@@ -98,9 +92,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	//for dial tone when initiating a call
 	private AudioTrack dialTone = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, S16, DIAL_TONE_SIZE, AudioTrack.MODE_STATIC);
-
-	private Key aesKeyObj;
-
 	private boolean playedEndTone=false;
 
 	@Override
@@ -284,6 +275,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	protected void onResume()
 	{
 		super.onResume();
+		Sodium.sodium_init();
 		screenShowing = true;
 		sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_NORMAL);
 	}
@@ -375,6 +367,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					//nothing useful you can do if the notification end tone fails to play
 				}
 			}
+
+			//clear the symmetric key
+			Vars.sodiumSymmetricKey = null;
 
 			//go back to the home screen and clear the back history so there is no way to come back to
 			//call main
@@ -472,8 +467,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private void changeToCallMode()
 	{
-		aesKeyObj = new SecretKeySpec(Vars.aesKey, "AES");
-		Arrays.fill(Vars.aesKey, (byte)0); //any secretly detained packets will forever be gibberish after the call is over
 		try
 		{
 			dialTone.stop();
@@ -555,7 +548,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					endThread();
 				}
 
-				byte[] accumulator = new byte[Const.MEDIA_SIZE-100];
+				byte[] accumulator = new byte[Const.SIZE_MEDIA -100];
 				int accPos = 4;
 
 				//put the first sequence number to detect duplicate or old voice packets
@@ -616,13 +609,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					}
 
 					//if the current aac chunk won't fit in the accumulator, send the packet and restart the accumulator
-					if((accPos + 2 + encodeLength) > accumulator.length)
+					if((accPos + AAC_LENGTH_ACCURACY + encodeLength) > accumulator.length)
 					{
 						try
 						{
 							byte[] accumulatorTrimmed = new byte[accPos];
 							System.arraycopy(accumulator, 0, accumulatorTrimmed, 0, accPos);
-							byte[] accumulatorEncrypted = encrypt(accumulatorTrimmed);
+							byte[] accumulatorEncrypted = Utils.sodiumSymEncrypt(accumulatorTrimmed);
 
 							DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length, Vars.callServer, Vars.mediaPort);
 							Vars.mediaUdp.send(packet);
@@ -640,24 +633,20 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							//kill the sockets so that UserHome's crash recovery will reinitialize them
 							endThread();
 						}
-						accPos = 4;
+						accPos = SEQ_LENGTH_ACCURACY;
 						Arrays.fill(accumulator, (byte)0);
 
 						//integer broken up as: 12,345,678: [12,34,56,78.....voice....]
-						accumulator[0] = (byte)(txSeq >> 21);
-						accumulator[1] = (byte)((txSeq >> 14) & Byte.MAX_VALUE);
-						accumulator[2] = (byte)((txSeq >> 7) & Byte.MAX_VALUE);
-						accumulator[3] = (byte)(txSeq & Byte.MAX_VALUE);
+						byte[] txSeqDisassembled = Utils.disassembleInt(txSeq, SEQ_LENGTH_ACCURACY);
+						System.arraycopy(txSeqDisassembled, 0, accumulator, 0, SEQ_LENGTH_ACCURACY);
 						txSeq++;
 					}
 
 					//write the aac chunk size as a "header" before writing the actual aac data
-					byte first = (byte)(encodeLength >> 7); //split up large numbers like 1234 into 12, 34
-					byte second = (byte)(encodeLength & Byte.MAX_VALUE);
-					accumulator[accPos] = first;
-					accumulator[accPos+1] = second;
-					System.arraycopy(aacbuffer, 0 , accumulator, accPos+2, encodeLength);
-					accPos = accPos + 2 + encodeLength;
+					byte[] encodedLengthDisassembled = Utils.disassembleInt(encodeLength, AAC_LENGTH_ACCURACY);
+					System.arraycopy(encodedLengthDisassembled, 0, accumulator, accPos, AAC_LENGTH_ACCURACY);
+					System.arraycopy(aacbuffer, 0 , accumulator, accPos+AAC_LENGTH_ACCURACY, encodeLength);
+					accPos = accPos + AAC_LENGTH_ACCURACY + encodeLength;
 				}
 				FdkAAC.closeEncoder();
 				wavRecorder.stop();
@@ -713,8 +702,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					try
 					{
 						//read encrypted aac
-						byte[] inputBuffer = new byte[Const.MEDIA_SIZE];
-						DatagramPacket received = new DatagramPacket(inputBuffer, Const.MEDIA_SIZE);
+						byte[] inputBuffer = new byte[Const.SIZE_MEDIA];
+						DatagramPacket received = new DatagramPacket(inputBuffer, Const.SIZE_MEDIA);
 						Vars.mediaUdp.receive(received);
 
 						//decrypt
@@ -722,16 +711,17 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						rxCount++;
 						byte[] accumulator = new byte[received.getLength()];
 						System.arraycopy(received.getData(), 0, accumulator, 0, received.getLength());
-						byte[] accumulatorDec = decrypt(accumulator); //contents [size1|aac chunk 1|size2|aac chunk 2|...|sizeN|aac chunk N]
+						byte[] accumulatorDec = Utils.sodiumSymDecrypt(accumulator); //contents [size1|aac chunk 1|size2|aac chunk 2|...|sizeN|aac chunk N]
 						if(accumulatorDec == null)
 						{
 							Utils.logcat(Const.LOGD, tag, "Invalid decryption");
 							continue;
 						}
 
-						int readPos = 4;
-						int sequence = (((int)accumulatorDec[0]) << 21) + (((int)accumulatorDec[1]) << 14)
-								+ (((int)accumulatorDec[2]) << 7) + (int)accumulatorDec[3];
+						int readPos = SEQ_LENGTH_ACCURACY;
+						byte[] sequenceBytes = new byte[SEQ_LENGTH_ACCURACY];
+						System.arraycopy(accumulatorDec, 0, sequenceBytes, 0, SEQ_LENGTH_ACCURACY);
+						int sequence = Utils.reassembleInt(sequenceBytes);
 						if(sequence <= rxSeq)
 						{
 							skipped++;
@@ -742,11 +732,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						while(readPos < accumulatorDec.length)
 						{
 							//retrieve the size from the first 2 bytes
-							int aacLength = (accumulatorDec[readPos] << 7) + (accumulatorDec[readPos+1]);
+							byte[] aacLengthBytes = new byte[AAC_LENGTH_ACCURACY];
+							System.arraycopy(accumulatorDec, readPos, aacLengthBytes, 0, AAC_LENGTH_ACCURACY);
+							int aacLength = Utils.reassembleInt(aacLengthBytes);
 
 							//extract the aac chunk
 							byte[] aacbuffer = new byte[aacLength];
-							System.arraycopy(accumulatorDec, readPos+2, aacbuffer, 0, aacLength);
+							System.arraycopy(accumulatorDec, readPos+AAC_LENGTH_ACCURACY, aacbuffer, 0, aacLength);
 
 							//decode aac chunk
 							int error = FdkAAC.decode(aacbuffer, wavbuffer);
@@ -760,7 +752,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							}
 
 							//advance the accumulator read position
-							readPos = readPos + 2 + aacLength;
+							readPos = readPos + AAC_LENGTH_ACCURACY + aacLength;
 						}
 					}
 					catch (Exception i) //io or null pointer depending on when the connection dies
@@ -835,63 +827,19 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		//not relevant for proximity sensor so do nothing
 	}
 
-	private byte[] encrypt(byte[] in)
-	{
-		byte[] result;
-		try
-		{
-			Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-			cipher.init(Cipher.ENCRYPT_MODE, aesKeyObj);
-			byte[] init = cipher.getIV();
-			byte[] enc = cipher.doFinal(in);
-			result = new byte[1+init.length + enc.length]; //|length;init;encrypted|
-			result[0] = (byte)init.length;
-			System.arraycopy(init, 0, result, 1, init.length);
-			System.arraycopy(enc, 0, result, 1 + init.length, enc.length);
-			return result;
-		}
-		catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e)
-		{
-			Utils.dumpException(tag, e);
-		}
-		return null;
-	}
-
-	private byte[] decrypt(byte[] in)
-	{//udp packet: [nonce length (byte 0) | nonce (byte 1 --> L)| aes payload (bytes L+1 --> end)]
-		try
-		{
-			Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-			byte initLength = in[0];
-			if(initLength < 1)
-			{
-				throw new InvalidAlgorithmParameterException("Garbage udp packet");
-			}
-
-			byte[] init = new byte[initLength];
-			System.arraycopy(in, 1, init, 0, in[0]);
-			cipher.init(Cipher.DECRYPT_MODE, aesKeyObj, new IvParameterSpec(init));
-			return cipher.doFinal(in, init.length+1, in.length-init.length-1);
-		}
-		catch (NoSuchAlgorithmException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | NoSuchPaddingException | InvalidAlgorithmParameterException e)
-		{
-			Utils.dumpException(tag, e);
-			garbage++;
-		}
-
-		return null;
-	}
-
 	private String formatInternetMeteric(int n)
 	{
+		int mega = 1000000;
+		int kilo = 1000;
+
 		DecimalFormat decimalFormat = new DecimalFormat("#.###");
-		if(n > 1000000)
+		if(n > mega)
 		{
-			return decimalFormat.format((float)n / (float)1000000) + "M";
+			return decimalFormat.format((float)n / (float)mega) + "M";
 		}
-		else if (n > 1000)
+		else if (n > kilo)
 		{
-			return (n/1000) + "K";
+			return (n/kilo) + "K";
 		}
 		else
 		{

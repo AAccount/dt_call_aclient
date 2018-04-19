@@ -22,25 +22,18 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
 import android.util.Log;
 
+import org.libsodium.jni.NaCl;
+import org.libsodium.jni.Sodium;
+
+import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.security.KeyFactory;
-import java.security.PublicKey;
-import java.security.SecureRandom;
+import java.io.UnsupportedEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
-
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 
 import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.screens.CallIncoming;
@@ -72,71 +65,6 @@ public class Utils
 		long diff = now-ts;
 
 		return Math.abs(diff) <= fivemins;
-	}
-
-	public static SSLSocket mkSocket(String host, int port, final String expected64) throws CertificateException
-	{
-		SSLSocket socket = null;
-		TrustManager[] trustOnlyServerCert = new TrustManager[]
-		{new X509TrustManager()
-				{
-					@Override
-					public void checkClientTrusted(X509Certificate[] chain, String alg)
-					{
-						//this IS the client. it's not going to be getting clients itself. nothing to see here
-					}
-
-					@Override
-					public void checkServerTrusted(X509Certificate[] chain, String alg) throws CertificateException
-					{
-						//Get the certificate encoded as ascii text. Normally a certificate can be opened
-						//	by a text editor anyways.
-						byte[] serverCertDump = chain[0].getEncoded();
-						String server64 = Base64.encodeToString(serverCertDump, Const.BASE64_Flags);
-
-						//Trim the expected and presented server ceritificate ascii representations to prevent false
-						//	positive of not matching because of randomly appended new lines or tabs or both.
-						server64 = server64.trim();
-						String expected64Trimmed = expected64.trim();
-						if(!expected64Trimmed.equals(server64))
-						{
-							throw new CertificateException("Server certificate does not match expected one.");
-						}
-
-					}
-
-					@Override
-					public X509Certificate[] getAcceptedIssuers()
-					{
-						return null;
-					}
-
-				}
-		};
-		try
-		{
-			SSLContext context;
-			context = SSLContext.getInstance("TLSv1.2");
-			context.init(new KeyManager[0], trustOnlyServerCert, new SecureRandom());
-			SSLSocketFactory mkssl = context.getSocketFactory();
-			socket = (SSLSocket)mkssl.createSocket(host, port);
-			socket.setTcpNoDelay(true); //for heartbeat to get instant ack
-			socket.startHandshake();
-			return socket;
-		}
-		catch (Exception e)
-		{
-			try
-			{
-				socket.close();
-			}
-			catch (Exception e1)
-			{
-				dumpException(tag, e1); //although there's nothing that can really be done at this point
-			}
-			dumpException(tag, e);
-			return null;
-		}
 	}
 
 	public static void logcat(int type, String tag, String message)
@@ -382,6 +310,7 @@ public class Utils
 	//for cases when Vars.(shared prefs variable) goes missing or the initial load
 	public static void loadPrefs()
 	{
+		NaCl.sodium();
 		SharedPreferences sharedPreferences = Vars.applicationContext.getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
 		Vars.uname = sharedPreferences.getString(Const.PREF_UNAME, "");
 		Vars.serverAddress = sharedPreferences.getString(Const.PREF_ADDR, "");
@@ -403,18 +332,56 @@ public class Utils
 		String privateKeyDump = sharedPreferences.getString(Const.PREF_PRIVATE_KEY_DUMP, "");
 		if(!privateKeyDump.equals(""))
 		{
+			Vars.privateSodium = interpretSodiumPrivateKey(privateKeyDump);
+		}
+
+		if(Vars.certDump != null)
+		{
 			try
 			{
-				byte[] keyDecoded = Base64.decode(privateKeyDump, Const.BASE64_Flags);
-				KeyFactory kf = KeyFactory.getInstance("RSA");
-				Vars.privateKey = kf.generatePrivate(new PKCS8EncodedKeySpec(keyDecoded));
+				byte[] serverCertBytes = Base64.decode(Vars.certDump, Const.BASE64_Flags);
+				X509Certificate serverCert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(serverCertBytes));
+				Vars.serverKey = serverCert.getPublicKey();
 			}
-			catch (Exception e)
+			catch(Exception e)
 			{
 				dumpException(tag, e);
-				Vars.privateKey = null;
 			}
 		}
+
+		Vars.serverPublicSodiumDump = sharedPreferences.getString(Const.PREF_SODIUM_DUMP, "");
+		if(!Vars.serverPublicSodiumDump.equals(""))
+		{
+			Vars.serverPublicSodium = interpretSodiumPublicKey(Vars.serverPublicSodiumDump);
+		}
+		Vars.serverPublicSodiumName = sharedPreferences.getString(Const.PREF_SODIUM_DUMP_NAME, "");
+	}
+
+	public static byte[] interpretSodiumPublicKey(String dump)
+	{
+		int h = Const.SODIUM_PUBLIC_HEADER.length();
+		int k = Sodium.crypto_box_publickeybytes()*3;
+		int expectedLength = h + k;
+		int l = dump.length();
+		if(l != expectedLength)
+		{
+			return null;
+		}
+
+		dump = dump.substring(Const.SODIUM_PUBLIC_HEADER.length());
+		return destringify(dump, false);
+	}
+
+	public static byte[] interpretSodiumPrivateKey(String dump)
+	{
+		int expectedLength = Const.SODIUM_PRIVATE_HEADER.length() + Sodium.crypto_box_publickeybytes()*3;
+		if(dump.length() != expectedLength)
+		{
+			return null;
+		}
+
+		dump = dump.substring(Const.SODIUM_PRIVATE_HEADER.length());
+		return destringify(dump, false);
 	}
 
 	//for dtsettings and initial server: read the server's public key and set it up for use
@@ -427,6 +394,7 @@ public class Utils
 			X509Certificate expectedCert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(certInputStream);
 			byte[] expectedDump = expectedCert.getEncoded();
 			Vars.certDump = Base64.encodeToString(expectedDump, Const.BASE64_Flags);
+			Vars.serverKey = expectedCert.getPublicKey();
 
 			//store the certificate file name for esthetic purposes
 			String[] expanded = uri.getPath().split("[\\/:\\:]");
@@ -442,18 +410,19 @@ public class Utils
 		}
 	}
 
-	public static byte[] readKey(Uri uri, Context context)
+	public static byte[] readFileBytes(Uri uri, Context context)
 	{
 		try
 		{
 			//read the public key and convert to a string
 			ContentResolver resolver = context.getContentResolver();
-			InputStream userKeyStream = resolver.openInputStream(uri);
-			byte[] keyBytes = new byte[Const.COMMAND_SIZE];
-			int amountRead = userKeyStream.read(keyBytes);
-			userKeyStream.close();
+			InputStream inputStream = resolver.openInputStream(uri);
+			int longerHeader = Math.max(Const.SODIUM_PRIVATE_HEADER.length(), Const.SODIUM_PUBLIC_HEADER.length());
+			byte[] fileBytes = new byte[longerHeader + Sodium.crypto_box_publickeybytes()*3];
+			int amountRead = inputStream.read(fileBytes);
+			inputStream.close();
 			byte[] result = new byte[amountRead];
-			System.arraycopy(keyBytes, 0, result, 0, amountRead);
+			System.arraycopy(fileBytes, 0, result, 0, amountRead);
 			return result;
 		}
 		catch(Exception e)
@@ -464,37 +433,55 @@ public class Utils
 	}
 
 	//for dtsettings and initial user: read the user's private key and set it up for use
-	public static boolean readUserPrivateKey(Uri uri, Context context)
+	public static boolean readUserSodiumPrivate(Uri uri, Context context)
 	{
-		try
+		byte[] keyBytes = readFileBytes(uri, context);
+		if(keyBytes == null)
 		{
-			//read the private key and convert to a string
-			byte[] keyBytes = readKey(uri, context);
-
-			//chop of header and footer
-			Vars.privateKeyDump = new String(keyBytes);
-			Vars.privateKeyDump = Vars.privateKeyDump.replace("-----BEGIN PRIVATE KEY-----\n", "");
-			Vars.privateKeyDump = Vars.privateKeyDump.replace("-----END PRIVATE KEY-----", "");
-
-			//actually turn the file into a key
-			byte[] keyDecoded = Base64.decode(Vars.privateKeyDump, Const.BASE64_Flags);
-			KeyFactory kf = KeyFactory.getInstance("RSA");
-			Vars.privateKey = kf.generatePrivate(new PKCS8EncodedKeySpec(keyDecoded));
-
-			//if it's gotten this far it must be a useable key, save the name
-			String[] expanded = uri.getPath().split("[\\/:\\:]");
-			Vars.privateKeyName = expanded[expanded.length-1];
-			return true;
-		}
-		catch (Exception e)
-		{
-			//file somehow disappeared between picking and trying to use in the app
-			//	there's nothing you can do about it
-			Utils.dumpException(tag, e);
-			Utils.showOk(context, context.getString(R.string.alert_corrupted_cert));
-
 			return false;
 		}
+
+		//interpret the file contents as a public key
+		Vars.privateSodiumDump = new String(keyBytes);
+		Vars.privateSodium = Utils.interpretSodiumPrivateKey(Vars.privateSodiumDump);
+		if(Vars.privateSodium == null)
+		{
+			return false;
+		}
+
+		String[] expanded = uri.getPath().split("[\\/:\\:]");
+		Vars.privateSodiumName = expanded[expanded.length-1];
+		return true;
+	}
+
+	//for dtsettings and initial server: read the server's public sodium key and set it up for use
+	public static boolean readServerSodiumPublic(Uri uri, Context context)
+	{
+		byte[] keyBytes = readFileBytes(uri, context);
+		if(keyBytes == null)
+		{
+			return false;
+		}
+
+		//interpret the file contents as a public key
+		try
+		{
+			Vars.serverPublicSodiumDump = new String(keyBytes, "UTF8");
+		}
+		catch (UnsupportedEncodingException e)
+		{
+			dumpException(tag, e);
+			return false;
+		}
+		Vars.serverPublicSodium = Utils.interpretSodiumPublicKey(Vars.serverPublicSodiumDump);
+		if(Vars.serverPublicSodium == null)
+		{
+			return false;
+		}
+
+		String[] expanded = uri.getPath().split("[\\/:\\:]");
+		Vars.serverPublicSodiumName = expanded[expanded.length-1];
+		return true;
 	}
 
 	//turn a string of #s into actual #s assuming the string is a bunch of
@@ -565,23 +552,146 @@ public class Utils
 		return result;
 	}
 
-	public static PublicKey interpretDump(String dump)
+	//break up an into into "byte sized" chunks: 123456: [12, 34, 56]
+	public static byte[] disassembleInt(int input, int accuracy /*how many bytes to use*/)
 	{
-		PublicKey result = null;
-		dump = dump.replace(Const.CERT_HEADER, "");
-		dump = dump.replace(Const.CERT_FOOTER, "");
-		byte[] publicKeyBytes = Base64.decode(dump, Const.BASE64_Flags);
-
-		try
+		byte[] result = new byte[accuracy];
+		for(int i=0; i<accuracy; i++)
 		{
-			KeyFactory kf = KeyFactory.getInstance("RSA");
-			result = kf.generatePublic(new X509EncodedKeySpec(publicKeyBytes));
-		}
-		catch(Exception e)
-		{
-			dumpException(tag, e);
-			result = null;
+			result[i] = (byte)((input >> (Const.SIZEOF_USEBLE_JBYTE*(accuracy-1-i))) & Byte.MAX_VALUE);
 		}
 		return result;
+	}
+
+	//merge together a split up in [12, 34, 56] as 123456
+	public static int reassembleInt(byte[] disassembled)
+	{
+		int result = 0;
+		for(int i=0; i<disassembled.length; i++)
+		{
+			result = result +((int)disassembled[i]) << (Const.SIZEOF_USEBLE_JBYTE*(disassembled.length-1-i));
+		}
+		return result;
+	}
+
+	public static byte[] sodiumAsymEncrypt(byte[] message, byte[] receiver)
+	{
+		return sodiumEncrypt(message, true, receiver);
+	}
+
+	public static byte[] sodiumSymEncrypt(byte[] message)
+	{
+		return sodiumEncrypt(message, false, null);
+	}
+
+	private static byte[] sodiumEncrypt(byte[] message, boolean asym, byte[] receiver)
+	{
+		Sodium.sodium_init();
+
+		//setup nonce (like a password salt)
+		int nonceLength = 0;
+		if(asym)
+		{
+			nonceLength = Sodium.crypto_box_noncebytes();
+		}
+		else
+		{
+			nonceLength = Sodium.crypto_secretbox_noncebytes();
+		}
+		byte[] nonce = new byte[nonceLength];
+		Sodium.randombytes_buf(nonce, nonceLength);
+
+		//setup cipher text
+		int cipherTextLength = 0, ret = 0;
+		byte[]cipherText;
+		if(asym)
+		{
+			cipherTextLength = Sodium.crypto_box_macbytes() + message.length;
+			cipherText = new byte[cipherTextLength];
+			ret = Sodium.crypto_box_easy(cipherText, message, message.length, nonce, receiver, Vars.privateSodium);
+		}
+		else
+		{
+			cipherTextLength = Sodium.crypto_secretbox_macbytes() + message.length;
+			cipherText = new byte[cipherTextLength];
+			ret = Sodium.crypto_secretbox_easy(cipherText, message, message.length, nonce, Vars.sodiumSymmetricKey);
+		}
+
+		//something went wrong with the encryption
+		if(ret != 0)
+		{
+			logcat(Const.LOGE, tag, "sodium encryption failed, asym: " + asym + " return code: " + ret);;
+			return null;
+		}
+
+		//glue all the information together for sending
+		//[nonce|message length|encrypted message]
+		byte[] messageLengthDissasembled = Utils.disassembleInt(message.length, Const.JAVA_MAX_PRECISION_INT);
+		byte[] finalSetup = new byte[nonceLength+Const.JAVA_MAX_PRECISION_INT+cipherTextLength];
+		System.arraycopy(nonce, 0, finalSetup, 0, nonceLength);
+		System.arraycopy(messageLengthDissasembled, 0, finalSetup, nonceLength, Const.JAVA_MAX_PRECISION_INT);
+		System.arraycopy(cipherText, 0, finalSetup, nonceLength+Const.JAVA_MAX_PRECISION_INT, cipherTextLength);
+		return finalSetup;
+	}
+
+	public static byte[] sodiumAsymDecrypt(byte[] setup, byte[] from)
+	{
+		return sodiumDecrypt(setup, true, from);
+	}
+
+	public static byte[] sodiumSymDecrypt(byte[] setup)
+	{
+		return sodiumDecrypt(setup, false, null);
+	}
+
+	private static byte[] sodiumDecrypt(byte[] setup, boolean asym, byte[] from)
+	{
+		Sodium.sodium_init();
+
+		//[nonce|message length|encrypted message]
+		//reassemble the nonce
+		int nonceLength = 0;
+		if(asym)
+		{
+			nonceLength = Sodium.crypto_box_noncebytes();
+		}
+		else
+		{
+			nonceLength = Sodium.crypto_secretbox_noncebytes();
+		}
+		byte[] nonce = new byte[nonceLength];
+		System.arraycopy(setup, 0, nonce, 0, nonceLength);
+
+		//get the cipher text
+		byte[] messageLengthDisassembled = new byte[Const.JAVA_MAX_PRECISION_INT];
+		System.arraycopy(setup, nonceLength, messageLengthDisassembled, 0, Const.JAVA_MAX_PRECISION_INT);
+		int messageLength = Utils.reassembleInt(messageLengthDisassembled);
+		int cipherLength = setup.length - nonceLength - Const.JAVA_MAX_PRECISION_INT;
+		byte[] cipherText = new byte[cipherLength];
+		System.arraycopy(setup, nonceLength+Const.JAVA_MAX_PRECISION_INT, cipherText, 0, cipherLength);
+		byte[] message= new byte[messageLength];
+
+		//message length can't be longer than the encrypted cipher
+		if(messageLength > cipherLength)
+		{
+			return null;
+		}
+
+		int ret;
+		if(asym)
+		{
+			ret = Sodium.crypto_box_open_easy(message, cipherText, cipherLength, nonce, from, Vars.privateSodium);
+		}
+		else
+		{
+			ret = Sodium.crypto_secretbox_open_easy(message, cipherText, cipherLength, nonce, Vars.sodiumSymmetricKey);
+		}
+
+		if(ret != 0)
+		{
+			logcat(Const.LOGE, tag, "sodium decryption failed, asym: " + asym + " return code: " + ret);;
+			return null;
+		}
+		return message;
 	}
 }
