@@ -341,7 +341,7 @@ public class Utils
 			{
 				byte[] serverCertBytes = Base64.decode(Vars.certDump, Const.BASE64_Flags);
 				X509Certificate serverCert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(serverCertBytes));
-				Vars.serverKey = serverCert.getPublicKey();
+				Vars.serverTlsKey = serverCert.getPublicKey();
 			}
 			catch(Exception e)
 			{
@@ -394,7 +394,7 @@ public class Utils
 			X509Certificate expectedCert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(certInputStream);
 			byte[] expectedDump = expectedCert.getEncoded();
 			Vars.certDump = Base64.encodeToString(expectedDump, Const.BASE64_Flags);
-			Vars.serverKey = expectedCert.getPublicKey();
+			Vars.serverTlsKey = expectedCert.getPublicKey();
 
 			//store the certificate file name for esthetic purposes
 			String[] expanded = uri.getPath().split("[\\/:\\:]");

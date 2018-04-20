@@ -49,7 +49,7 @@ public class Vars
 	public static int mediaPort;
 	public static String certDump;
 	public static String certName;
-	public static PublicKey serverKey = null;
+	public static PublicKey serverTlsKey = null;
 	public static String serverPublicSodiumName;
 	public static String serverPublicSodiumDump;
 	public static byte[] serverPublicSodium = null;
