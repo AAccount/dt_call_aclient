@@ -485,7 +485,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 			private static final int STEREOIN = AudioFormat.CHANNEL_IN_STEREO;
 			private static final int MIC = MediaRecorder.AudioSource.DEFAULT;
-			private volatile int error = 0; //java never sees this change because the jni does it. mark it volatile to prevent false assumptions
 
 			@Override
 			public void run()
@@ -570,8 +569,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					/**
 					 *Avoid sending tons of tiny packets wasting resources for headers.
 					 */
-					int encodeLength = FdkAAC.encode(wavbuffer, aacbuffer, error);
-					if(error != 0)
+					int encodeLength = FdkAAC.encode(wavbuffer, aacbuffer);
+					String error = FdkAAC.getEncoderError();
+					if(!error.equals(FdkAAC.AACENC_OK))
 					{
 						Log.d(tag, "encoding error of: " + error);
 					}
