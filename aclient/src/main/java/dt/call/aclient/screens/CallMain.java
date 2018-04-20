@@ -78,7 +78,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private int min=0, sec=0;
 	private Timer counter = new Timer();
 	private BroadcastReceiver myReceiver;
-	private int garbage=0, tx=0, rx=0, txCount=0, rxCount=0, rxSeq=0, txSeq=0, skipped=0;
+	private int garbage=0, txData=0, rxData=0, txCount=0, rxCount=0, rxSeq=0, txSeq=0, skipped=0;
 	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel;
 	private boolean showStats = false;
 
@@ -172,7 +172,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 				if(showStats)
 				{
-					String rxDisp=formatInternetMeteric(rx), txDisp=formatInternetMeteric(tx);
+					String rxDisp=formatInternetMeteric(rxData), txDisp=formatInternetMeteric(txData);
 					int missing = txCount-rxCount;
 					final String latestStats = missingLabel + ": " + (missing > 0 ? missing : 0) + " " + garbageLabel + ": " + garbage + "\n"
 							+rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp + "\n"
@@ -587,7 +587,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 							DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length, Vars.callServer, Vars.mediaPort);
 							Vars.mediaUdp.send(packet);
-							tx = tx + accumulatorEncrypted.length + HEADERS;
+							txData = txData + accumulatorEncrypted.length + HEADERS;
 							txCount++;
 						}
 						catch (Exception e)
@@ -675,7 +675,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						Vars.mediaUdp.receive(received);
 
 						//decrypt
-						rx = rx + received.getLength() + HEADERS;
+						rxData = rxData + received.getLength() + HEADERS;
 						rxCount++;
 						byte[] accumulator = new byte[received.getLength()];
 						System.arraycopy(received.getData(), 0, accumulator, 0, received.getLength());
