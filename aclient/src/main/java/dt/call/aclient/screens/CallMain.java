@@ -656,25 +656,24 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				Log.d(tag, "recommended buffer size: " + BUFFER);
 
 				//setup the wave audio track with enhancements if available
-				AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLES, STEREOOUT, S16, BUFFER, AudioTrack.MODE_STREAM);
+				final AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLES, STEREOOUT, S16, BUFFER, AudioTrack.MODE_STREAM);
 				wavPlayer.play();
 
 				while(Vars.state == CallState.INCALL)
 				{
-					short[] wavbuffer = new short[WAVBUFFERSIZE];
 					try
 					{
 						//read encrypted aac
-						byte[] inputBuffer = new byte[Const.SIZE_MEDIA];
+						final byte[] inputBuffer = new byte[Const.SIZE_MEDIA];
 						DatagramPacket received = new DatagramPacket(inputBuffer, Const.SIZE_MEDIA);
 						Vars.mediaUdp.receive(received);
 
 						//decrypt
 						rxData = rxData + received.getLength() + HEADERS;
 						rxCount++;
-						byte[] accumulator = new byte[received.getLength()];
+						final byte[] accumulator = new byte[received.getLength()];
 						System.arraycopy(received.getData(), 0, accumulator, 0, received.getLength());
-						byte[] accumulatorDec = Utils.sodiumSymDecrypt(accumulator); //contents [size1|aac chunk 1|size2|aac chunk 2|...|sizeN|aac chunk N]
+						final byte[] accumulatorDec = Utils.sodiumSymDecrypt(accumulator); //contents [size1|aac chunk 1|size2|aac chunk 2|...|sizeN|aac chunk N]
 						if(accumulatorDec == null)
 						{
 							Utils.logcat(Const.LOGD, tag, "Invalid decryption");
@@ -682,9 +681,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						}
 
 						int readPos = SEQ_LENGTH_ACCURACY;
-						byte[] sequenceBytes = new byte[SEQ_LENGTH_ACCURACY];
+						final byte[] sequenceBytes = new byte[SEQ_LENGTH_ACCURACY];
 						System.arraycopy(accumulatorDec, 0, sequenceBytes, 0, SEQ_LENGTH_ACCURACY);
-						int sequence = Utils.reassembleInt(sequenceBytes);
+						final int sequence = Utils.reassembleInt(sequenceBytes);
 						if(sequence <= rxSeq)
 						{
 							skipped++;
@@ -695,16 +694,17 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						while(readPos < accumulatorDec.length)
 						{
 							//retrieve the size from the first 2 bytes
-							byte[] encLengthBytes = new byte[ENC_LENGTH_ACCURACY];
+							final byte[] encLengthBytes = new byte[ENC_LENGTH_ACCURACY];
 							System.arraycopy(accumulatorDec, readPos, encLengthBytes, 0, ENC_LENGTH_ACCURACY);
-							int aacLength = Utils.reassembleInt(encLengthBytes);
+							final int aacLength = Utils.reassembleInt(encLengthBytes);
 							readPos = readPos+ ENC_LENGTH_ACCURACY;
 
 							//extract the aac chunk
-							byte[] encbuffer = new byte[aacLength];
+							final byte[] encbuffer = new byte[aacLength];
 							System.arraycopy(accumulatorDec, readPos, encbuffer, 0, aacLength);
 
 							//decode aac chunk
+							final short[] wavbuffer = new short[WAVBUFFERSIZE];
 							FdkAAC.decode(encbuffer, wavbuffer);
 							wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
 
