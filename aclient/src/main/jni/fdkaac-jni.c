@@ -10,16 +10,15 @@
 
 HANDLE_AACENCODER encInternals;
 HANDLE_AACDECODER decInternals;
-AACENC_ERROR aacencError = AACENC_OK;
 
 JNIEXPORT jint JNICALL
-Java_dt_call_aclient_fdkaac_FdkAAC_getWavFrameSize(JNIEnv *env, jclass type)
+Java_dt_call_aclient_codec_FdkAAC_getWavFrameSize(JNIEnv *env, jclass type)
 {
     return WAVFRAME_SZ;
 }
 
 JNIEXPORT void JNICALL
-Java_dt_call_aclient_fdkaac_FdkAAC_initAAC(JNIEnv *env, jclass type)
+Java_dt_call_aclient_codec_FdkAAC_initAAC(JNIEnv *env, jclass type)
 {
     //initialize encoder and decoder in the same function because the decoder needs encoder information
     //  therefore order matters when initializing the encoder and decoder: 1--> encoder 2-->decoder
@@ -66,19 +65,19 @@ Java_dt_call_aclient_fdkaac_FdkAAC_initAAC(JNIEnv *env, jclass type)
     }
 
     //setup the decoder
-    decInternals = aacDecoder_Open(TRANSPORT, (UINT)1);
+    decInternals = aacDecoder_Open(TRANSPORT, 1);
 
     //it's the same program, compiled with the same static library with the same jni on both ends.
     // ok to cheat a little and use your own AACENC_InfoStruct for somebody else's voice
-    UCHAR* info = (UCHAR*)&encInfo;
+    UCHAR *info = (UCHAR*)&encInfo;
     UINT infoSz = sizeof(AACENC_InfoStruct);
     aacDecoder_ConfigRaw(decInternals, &info, &infoSz);
 }
 
 JNIEXPORT jint JNICALL
-Java_dt_call_aclient_fdkaac_FdkAAC_encode(JNIEnv *env, jclass type, jshortArray wav_, jbyteArray aac_)
+Java_dt_call_aclient_codec_FdkAAC_encode(JNIEnv *env, jclass type, jshortArray wav_, jbyteArray aac_, jint error_)
 {
-    jshort* wav = (*env)->GetShortArrayElements(env, wav_, NULL);
+    jshort *wav = (*env)->GetShortArrayElements(env, wav_, NULL);
 
     AACENC_BufDesc input;
     int inputIdentifier = IN_AUDIO_DATA;
@@ -97,7 +96,7 @@ Java_dt_call_aclient_fdkaac_FdkAAC_encode(JNIEnv *env, jclass type, jshortArray 
     AACENC_BufDesc output;
     int outputIdenfitier = OUT_BITSTREAM_DATA;
     int outputBytes = 10000;
-    jbyte* outputBuffer = malloc(outputBytes);
+    jbyte  *outputBuffer = malloc(outputBytes);
     int outputSampleSize = 1;
     output.numBufs = 1;
     output.bufs = (void**)&outputBuffer;
@@ -106,32 +105,28 @@ Java_dt_call_aclient_fdkaac_FdkAAC_encode(JNIEnv *env, jclass type, jshortArray 
     output.bufElSizes = &outputSampleSize;
     AACENC_OutArgs outArgs;
 
-    aacencError = aacEncEncode(encInternals, &input, &output, &inArgs, &outArgs);
+    int result = aacEncEncode(encInternals, &input, &output, &inArgs, &outArgs);
+    error_ = result;
     (*env)->SetByteArrayRegion(env, aac_, 0, outArgs.numOutBytes, outputBuffer);
+
     (*env)->ReleaseShortArrayElements(env, wav_, wav, 0);
     free(outputBuffer);
     return outArgs.numOutBytes;
 }
 
-JNIEXPORT jint JNICALL
-Java_dt_call_aclient_fdkaac_FdkAAC_getEncodeErrorRaw(JNIEnv *env, jclass type)
-{
-    return aacencError;
-}
-
 JNIEXPORT void JNICALL
-Java_dt_call_aclient_fdkaac_FdkAAC_closeEncoder(JNIEnv *env, jclass type)
+Java_dt_call_aclient_codec_FdkAAC_closeEncoder(JNIEnv *env, jclass type)
 {
     aacEncClose(&encInternals);
 }
 
 JNIEXPORT jint JNICALL
-Java_dt_call_aclient_fdkaac_FdkAAC_decode(JNIEnv *env, jclass type, jbyteArray aac_, jshortArray wav_)
+Java_dt_call_aclient_codec_FdkAAC_decode(JNIEnv *env, jclass type, jbyteArray aac_, jshortArray wav_)
 {
-    jbyte* aac = (*env)->GetByteArrayElements(env, aac_, NULL);
+    jbyte *aac = (*env)->GetByteArrayElements(env, aac_, NULL);
     UINT aacSize = (UINT)(*env)->GetArrayLength(env, aac_);
     UINT valid = aacSize;
-    UCHAR* caac = (UCHAR*)aac;
+    UCHAR *caac = (UCHAR*)aac;
     aacDecoder_Fill(decInternals, &caac, &aacSize, &valid);
 
     short *wavJni = malloc(sizeof(int16_t)*WAVFRAME_SZ);
@@ -144,7 +139,7 @@ Java_dt_call_aclient_fdkaac_FdkAAC_decode(JNIEnv *env, jclass type, jbyteArray a
 }
 
 JNIEXPORT void JNICALL
-Java_dt_call_aclient_fdkaac_FdkAAC_closeDecoder(JNIEnv *env, jclass type)
+Java_dt_call_aclient_codec_FdkAAC_closeDecoder(JNIEnv *env, jclass type)
 {
     aacDecoder_Close(decInternals);
 }
