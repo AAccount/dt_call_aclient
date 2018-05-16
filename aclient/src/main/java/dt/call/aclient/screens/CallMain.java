@@ -86,7 +86,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	//related to audio playback and recording
 	private AudioManager audioManager;
-	private AudioRecord wavRecorder = null;
 
 	//for dial tone when initiating a call
 	private AudioTrack dialTone = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, S16, DIAL_TONE_SIZE, AudioTrack.MODE_STATIC);
@@ -490,7 +489,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has started");
 
 				//setup the wave audio recorder. since it is released and restarted, it needs to be setup here and not onCreate
-				wavRecorder = new AudioRecord(MIC, SAMPLES, STEREOIN, S16, WAVBUFFERSIZE);
+				AudioRecord wavRecorder = new AudioRecord(MIC, SAMPLES, STEREOIN, S16, WAVBUFFERSIZE);
 				wavRecorder.startRecording();
 
 				//my dying i9300 on CM12.1 sometimes can't get the audio record on its first try
@@ -513,7 +512,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					endThread();
 				}
 
-				byte[] accumulator = new byte[Const.SIZE_MEDIA -100];
+				final byte[] accumulator = new byte[Const.SIZE_MEDIA -100];
 				int accPos = 4;
 
 				//put the first sequence number to detect duplicate or old voice packets
@@ -526,8 +525,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 				while (Vars.state == CallState.INCALL)
 				{
-					byte[] aacbuffer = new byte[AACBUFFERSIZE];
-					short[] wavbuffer = new short[WAVBUFFERSIZE];
+					final byte[] aacbuffer = new byte[AACBUFFERSIZE];
+					final short[] wavbuffer = new short[WAVBUFFERSIZE];
 
 					if (micStatusNew)
 					{
@@ -568,16 +567,16 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					 *Avoid sending tons of tiny packets wasting resources for headers.
 					 */
 					int error = 0;
-					int encodeLength = FdkAAC.encode(wavbuffer, aacbuffer, error);
+					final int encodeLength = FdkAAC.encode(wavbuffer, aacbuffer, error);
 
 					//if the current aac chunk won't fit in the accumulator, send the packet and restart the accumulator
 					if((accPos + ENC_LENGTH_ACCURACY + encodeLength) > accumulator.length)
 					{
 						try
 						{
-							byte[] accumulatorTrimmed = new byte[accPos];
+							final byte[] accumulatorTrimmed = new byte[accPos];
 							System.arraycopy(accumulator, 0, accumulatorTrimmed, 0, accPos);
-							byte[] accumulatorEncrypted = Utils.sodiumSymEncrypt(accumulatorTrimmed);
+							final byte[] accumulatorEncrypted = Utils.sodiumSymEncrypt(accumulatorTrimmed);
 
 							DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length, Vars.callServer, Vars.mediaPort);
 							Vars.mediaUdp.send(packet);
@@ -599,13 +598,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						Arrays.fill(accumulator, (byte)0);
 
 						//integer broken up as: 12,345,678: [12,34,56,78.....voice....]
-						byte[] txSeqDisassembled = Utils.disassembleInt(txSeq, SEQ_LENGTH_ACCURACY);
+						final byte[] txSeqDisassembled = Utils.disassembleInt(txSeq, SEQ_LENGTH_ACCURACY);
 						System.arraycopy(txSeqDisassembled, 0, accumulator, 0, SEQ_LENGTH_ACCURACY);
 						txSeq++;
 					}
 
 					//write the aac chunk size as a "header" before writing the actual aac data
-					byte[] encodedLengthDisassembled = Utils.disassembleInt(encodeLength, ENC_LENGTH_ACCURACY);
+					final byte[] encodedLengthDisassembled = Utils.disassembleInt(encodeLength, ENC_LENGTH_ACCURACY);
 					System.arraycopy(encodedLengthDisassembled, 0, accumulator, accPos, ENC_LENGTH_ACCURACY);
 					accPos = accPos + ENC_LENGTH_ACCURACY;
 					System.arraycopy(aacbuffer, 0 , accumulator, accPos, encodeLength);
