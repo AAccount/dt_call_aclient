@@ -14,8 +14,6 @@ import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder;
-import android.media.audiofx.AcousticEchoCanceler;
-import android.media.audiofx.NoiseSuppressor;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
@@ -44,7 +42,7 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.CommandEndAsync;
-import dt.call.aclient.fdkaac.FdkAAC;
+import dt.call.aclient.codec.FdkAAC;
 
 public class CallMain extends AppCompatActivity implements View.OnClickListener, SensorEventListener
 {
@@ -62,7 +60,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final int END_TONE_SIZE = 10858;
 	private static final int WAV_FILE_HEADER = 44; //.wav files actually have a 44 byte header
 
-	private static final int AAC_LENGTH_ACCURACY = 2;
+	private static final int ENC_LENGTH_ACCURACY = 2;
 	private static final int SEQ_LENGTH_ACCURACY = 4;
 
 	//ui stuff
@@ -569,15 +567,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					/**
 					 *Avoid sending tons of tiny packets wasting resources for headers.
 					 */
-					int encodeLength = FdkAAC.encode(wavbuffer, aacbuffer);
-					String error = FdkAAC.getEncoderError();
-					if(!error.equals(FdkAAC.AACENC_OK))
-					{
-						Log.d(tag, "encoding error of: " + error);
-					}
+					int error = 0;
+					int encodeLength = FdkAAC.encode(wavbuffer, aacbuffer, error);
 
 					//if the current aac chunk won't fit in the accumulator, send the packet and restart the accumulator
-					if((accPos + AAC_LENGTH_ACCURACY + encodeLength) > accumulator.length)
+					if((accPos + ENC_LENGTH_ACCURACY + encodeLength) > accumulator.length)
 					{
 						try
 						{
@@ -611,10 +605,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					}
 
 					//write the aac chunk size as a "header" before writing the actual aac data
-					byte[] encodedLengthDisassembled = Utils.disassembleInt(encodeLength, AAC_LENGTH_ACCURACY);
-					System.arraycopy(encodedLengthDisassembled, 0, accumulator, accPos, AAC_LENGTH_ACCURACY);
-					System.arraycopy(aacbuffer, 0 , accumulator, accPos+AAC_LENGTH_ACCURACY, encodeLength);
-					accPos = accPos + AAC_LENGTH_ACCURACY + encodeLength;
+					byte[] encodedLengthDisassembled = Utils.disassembleInt(encodeLength, ENC_LENGTH_ACCURACY);
+					System.arraycopy(encodedLengthDisassembled, 0, accumulator, accPos, ENC_LENGTH_ACCURACY);
+					accPos = accPos + ENC_LENGTH_ACCURACY;
+					System.arraycopy(aacbuffer, 0 , accumulator, accPos, encodeLength);
+					accPos = accPos + encodeLength;
 				}
 				FdkAAC.closeEncoder();
 				wavRecorder.stop();
@@ -700,27 +695,21 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						while(readPos < accumulatorDec.length)
 						{
 							//retrieve the size from the first 2 bytes
-							byte[] aacLengthBytes = new byte[AAC_LENGTH_ACCURACY];
-							System.arraycopy(accumulatorDec, readPos, aacLengthBytes, 0, AAC_LENGTH_ACCURACY);
-							int aacLength = Utils.reassembleInt(aacLengthBytes);
+							byte[] encLengthBytes = new byte[ENC_LENGTH_ACCURACY];
+							System.arraycopy(accumulatorDec, readPos, encLengthBytes, 0, ENC_LENGTH_ACCURACY);
+							int aacLength = Utils.reassembleInt(encLengthBytes);
+							readPos = readPos+ ENC_LENGTH_ACCURACY;
 
 							//extract the aac chunk
-							byte[] aacbuffer = new byte[aacLength];
-							System.arraycopy(accumulatorDec, readPos+AAC_LENGTH_ACCURACY, aacbuffer, 0, aacLength);
+							byte[] encbuffer = new byte[aacLength];
+							System.arraycopy(accumulatorDec, readPos, encbuffer, 0, aacLength);
 
 							//decode aac chunk
-							int error = FdkAAC.decode(aacbuffer, wavbuffer);
-							if(error != 0)
-							{
-								Utils.logcat(Const.LOGW, tag, "aac jni decoder error of: " + error);
-							}
-							else
-							{
-								wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
-							}
+							FdkAAC.decode(encbuffer, wavbuffer);
+							wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
 
 							//advance the accumulator read position
-							readPos = readPos + AAC_LENGTH_ACCURACY + aacLength;
+							readPos = readPos + aacLength;
 						}
 					}
 					catch (Exception i) //io or null pointer depending on when the connection dies
