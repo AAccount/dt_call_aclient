@@ -37,7 +37,7 @@ public class BackgroundManager extends BroadcastReceiver
 		//double check to make sure these things are setup
 		Vars.applicationContext = context.getApplicationContext();
 		Utils.initAlarmVars();
-		AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+		final AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 
 		if(Vars.uname == null || Vars.privateSodium == null || Vars.serverAddress == null)
 		{
@@ -46,7 +46,7 @@ public class BackgroundManager extends BroadcastReceiver
 			Utils.loadPrefs();
 		}
 
-		String action = intent.getAction();
+		final String action = intent.getAction();
 		Utils.logcat(Const.LOGD, tag, "background manager received: " + action);
 
 		//to prevent timing problems, if android's connectivity_action AND workaround HAS_INTERNET broadcast are available
@@ -75,7 +75,7 @@ public class BackgroundManager extends BroadcastReceiver
 		}
 		else if (!Const.NEEDS_MANUAL_INTERNET_DETECTION && action.equals(ConnectivityManager.CONNECTIVITY_ACTION))
 		{
-			boolean extra = intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false);
+			final boolean extra = intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false);
 			Bundle b = intent.getExtras();
 			String dump = "";
 			for(String k : b.keySet())
@@ -174,7 +174,7 @@ public class BackgroundManager extends BroadcastReceiver
 
 	private void handleNoInternet(Context mainContext)
 	{
-		AlarmManager manager = (AlarmManager)mainContext.getSystemService(Context.ALARM_SERVICE);
+		final AlarmManager manager = (AlarmManager)mainContext.getSystemService(Context.ALARM_SERVICE);
 		manager.cancel(Vars.pendingHeartbeat);
 		manager.cancel(Vars.pendingHeartbeat2ndary);
 		manager.cancel(Vars.pendingRetries);
