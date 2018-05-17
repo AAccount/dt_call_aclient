@@ -259,7 +259,16 @@ public class CmdListener extends IntentService
 						final String ackString = new String(decAck, "UTF-8");
 
 						//verify ack timestamp
-						final long ackts = Long.valueOf(ackString);
+						long ackts = 0;
+						try
+						{
+							ackts = Long.valueOf(ackString);
+						}
+						catch(NumberFormatException n)
+						{
+							Utils.dumpException(tag, n);
+						}
+
 						if(Utils.validTS(ackts))
 						{
 							gotAck = true;
