@@ -598,7 +598,7 @@ public class Utils
 		{
 			nonceLength = Sodium.crypto_secretbox_noncebytes();
 		}
-		byte[] nonce = new byte[nonceLength];
+		final byte[] nonce = new byte[nonceLength];
 		Sodium.randombytes_buf(nonce, nonceLength);
 
 		//setup cipher text
@@ -626,8 +626,8 @@ public class Utils
 
 		//glue all the information together for sending
 		//[nonce|message length|encrypted message]
-		byte[] messageLengthDissasembled = Utils.disassembleInt(message.length, Const.JAVA_MAX_PRECISION_INT);
-		byte[] finalSetup = new byte[nonceLength+Const.JAVA_MAX_PRECISION_INT+cipherTextLength];
+		final byte[] messageLengthDissasembled = Utils.disassembleInt(message.length, Const.JAVA_MAX_PRECISION_INT);
+		final byte[] finalSetup = new byte[nonceLength+Const.JAVA_MAX_PRECISION_INT+cipherTextLength];
 		System.arraycopy(nonce, 0, finalSetup, 0, nonceLength);
 		System.arraycopy(messageLengthDissasembled, 0, finalSetup, nonceLength, Const.JAVA_MAX_PRECISION_INT);
 		System.arraycopy(cipherText, 0, finalSetup, nonceLength+Const.JAVA_MAX_PRECISION_INT, cipherTextLength);
@@ -649,7 +649,6 @@ public class Utils
 		Sodium.sodium_init();
 
 		//[nonce|message length|encrypted message]
-		//reassemble the nonce
 		int nonceLength = 0;
 		if(asym)
 		{
@@ -659,33 +658,48 @@ public class Utils
 		{
 			nonceLength = Sodium.crypto_secretbox_noncebytes();
 		}
-		byte[] nonce = new byte[nonceLength];
-		System.arraycopy(setup, 0, nonce, 0, nonceLength);
 
-		//get the cipher text
-		byte[] messageLengthDisassembled = new byte[Const.JAVA_MAX_PRECISION_INT];
-		System.arraycopy(setup, nonceLength, messageLengthDisassembled, 0, Const.JAVA_MAX_PRECISION_INT);
-		int messageLength = Utils.reassembleInt(messageLengthDisassembled);
-		int cipherLength = setup.length - nonceLength - Const.JAVA_MAX_PRECISION_INT;
-		byte[] cipherText = new byte[cipherLength];
-		System.arraycopy(setup, nonceLength+Const.JAVA_MAX_PRECISION_INT, cipherText, 0, cipherLength);
-		byte[] message= new byte[messageLength];
-
-		//message length can't be longer than the encrypted cipher
-		if(messageLength > cipherLength)
+		//check if the nonce and message length are there
+		if(setup.length < (nonceLength + Const.JAVA_MAX_PRECISION_INT))
 		{
 			return null;
 		}
 
+		//reassemble the nonce
+		final byte[] nonce = new byte[nonceLength];
+		System.arraycopy(setup, 0, nonce, 0, nonceLength);
+
+		//get the message length and check it
+		final byte[] messageLengthDisassembled = new byte[Const.JAVA_MAX_PRECISION_INT];
+		System.arraycopy(setup, nonceLength, messageLengthDisassembled, 0, Const.JAVA_MAX_PRECISION_INT);
+		final int messageLength = Utils.reassembleInt(messageLengthDisassembled);
+		final int cipherLength = setup.length - nonceLength - Const.JAVA_MAX_PRECISION_INT;
+		final boolean messageCompressed = messageLength > cipherLength;
+		final boolean messageMIA = messageLength < 1;
+		if(messageCompressed || messageMIA)
+		{
+			return null;
+		}
+
+		//get the cipher text
+		final byte[] cipherText = new byte[cipherLength];
+		System.arraycopy(setup, nonceLength+Const.JAVA_MAX_PRECISION_INT, cipherText, 0, cipherLength);
+		final byte[] messageStorage= new byte[cipherLength];//store the message in somewhere it is guaranteed to fit in case messageLength is bogus/malicious
+
 		int ret;
 		if(asym)
 		{
-			ret = Sodium.crypto_box_open_easy(message, cipherText, cipherLength, nonce, from, Vars.privateSodium);
+			ret = Sodium.crypto_box_open_easy(messageStorage, cipherText, cipherLength, nonce, from, Vars.privateSodium);
 		}
 		else
 		{
-			ret = Sodium.crypto_secretbox_open_easy(message, cipherText, cipherLength, nonce, Vars.sodiumSymmetricKey);
+			ret = Sodium.crypto_secretbox_open_easy(messageStorage, cipherText, cipherLength, nonce, Vars.sodiumSymmetricKey);
 		}
+
+		//now that the message has been successfully decrypted, take in on blind faith messageLength makes was ok
+		//	up to the next function to make sure the decryption contents aren't truncated by a malicious messageLength
+		final byte[] message = new byte[messageLength];
+		System.arraycopy(messageStorage, 0, message, 0, messageLength);
 
 		if(ret != 0)
 		{
