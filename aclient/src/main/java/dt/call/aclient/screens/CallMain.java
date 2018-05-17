@@ -76,19 +76,19 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private int min=0, sec=0;
 	private Timer counter = new Timer();
 	private BroadcastReceiver myReceiver;
-	private int garbage=0, txData=0, rxData=0, txCount=0, rxCount=0, rxSeq=0, txSeq=0, skipped=0;
+	private int garbage=0, txData=0, rxData=0, rxCount=0, rxSeq=0, txSeq=0, skipped=0;
 	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel;
 	private boolean showStats = false;
 
 	//proximity sensor stuff
 	private SensorManager sensorManager;
-	private Sensor proximity;
+	private Sensor proximity = null;
 
 	//related to audio playback and recording
 	private AudioManager audioManager;
 
 	//for dial tone when initiating a call
-	private AudioTrack dialTone = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, S16, DIAL_TONE_SIZE, AudioTrack.MODE_STATIC);
+	final private AudioTrack dialTone = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, S16, DIAL_TONE_SIZE, AudioTrack.MODE_STATIC);
 	private boolean playedEndTone=false;
 
 	@Override
@@ -127,7 +127,15 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 		//proximity sensor
 		sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-		proximity = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+		try
+		{
+			proximity = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+		}
+		catch(NullPointerException n)
+		{
+			Utils.logcat(Const.LOGE, tag, "CallMain get proximity sensor null");
+			Utils.dumpException(tag, n);
+		}
 
 		//Start showing the counter for how long it's taking to answer the call or how long
 		//	the call has been going for
@@ -170,7 +178,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				if(showStats)
 				{
 					String rxDisp=formatInternetMeteric(rxData), txDisp=formatInternetMeteric(txData);
-					int missing = txCount-rxCount;
+					int missing = txSeq-rxCount;
 					final String latestStats = missingLabel + ": " + (missing > 0 ? missing : 0) + " " + garbageLabel + ": " + garbage + "\n"
 							+rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp + "\n"
 							+rxSeqLabel + ": " + rxSeq + " "
@@ -270,7 +278,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		super.onResume();
 		Sodium.sodium_init();
 		screenShowing = true;
-		sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_NORMAL);
+		if(proximity != null)
+		{
+			sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_NORMAL);
+		}
 	}
 
 	@Override
@@ -305,7 +316,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			{
 				dialTone.stop();
 				dialTone.release();
-				dialTone = null;
 			}
 			catch (Exception e)
 			{
@@ -438,7 +448,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		{
 			dialTone.stop();
 			dialTone.release();
-			dialTone = null;
 		}
 		catch (Exception e)
 		{
@@ -581,7 +590,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length, Vars.callServer, Vars.mediaPort);
 							Vars.mediaUdp.send(packet);
 							txData = txData + accumulatorEncrypted.length + HEADERS;
-							txCount++;
 						}
 						catch (Exception e)
 						{
@@ -757,7 +765,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	@Override
 	public void onSensorChanged(SensorEvent event)
 	{
-		float x = event.values[0];
+		final float x = event.values[0];
 
 		if(x < 5)
 		{
@@ -785,10 +793,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private String formatInternetMeteric(int n)
 	{
-		int mega = 1000000;
-		int kilo = 1000;
+		final int mega = 1000000;
+		final int kilo = 1000;
 
-		DecimalFormat decimalFormat = new DecimalFormat("#.###");
+		final DecimalFormat decimalFormat = new DecimalFormat("#.###");
 		if(n > mega)
 		{
 			return decimalFormat.format((float)n / (float)mega) + "M";
