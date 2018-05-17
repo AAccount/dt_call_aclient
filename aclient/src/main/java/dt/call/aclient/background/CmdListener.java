@@ -47,7 +47,6 @@ public class CmdListener extends IntentService
 	@Override
 	protected void onHandleIntent(Intent workIntent)
 	{
-		//	don't want this to catch the login resposne
 		Utils.logcat(Const.LOGD, tag, "command listener INTENT SERVICE started");
 
 		while(inputValid)
@@ -65,14 +64,14 @@ public class CmdListener extends IntentService
 			try
 			{//the async magic here... it will patiently wait until something comes in
 
-				byte[] rawString = new byte[Const.SIZE_COMMAND];
-				int length = Vars.commandSocket.getInputStream().read(rawString);
+				final byte[] rawString = new byte[Const.SIZE_COMMAND];
+				final int length = Vars.commandSocket.getInputStream().read(rawString);
 				if(length < 0)
 				{
 					throw new Exception("input stream read failed");
 				}
-				String fromServer = new String(rawString, 0, length);
-				String[] respContents = fromServer.split("\\|");
+				final String fromServer = new String(rawString, 0, length);
+				final String[] respContents = fromServer.split("\\|");
 				logd = "Server response raw: " + fromServer + "\n";
 
 				//check for properly formatted command
@@ -83,7 +82,7 @@ public class CmdListener extends IntentService
 				}
 
 				//verify timestamp
-				long ts = Long.valueOf(respContents[0]);
+				final long ts = Long.valueOf(respContents[0]);
 				if(!Utils.validTS(ts))
 				{
 					Utils.logcat(Const.LOGW, tag, logd+"Rejecting server response for bad timestamp");
@@ -91,14 +90,14 @@ public class CmdListener extends IntentService
 				}
 
 				//look at what the server is telling the call simulator to do
-				String command = respContents[1];
-				String involved = respContents[respContents.length-1];
+				final String command = respContents[1];
+				final String involved = respContents[respContents.length-1];
 
 				//"incoming" has no "other person you're in a call with" to verify because incoming defines who that other person is
 				if (command.equals("incoming"))
 				{
 					//wake up the cell phone
-					PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+					final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 					Vars.wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE, Const.WAKELOCK_TAG);
 					Vars.wakeLock.acquire();
 
@@ -116,7 +115,7 @@ public class CmdListener extends IntentService
 
 					//launch the incoming call screen
 					Utils.setNotification(R.string.state_popup_incoming, R.color.material_light_blue, Vars.go2CallIncomingPending);
-					Intent showIncoming = new Intent(getApplicationContext(), CallIncoming.class);
+					final Intent showIncoming = new Intent(getApplicationContext(), CallIncoming.class);
 					showIncoming.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK); //needed to start activity from background
 					startActivity(showIncoming);
 					continue;
@@ -154,8 +153,8 @@ public class CmdListener extends IntentService
 				else if(command.equals("prepare"))
 				{
 					//prepare the server's presentation of the person's public key for use
-					String receivedKeyDump = respContents[2];
-					String expectedKeyDump = Vars.publicSodiumDumps.get(Vars.callWith);
+					final String receivedKeyDump = respContents[2];
+					final String expectedKeyDump = Vars.publicSodiumDumps.get(Vars.callWith);
 					byte[] expectedKey = Vars.publicSodiumTable.get(Vars.callWith);
 
 					//if this person's public key is known, sanity check the server to make sure it sent the right one
@@ -173,7 +172,6 @@ public class CmdListener extends IntentService
 					else
 					{
 						//with nothing else to go on, assume this really is the person's key
-						expectedKeyDump = receivedKeyDump;
 						byte[] receivedUserKey = Utils.interpretSodiumPublicKey(receivedKeyDump);
 						Vars.publicSodiumTable.put(Vars.callWith, receivedUserKey);
 						Vars.publicSodiumDumps.put(Vars.callWith, receivedKeyDump);
@@ -190,11 +188,11 @@ public class CmdListener extends IntentService
 						Sodium.randombytes_buf(Vars.sodiumSymmetricKey, Sodium.crypto_secretbox_keybytes());
 
 						//have sodium encrypt its key
-						byte[] sodiumAsymmCrypted = Utils.sodiumAsymEncrypt(Vars.sodiumSymmetricKey, expectedKey);
-						String finalEncryptedString = Utils.stringify(sodiumAsymmCrypted, true);
+						final byte[] sodiumAsymmCrypted = Utils.sodiumAsymEncrypt(Vars.sodiumSymmetricKey, expectedKey);
+						final String finalEncryptedString = Utils.stringify(sodiumAsymmCrypted, true);
 
 						//send the sodium key
-						String passthrough = Utils.currentTimeSeconds() + "|passthrough|" + involved + "|" + finalEncryptedString + "|" + Vars.sessionKey;
+						final String passthrough = Utils.currentTimeSeconds() + "|passthrough|" + involved + "|" + finalEncryptedString + "|" + Vars.sessionKey;
 						logd = logd + "passthrough of sodium key " + passthrough.replace(finalEncryptedString, Const.SODIUM_PLACEHOLDER) + "\n";
 						try
 						{
@@ -218,24 +216,24 @@ public class CmdListener extends IntentService
 					boolean gotAck = false;
 					while(!gotAck && retries > 0)
 					{
-						String registration = String.valueOf(Utils.currentTimeSeconds());
-						byte[] sodiumAsymmedRegistration = Utils.sodiumAsymEncrypt(registration.getBytes(), Vars.serverPublicSodium);
+						final String registration = String.valueOf(Utils.currentTimeSeconds());
+						final byte[] sodiumAsymmedRegistration = Utils.sodiumAsymEncrypt(registration.getBytes(), Vars.serverPublicSodium);
 
 						//prepend user name so the server will know whose public key to use for authentication
-						byte[] nameLengthDisassembled = Utils.disassembleInt(Vars.uname.length(), Const.JAVA_MAX_PRECISION_INT);
-						byte[] unameBytes = Vars.uname.getBytes();
-						byte[] payload = new byte[Const.JAVA_MAX_PRECISION_INT+unameBytes.length+sodiumAsymmedRegistration.length];
+						final byte[] nameLengthDisassembled = Utils.disassembleInt(Vars.uname.length(), Const.JAVA_MAX_PRECISION_INT);
+						final byte[] unameBytes = Vars.uname.getBytes();
+						final byte[] payload = new byte[Const.JAVA_MAX_PRECISION_INT+unameBytes.length+sodiumAsymmedRegistration.length];
 						System.arraycopy(nameLengthDisassembled, 0, payload, 0, Const.JAVA_MAX_PRECISION_INT);
 						System.arraycopy(unameBytes, 0, payload, Const.JAVA_MAX_PRECISION_INT, unameBytes.length);
 						System.arraycopy(sodiumAsymmedRegistration, 0, payload, Const.JAVA_MAX_PRECISION_INT+unameBytes.length, sodiumAsymmedRegistration.length);
 
 						//send the registration
-						DatagramPacket registrationPacket = new DatagramPacket(payload, payload.length, Vars.callServer, Vars.mediaPort);
+						final DatagramPacket registrationPacket = new DatagramPacket(payload, payload.length, Vars.callServer, Vars.mediaPort);
 						Vars.mediaUdp.send(registrationPacket);
 
 						//wait for media port registration ack
-						byte[] ackBuffer = new byte[Const.SIZE_MEDIA];
-						DatagramPacket ack = new DatagramPacket(ackBuffer, Const.SIZE_MEDIA);
+						final byte[] ackBuffer = new byte[Const.SIZE_MEDIA];
+						final DatagramPacket ack = new DatagramPacket(ackBuffer, Const.SIZE_MEDIA);
 						try
 						{
 							Vars.mediaUdp.receive(ack);
@@ -248,20 +246,20 @@ public class CmdListener extends IntentService
 						}
 
 						//extract ack response
-						byte[] ackEncBytes = new byte[ack.getLength()];
+						final byte[] ackEncBytes = new byte[ack.getLength()];
 						System.arraycopy(ack.getData(), 0, ackEncBytes, 0, ack.getLength());
 
 						//decrypt ack
-						byte[] decAck = Utils.sodiumAsymDecrypt(ackEncBytes, Vars.serverPublicSodium);
+						final byte[] decAck = Utils.sodiumAsymDecrypt(ackEncBytes, Vars.serverPublicSodium);
 						if(decAck == null)
 						{
 							gotAck = false;
 							break;
 						}
-						String ackString = new String(decAck, "UTF-8");
+						final String ackString = new String(decAck, "UTF-8");
 
 						//verify ack timestamp
-						long ackts = Long.valueOf(ackString);
+						final long ackts = Long.valueOf(ackString);
 						if(Utils.validTS(ackts))
 						{
 							gotAck = true;
@@ -286,10 +284,10 @@ public class CmdListener extends IntentService
 				else if(command.equals("direct"))
 				{
 					//decrypt the sodium symmetric key
-					String setupString = respContents[2];
-					byte[] setup = Utils.destringify(setupString, true);
+					final String setupString = respContents[2];
+					final byte[] setup = Utils.destringify(setupString, true);
 					Vars.sodiumSymmetricKey = null;
-					byte[] callWithKey = Vars.publicSodiumTable.get(involved);
+					final byte[] callWithKey = Vars.publicSodiumTable.get(involved);
 					Vars.sodiumSymmetricKey = Utils.sodiumAsymDecrypt(setup, callWithKey);
 
 					if(Vars.sodiumSymmetricKey != null)
@@ -352,7 +350,7 @@ public class CmdListener extends IntentService
 
 		//cleanup the pending intents now that the sockets are unsable. also must do asap to prevent
 		//timing problems where socket close and pending intent happen at the same time.
-		AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+		final AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
 		try
 		{
 			manager.cancel(Vars.pendingHeartbeat);
@@ -365,7 +363,7 @@ public class CmdListener extends IntentService
 			//can happen on quit if quit cancels the pendings first. nothing you can do.
 			//	just part of the normal shutdown procedure. no reason to panic
 		}
-		Intent deadBroadcast = new Intent(Const.BROADCAST_RELOGIN);
+		final Intent deadBroadcast = new Intent(Const.BROADCAST_RELOGIN);
 		deadBroadcast.setClass(Vars.applicationContext, BackgroundManager.class);
 		sendBroadcast(deadBroadcast);
 	}
@@ -376,7 +374,7 @@ public class CmdListener extends IntentService
 	 */
 	private void notifyCallStateChange(String change)
 	{
-		Intent stateChange = new Intent(Const.BROADCAST_CALL);
+		final Intent stateChange = new Intent(Const.BROADCAST_CALL);
 		if((change.equals(Const.BROADCAST_CALL_END)) || (change.equals(Const.BROADCAST_CALL_START)) ||  (change.equals(Const.BROADCAST_CALL_TRY)))
 		{
 			Utils.logcat(Const.LOGD, tag, "broadcasting: " + change);
@@ -400,7 +398,7 @@ public class CmdListener extends IntentService
 		Utils.logcat(Const.LOGD, tag, "key, prep " + haveAesKey + ","+preparationsComplete);
 		if(haveAesKey && preparationsComplete)
 		{
-			String ready = Utils.currentTimeSeconds() + "|ready|" + Vars.callWith + "|" + Vars.sessionKey;
+			final String ready = Utils.currentTimeSeconds() + "|ready|" + Vars.callWith + "|" + Vars.sessionKey;
 			Utils.logcat(Const.LOGD, tag, ready);
 			try
 			{
