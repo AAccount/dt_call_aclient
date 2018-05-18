@@ -63,6 +63,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final int ENC_LENGTH_ACCURACY = 2;
 	private static final int SEQ_LENGTH_ACCURACY = 4;
 
+	private static final double NOSIGNAL = -1000000.00;
+
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
 	private Button stats;
@@ -77,7 +79,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private Timer counter = new Timer();
 	private BroadcastReceiver myReceiver;
 	private int garbage=0, txData=0, rxData=0, rxCount=0, rxSeq=0, txSeq=0, skipped=0;
-	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel;
+	private double txDB=0, rxDB=0;
+	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel, rxDBLabel, txDBLabel;
 	private boolean showStats = false;
 
 	//proximity sensor stuff
@@ -182,8 +185,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					final String latestStats = missingLabel + ": " + (missing > 0 ? missing : 0) + " " + garbageLabel + ": " + garbage + "\n"
 							+rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp + "\n"
 							+rxSeqLabel + ": " + rxSeq + " "
-							+ txSeqLabel + ": " + txSeq+ "\n"
-							+skippedLabel + ": " + skipped;
+							+txSeqLabel + ": " + txSeq + "\n"
+							+skippedLabel + ": " + skipped + "\n"
+							+rxDBLabel + ": " + formatDouble(rxDB) + " " + txDBLabel + ": " + formatDouble(txDB);
 					runOnUiThread(new Runnable()
 					{
 						@Override
@@ -205,6 +209,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		rxSeqLabel = getString(R.string.call_main_stat_rx_seq);
 		txSeqLabel = getString(R.string.call_main_stat_tx_seq);
 		skippedLabel = getString(R.string.call_main_stat_skipped);
+		rxDBLabel = getString(R.string.call_main_stat_rx_db);
+		txDBLabel = getString(R.string.call_main_stat_tx_db);
 
 		if(!Vars.SHOUDLOG)
 		{
@@ -492,6 +498,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			private static final int STEREOIN = AudioFormat.CHANNEL_IN_STEREO;
 			private static final int MIC = MediaRecorder.AudioSource.DEFAULT;
 
+			private static final double MIN_DB_EARPIECE = 20.00;
+			private static final double MIN_DB_SPEAKER = 50.00;
+			private double minSignal = 0.00;
+
 			@Override
 			public void run()
 			{
@@ -563,8 +573,16 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						dataRead = wavRecorder.read(wavbuffer, totalRead, WAVBUFFERSIZE - totalRead);
 						totalRead = totalRead + dataRead;
 					}
+					txDB = signalLevel(wavbuffer);
 
-					if(micMute)
+					if((txDB < minSignal) && (txDB != NOSIGNAL))
+					{
+						minSignal = txDB;
+					}
+
+					final double min_db = onSpeaker ? MIN_DB_SPEAKER : MIN_DB_EARPIECE;
+					final boolean seeminglyNothing = txDB < (minSignal + min_db);
+					if(micMute || seeminglyNothing)
 					{
 						//if muting, erase the recorded audio
 						//need to record during mute because a cell phone can generate zeros faster than real time talking
@@ -713,6 +731,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							//decode aac chunk
 							final short[] wavbuffer = new short[WAVBUFFERSIZE];
 							FdkAAC.decode(encbuffer, wavbuffer);
+							rxDB = signalLevel(wavbuffer);
 							wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
 
 							//advance the accumulator read position
@@ -809,5 +828,30 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		{
 			return Integer.toString(n);
 		}
+	}
+
+	private double signalLevel(short[] rawAudio) //not decibels but signal level where 0db is max
+	{
+		long total = 0;
+		for(int i=0; i<rawAudio.length; i++)
+		{
+			total = total + Math.abs((long)rawAudio[i]);
+		}
+		final double average = (double)total/(double)rawAudio.length;
+		final double ratio = average / (double)Short.MAX_VALUE;
+
+		System.out.println(ratio);
+		if(ratio == 0)
+		{
+			return NOSIGNAL;
+		}
+		return 20.00*Math.log(ratio);
+	}
+
+	private String formatDouble(double d)
+	{
+
+		final DecimalFormat decimalFormat = new DecimalFormat("##.##");
+		return decimalFormat.format(d);
 	}
 }

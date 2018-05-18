@@ -80,6 +80,8 @@
     <string name="call_main_stat_tx_seq">Out#</string>
     <string name="call_main_stat_rx_seq">In#</string>
     <string name="call_main_stat_skipped">Skipped</string>
+    <string name="call_main_stat_rx_db">InDB</string>
+    <string name="call_main_stat_tx_db">OutDB</string>
 
     <!-- Incoming call screen -->
     <string name="call_incoming_title">Incoming Call</string>
