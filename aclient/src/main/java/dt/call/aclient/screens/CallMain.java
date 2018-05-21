@@ -194,12 +194,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					String rxDisp=formatInternetMeteric(rxData), txDisp=formatInternetMeteric(txData);
 					int missing = txSeq-rxCount;
+					String rxDBString = rxDB == NOSIGNAL ? "//" : formatDouble(rxDB);
 					final String latestStats = missingLabel + ": " + (missing > 0 ? missing : 0) + " " + garbageLabel + ": " + garbage + "\n"
 							+rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp + "\n"
 							+rxSeqLabel + ": " + rxSeq + " "
 							+txSeqLabel + ": " + txSeq + "\n"
 							+skippedLabel + ": " + skipped + "\n"
-							+rxDBLabel + ": " + formatDouble(rxDB) + " " + txDBLabel + ": " + formatDouble(txDB);
+							+rxDBLabel + ": " + rxDBString + " " + txDBLabel + ": " + formatDouble(txDB);
 					runOnUiThread(new Runnable()
 					{
 						@Override
