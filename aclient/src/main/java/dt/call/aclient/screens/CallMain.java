@@ -622,13 +622,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					/**
 					 *Avoid sending tons of tiny packets wasting resources for headers.
 					 */
-					final int encodeLength = FdkAAC.encode(wavbuffer, aacbuffer);
-					final int error = FdkAAC.getEncodeError();
-					if(error != 0)
-					{
-						Arrays.fill(aacbuffer, (byte)0);
-						Utils.logcat(Const.LOGE, tag, "AAC encoding error of: " + error);
-					}
+					int error = 0;
+					final int encodeLength = FdkAAC.encode(wavbuffer, aacbuffer, error);
 
 					//if the current aac chunk won't fit in the accumulator, send the packet and restart the accumulator
 					if((accPos + ENC_LENGTH_ACCURACY + encodeLength) > accumulator.length)
