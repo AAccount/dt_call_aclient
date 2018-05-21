@@ -24,6 +24,8 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -72,6 +74,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private boolean micStatusNew = false;
 	private boolean onSpeaker = false;
 	private boolean screenShowing;
+	private ImageView userImage;
+	private EditText uiMindbEar;
+	private EditText uiMindbSpeaker;
 	private TextView status;
 	private TextView time;
 	private TextView callerid;
@@ -82,6 +87,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private double txDB=0, rxDB=0;
 	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel, rxDBLabel, txDBLabel;
 	private boolean showStats = false;
+	private double MIN_DB_EARPIECE = 20.00;
+	private double MIN_DB_SPEAKER = 50.00;
 
 	//proximity sensor stuff
 	private SensorManager sensorManager;
@@ -119,6 +126,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		callerid = (TextView) findViewById(R.id.call_main_callerid);
 		time = (TextView)findViewById(R.id.call_main_time);
 		callerid.setText(Utils.getCallerID(Vars.callWith));
+		userImage = (ImageView)findViewById(R.id.call_main_user_image);
+		uiMindbEar = (EditText)findViewById(R.id.call_main_mindb_ear);
+		uiMindbEar.setText(String.valueOf(MIN_DB_EARPIECE));
+		uiMindbSpeaker = (EditText)findViewById(R.id.call_main_mindb_speaker);
+		uiMindbSpeaker.setText(String.valueOf(MIN_DB_SPEAKER));
 
 		/**
 		 * The stuff under here might look like a lot which has the potential to seriously slow down onCreate()
@@ -196,6 +208,18 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							callerid.setText(latestStats);
 						}
 					});
+
+					String newMindbEar = uiMindbEar.getText().toString();
+					String newMindbSpeaker = uiMindbSpeaker.getText().toString();
+					try
+					{
+						MIN_DB_EARPIECE = Double.valueOf(newMindbEar);
+						MIN_DB_SPEAKER = Double.valueOf(newMindbSpeaker);
+					}
+					catch(NumberFormatException | NullPointerException n)
+					{
+						Utils.dumpException(tag, n);
+					}
 				}
 			}
 		};
@@ -427,11 +451,17 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			if(showStats)
 			{
 				stats.setTextColor(ContextCompat.getColor(this, R.color.material_green));
+				userImage.setVisibility(View.INVISIBLE);
+				uiMindbEar.setVisibility(View.VISIBLE);
+				uiMindbSpeaker.setVisibility(View.VISIBLE);
 			}
 			else
 			{
 				stats.setTextColor(ContextCompat.getColor(this, android.R.color.white));
 				callerid.setText(Utils.getCallerID(Vars.callWith));
+				userImage.setVisibility(View.VISIBLE);
+				uiMindbEar.setVisibility(View.INVISIBLE);
+				uiMindbSpeaker.setVisibility(View.INVISIBLE);
 			}
 		}
 	}
@@ -498,8 +528,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			private static final int STEREOIN = AudioFormat.CHANNEL_IN_STEREO;
 			private static final int MIC = MediaRecorder.AudioSource.DEFAULT;
 
-			private static final double MIN_DB_EARPIECE = 20.00;
-			private static final double MIN_DB_SPEAKER = 50.00;
 			private double minSignal = 0.00;
 
 			@Override
@@ -840,7 +868,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		final double average = (double)total/(double)rawAudio.length;
 		final double ratio = average / (double)Short.MAX_VALUE;
 
-		System.out.println(ratio);
 		if(ratio == 0)
 		{
 			return NOSIGNAL;
