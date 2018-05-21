@@ -17,10 +17,21 @@ public class FdkAAC
 	 * Encode raw wav into aac
 	 * @param wav Raw wave audio. MUST be in stereo 44100Hz. In addition, the "correct" array size should be found out by getWavFrameSize()
 	 * @param aac Encoded aac audio from the wave. Should supply a cautiously large buffer.
-	 * @param error Error code returned by aacEncEncode(...) if there is one
 	 * @return Actual size of the encoded audio.
 	 */
-	public static native int encode(short[] wav, byte[] aac, int error);
+	public static native int encode(short[] wav, byte[] aac);
+
+	/**
+	 * Gets the error from AACENC_ERROR aacEncEncode(
+	 const HANDLE_AACENCODER   hAacEncoder,
+	 const AACENC_BufDesc     *inBufDesc,
+	 const AACENC_BufDesc     *outBufDesc,
+	 const AACENC_InArgs      *inargs,
+	 AACENC_OutArgs           *outargs
+	 );
+	 * @return AACENC_ERROR error code
+	 */
+	public static native int getEncodeError();
 	public static native void closeEncoder();
 
 	/**

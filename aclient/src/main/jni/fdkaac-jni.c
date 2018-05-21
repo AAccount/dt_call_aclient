@@ -10,6 +10,7 @@
 
 HANDLE_AACENCODER encInternals;
 HANDLE_AACDECODER decInternals;
+AACENC_ERROR aacencError;
 
 JNIEXPORT jint JNICALL
 Java_dt_call_aclient_codec_FdkAAC_getWavFrameSize(JNIEnv *env, jclass type)
@@ -63,6 +64,7 @@ Java_dt_call_aclient_codec_FdkAAC_initAAC(JNIEnv *env, jclass type)
     {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "could not retrieve encoding seed information");
     }
+    aacencError = AACENC_OK;
 
     //setup the decoder
     decInternals = aacDecoder_Open(TRANSPORT, 1);
@@ -75,7 +77,7 @@ Java_dt_call_aclient_codec_FdkAAC_initAAC(JNIEnv *env, jclass type)
 }
 
 JNIEXPORT jint JNICALL
-Java_dt_call_aclient_codec_FdkAAC_encode(JNIEnv *env, jclass type, jshortArray wav_, jbyteArray aac_, jint error_)
+Java_dt_call_aclient_codec_FdkAAC_encode(JNIEnv *env, jclass type, jshortArray wav_, jbyteArray aac_)
 {
     jshort *wav = (*env)->GetShortArrayElements(env, wav_, NULL);
 
@@ -105,8 +107,7 @@ Java_dt_call_aclient_codec_FdkAAC_encode(JNIEnv *env, jclass type, jshortArray w
     output.bufElSizes = &outputSampleSize;
     AACENC_OutArgs outArgs;
 
-    int result = aacEncEncode(encInternals, &input, &output, &inArgs, &outArgs);
-    error_ = result;
+    aacencError = aacEncEncode(encInternals, &input, &output, &inArgs, &outArgs);
     (*env)->SetByteArrayRegion(env, aac_, 0, outArgs.numOutBytes, outputBuffer);
 
     (*env)->ReleaseShortArrayElements(env, wav_, wav, 0);
@@ -142,4 +143,10 @@ JNIEXPORT void JNICALL
 Java_dt_call_aclient_codec_FdkAAC_closeDecoder(JNIEnv *env, jclass type)
 {
     aacDecoder_Close(decInternals);
+}
+
+JNIEXPORT jint JNICALL
+Java_dt_call_aclient_codec_FdkAAC_getEncodeError(JNIEnv *env, jclass type)
+{
+    return aacencError;
 }
