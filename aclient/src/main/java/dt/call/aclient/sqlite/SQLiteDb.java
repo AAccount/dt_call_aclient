@@ -170,17 +170,6 @@ public class SQLiteDb extends SQLiteOpenHelper
 	public void populatePublicKeys()
 	{
 		//create once at the beginning to avoid wasting time creating this every time in the while loop
-		KeyFactory kf;
-		try
-		{
-			kf = KeyFactory.getInstance("RSA");
-		}
-		catch (NoSuchAlgorithmException e)
-		{
-			Utils.dumpException(TAG, e);
-			return;
-		}
-
 		Vars.publicSodiumTable = new HashMap<String, byte[]>();
 		Vars.publicSodiumDumps = new HashMap<String, String>();
 		Cursor cursor = appdb.rawQuery("select * from " + tablePublicKeys, null);
