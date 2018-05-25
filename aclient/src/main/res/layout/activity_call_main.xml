@@ -131,4 +131,13 @@
         android:inputType="number|numberDecimal"
         android:visibility="invisible"/>
 
+    <TextView
+        android:id="@+id/call_main_mindb_limit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/call_main_mindb_speaker"
+        android:layout_centerHorizontal="true"
+        android:text="TextView"
+        android:visibility="invisible"/>
+
 </RelativeLayout>
