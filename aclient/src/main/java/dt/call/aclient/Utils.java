@@ -299,6 +299,7 @@ public class Utils
 			{
 				Vars.commandSocket.close();
 			}
+			Vars.mediaUdp.close();
 		}
 		catch (Exception e)
 		{

@@ -102,16 +102,16 @@
     <string name="about_title">App Info</string>
     <string name="about_desc">Android client for Daniel Tjandra call server.\n
         Forces TLS 1.2, trusting only the supplied certificate regardless of its certificate chain.\n
-        Uses fdk aac in stereo @ 44100Hz with a bitrate of 32kbit/s for voice.</string>
+        Uses libsodium for udp voice encryption.</string>
     <string name="about_compile_label">Git:</string>
     <string name="about_compile_revision">(FILL IN GIT REVISION HERE)</string>
     <string name="about_version_label">Version:</string>
-    <string name="about_version_number" translatable="false">1.6</string>
+    <string name="about_version_number" translatable="false">1.7</string>
     <string name="about_by_label">Credits:</string>
     <string name="about_people">
         Daniel Tjandra (main)\n
         https://material.io/icons/ (icons) \n
-        Fraunhofer Institute for Integrated Circuits IIS (AAC library)\n
+        https://github.com/joshjdevl/libsodium-jni\n
     </string>
 
     <!-- For menu items that always show an icon, their text can be accessed by long pressing the item -->

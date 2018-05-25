@@ -31,12 +31,21 @@ import android.widget.Toast;
 
 import org.libsodium.jni.Sodium;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.DatagramPacket;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.text.DecimalFormat;
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
@@ -44,7 +53,6 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.CommandEndAsync;
-import dt.call.aclient.codec.FdkAAC;
 
 public class CallMain extends AppCompatActivity implements View.OnClickListener, SensorEventListener
 {
@@ -52,17 +60,15 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private static final int HEADERS = 52;
 
-	private static final int SAMPLES = 44100;
+	private static final int SAMPLES = 8000; //44100;
 	private static final int S16 = AudioFormat.ENCODING_PCM_16BIT;
 	private static final int STREAMCALL = AudioManager.STREAM_VOICE_CALL;
 
-	private static final int WAVBUFFERSIZE = FdkAAC.getWavFrameSize();
-	private static final int AACBUFFERSIZE = 1000; //extra big just to be safe
+	private static final int WAVBUFFERSIZE = 500; //FdkAAC.getWavFrameSize();
 	private static final int DIAL_TONE_SIZE = 32000;
 	private static final int END_TONE_SIZE = 10858;
 	private static final int WAV_FILE_HEADER = 44; //.wav files actually have a 44 byte header
 
-	private static final int ENC_LENGTH_ACCURACY = 2;
 	private static final int SEQ_LENGTH_ACCURACY = 4;
 
 	private static final double NOSIGNAL = -1000000.00;
@@ -75,6 +81,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private boolean onSpeaker = false;
 	private boolean screenShowing;
 	private ImageView userImage;
+	private TextView uiMindbLimit;
 	private EditText uiMindbEar;
 	private EditText uiMindbSpeaker;
 	private TextView status;
@@ -87,6 +94,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private double txDB=0, rxDB=0;
 	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel, rxDBLabel, txDBLabel;
 	private boolean showStats = false;
+	private double minSignal = 0.00;
 	private double MIN_DB_EARPIECE = 20.00;
 	private double MIN_DB_SPEAKER = 50.00;
 
@@ -131,6 +139,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		uiMindbEar.setText(String.valueOf(MIN_DB_EARPIECE));
 		uiMindbSpeaker = (EditText)findViewById(R.id.call_main_mindb_speaker);
 		uiMindbSpeaker.setText(String.valueOf(MIN_DB_SPEAKER));
+		uiMindbLimit = (TextView)findViewById(R.id.call_main_mindb_limit);
 
 		/**
 		 * The stuff under here might look like a lot which has the potential to seriously slow down onCreate()
@@ -207,6 +216,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						public void run()
 						{
 							callerid.setText(latestStats);
+							uiMindbLimit.setText(formatDouble(minSignal));
 						}
 					});
 
@@ -455,6 +465,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				userImage.setVisibility(View.INVISIBLE);
 				uiMindbEar.setVisibility(View.VISIBLE);
 				uiMindbSpeaker.setVisibility(View.VISIBLE);
+				uiMindbLimit.setVisibility(View.VISIBLE);
 			}
 			else
 			{
@@ -463,6 +474,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				userImage.setVisibility(View.VISIBLE);
 				uiMindbEar.setVisibility(View.INVISIBLE);
 				uiMindbSpeaker.setVisibility(View.INVISIBLE);
+				uiMindbLimit.setVisibility(View.INVISIBLE);
 			}
 		}
 	}
@@ -515,7 +527,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		speaker.setEnabled(true);
 
 		//initialize the aac library before creating the threads so it will be ready when the threads start
-		FdkAAC.initAAC();
+//		FdkAAC.initAAC();
 		startMediaEncodeThread();
 		startMediaDecodeThread();
 	}
@@ -526,10 +538,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		{
 			private static final String tag = "EncodingThread";
 
-			private static final int STEREOIN = AudioFormat.CHANNEL_IN_STEREO;
+			private static final int MONO = AudioFormat.CHANNEL_IN_MONO;
 			private static final int MIC = MediaRecorder.AudioSource.DEFAULT;
 
-			private double minSignal = 0.00;
+			private final ArrayDeque<DatagramPacket> sendQ = new ArrayDeque<DatagramPacket>();
+			private final Lock qMutex = new ReentrantLock();
+			private final Condition wakeup = qMutex.newCondition();
+			private volatile int qLength;
 
 			@Override
 			public void run()
@@ -537,7 +552,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has started");
 
 				//setup the wave audio recorder. since it is released and restarted, it needs to be setup here and not onCreate
-				AudioRecord wavRecorder = new AudioRecord(MIC, SAMPLES, STEREOIN, S16, WAVBUFFERSIZE);
+				AudioRecord wavRecorder = new AudioRecord(MIC, SAMPLES, MONO, S16, WAVBUFFERSIZE);
 				wavRecorder.startRecording();
 
 				//my dying i9300 on CM12.1 sometimes can't get the audio record on its first try
@@ -546,7 +561,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					wavRecorder.stop();
 					wavRecorder.release();
-					wavRecorder = new AudioRecord(MIC, SAMPLES, STEREOIN, S16, WAVBUFFERSIZE);
+					wavRecorder = new AudioRecord(MIC, SAMPLES, MONO, S16, WAVBUFFERSIZE);
 					wavRecorder.startRecording();
 					Utils.logcat(Const.LOGW, tag, "audiorecord failed to initialized. retried");
 					recorderRetries--;
@@ -560,20 +575,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					endThread();
 				}
 
-				final byte[] accumulator = new byte[Const.SIZE_MEDIA -100];
-				int accPos = 4;
-
-				//put the first sequence number to detect duplicate or old voice packets
-				//integer broken up as: 12,345,678: [12,34,56,78.....voice....]
-				accumulator[0] = 0;
-				accumulator[1] = 0;
-				accumulator[2] = 0;
-				accumulator[3] = 0;
 				txSeq++;
+
+				internalNetworkThread();
 
 				while (Vars.state == CallState.INCALL)
 				{
-					final byte[] aacbuffer = new byte[AACBUFFERSIZE];
+					//final byte[] aacbuffer = new byte[AACBUFFERSIZE];
 					final short[] wavbuffer = new short[WAVBUFFERSIZE];
 
 					if (micStatusNew)
@@ -617,55 +625,35 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						//need to record during mute because a cell phone can generate zeros faster than real time talking
 						//	so you can't just skip the recording and send placeholder zeros in a loop
 						Arrays.fill(wavbuffer, (short)0);
+						//continue;
 					}
 
-					/**
-					 *Avoid sending tons of tiny packets wasting resources for headers.
-					 */
-					int error = 0;
-					final int encodeLength = FdkAAC.encode(wavbuffer, aacbuffer, error);
+					final byte[] wavBytes = new byte[WAVBUFFERSIZE * 2];
+					ByteBuffer.wrap(wavBytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(wavbuffer);
 
-					//if the current aac chunk won't fit in the accumulator, send the packet and restart the accumulator
-					if((accPos + ENC_LENGTH_ACCURACY + encodeLength) > accumulator.length)
+					Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
+					deflater.setInput(wavBytes);
+					deflater.finish();
+					final byte[] compressedOutput = new byte[WAVBUFFERSIZE * 2];
+					final int compressedDataLength = deflater.deflate(compressedOutput);
+
+					final byte[] accumulatorTrimmed = new byte[SEQ_LENGTH_ACCURACY + compressedDataLength];
+					final byte[] seqBytes = Utils.disassembleInt(txSeq, SEQ_LENGTH_ACCURACY);
+					System.arraycopy(seqBytes, 0, accumulatorTrimmed, 0, SEQ_LENGTH_ACCURACY);
+
+					System.arraycopy(compressedOutput, 0, accumulatorTrimmed, SEQ_LENGTH_ACCURACY, compressedDataLength);
+					final byte[] accumulatorEncrypted = Utils.sodiumSymEncrypt(accumulatorTrimmed);
+
+					DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length, Vars.callServer, Vars.mediaPort);
+					qMutex.lock();
 					{
-						try
-						{
-							final byte[] accumulatorTrimmed = new byte[accPos];
-							System.arraycopy(accumulator, 0, accumulatorTrimmed, 0, accPos);
-							final byte[] accumulatorEncrypted = Utils.sodiumSymEncrypt(accumulatorTrimmed);
-
-							DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length, Vars.callServer, Vars.mediaPort);
-							Vars.mediaUdp.send(packet);
-							txData = txData + accumulatorEncrypted.length + HEADERS;
-						}
-						catch (Exception e)
-						{
-							Utils.logcat(Const.LOGE, tag, "Cannot send aac out the media socket");
-							Utils.dumpException(tag, e);
-
-							//if the socket died it's impossible to continue the call.
-							//the other person will get a dropped call and you can start the call again.
-							//
-							//kill the sockets so that UserHome's crash recovery will reinitialize them
-							endThread();
-						}
-						accPos = SEQ_LENGTH_ACCURACY;
-						Arrays.fill(accumulator, (byte)0);
-
-						//integer broken up as: 12,345,678: [12,34,56,78.....voice....]
-						final byte[] txSeqDisassembled = Utils.disassembleInt(txSeq, SEQ_LENGTH_ACCURACY);
-						System.arraycopy(txSeqDisassembled, 0, accumulator, 0, SEQ_LENGTH_ACCURACY);
-						txSeq++;
+						sendQ.push(packet);
 					}
-
-					//write the aac chunk size as a "header" before writing the actual aac data
-					final byte[] encodedLengthDisassembled = Utils.disassembleInt(encodeLength, ENC_LENGTH_ACCURACY);
-					System.arraycopy(encodedLengthDisassembled, 0, accumulator, accPos, ENC_LENGTH_ACCURACY);
-					accPos = accPos + ENC_LENGTH_ACCURACY;
-					System.arraycopy(aacbuffer, 0 , accumulator, accPos, encodeLength);
-					accPos = accPos + encodeLength;
+					wakeup.signal();
+					qMutex.unlock();
+					txData = txData + accumulatorEncrypted.length + HEADERS;
+					txSeq++;
 				}
-				FdkAAC.closeEncoder();
 				wavRecorder.stop();
 				wavRecorder.release();
 				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has stopped");
@@ -674,8 +662,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			private void endThread()
 			{
 				Vars.state = CallState.NONE;
-				//must guarantee that the sockets are killed before going to the home screen. otherwise
-				//the userhome's crash recovery won't kick in. don't leave it to dumb luck (race condition)
+				//kill the socket in case it's the reason end thread is being called.
 				Utils.killSockets();
 
 				try
@@ -688,6 +675,50 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					//because the main ui thead will be gone after the first onStop() is called. catch the exception
 				}
 			}
+
+			private void internalNetworkThread()
+			{
+				Thread networkThread = new Thread(new Runnable()
+				{
+					private static final String tag = "EncodeNetwork";
+
+					@Override
+					public void run()
+					{
+						while(Vars.state == CallState.INCALL)
+						{
+							qMutex.lock();
+							while(sendQ.isEmpty())
+							{
+								try
+								{
+									wakeup.await();
+								}
+								catch (InterruptedException e)
+								{
+									Utils.dumpException(tag, e);
+								}
+								qMutex.unlock();
+							}
+
+							qMutex.lock();
+								final DatagramPacket packet = sendQ.remove();
+							qMutex.unlock();
+							try
+							{
+								Vars.mediaUdp.send(packet);
+							}
+							catch (IOException e)
+							{
+								Utils.dumpException(tag, e);
+								endThread();
+							}
+						}
+					}
+				});
+				networkThread.setName("Media_Encoder_Network");
+				networkThread.start();
+			}
 		});
 		recordThread.setName("Media_Encoder");
 		recordThread.start();
@@ -698,29 +729,37 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		Thread playbackThread = new Thread(new Runnable()
 		{
 			private static final String tag = "DecodingThread";
-			private static final int STEREOOUT = AudioFormat.CHANNEL_OUT_STEREO;
+			private static final int MONO = AudioFormat.CHANNEL_OUT_MONO;
 
-			//realtime strategy variables
-			private final int BUFFER = AudioTrack.getMinBufferSize(SAMPLES, STEREOOUT, S16);
+			private final ArrayDeque<DatagramPacket> receiveQ = new ArrayDeque<DatagramPacket>();
+			private final Lock qMutex = new ReentrantLock();
+			private final Condition wakeup = qMutex.newCondition();
 
 			@Override
 			public void run()
 			{
 				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has started");
-				Log.d(tag, "recommended buffer size: " + BUFFER);
 
 				//setup the wave audio track with enhancements if available
-				final AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLES, STEREOOUT, S16, BUFFER, AudioTrack.MODE_STREAM);
+				final AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLES, MONO, S16, WAVBUFFERSIZE, AudioTrack.MODE_STREAM);
 				wavPlayer.play();
 
+				internalNetworkThread();
 				while(Vars.state == CallState.INCALL)
 				{
 					try
 					{
 						//read encrypted aac
-						final byte[] inputBuffer = new byte[Const.SIZE_MEDIA];
-						DatagramPacket received = new DatagramPacket(inputBuffer, Const.SIZE_MEDIA);
-						Vars.mediaUdp.receive(received);
+						qMutex.lock();
+						while(receiveQ.isEmpty())
+						{
+							wakeup.await();
+						}
+						qMutex.unlock();
+
+						qMutex.lock();
+							final DatagramPacket received = receiveQ.remove();
+						qMutex.unlock();
 
 						//decrypt
 						rxData = rxData + received.getLength() + HEADERS;
@@ -734,7 +773,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							continue;
 						}
 
-						int readPos = SEQ_LENGTH_ACCURACY;
 						final byte[] sequenceBytes = new byte[SEQ_LENGTH_ACCURACY];
 						System.arraycopy(accumulatorDec, 0, sequenceBytes, 0, SEQ_LENGTH_ACCURACY);
 						final int sequence = Utils.reassembleInt(sequenceBytes);
@@ -745,57 +783,81 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						}
 						rxSeq = sequence;
 
-						while(readPos < accumulatorDec.length)
+						final int compressedLength = accumulatorDec.length - SEQ_LENGTH_ACCURACY;
+						final byte[] compressedBytes = new byte[compressedLength];
+						System.arraycopy(accumulatorDec, SEQ_LENGTH_ACCURACY, compressedBytes, 0, compressedLength);
+
+						Inflater inflater = new Inflater();
+						inflater.setInput(compressedBytes);
+						final byte[] wavbytes = new byte[WAVBUFFERSIZE * 2];
+						inflater.inflate(wavbytes);
+
+						final short[] wavshorts = new short[WAVBUFFERSIZE];
+						ByteBuffer.wrap(wavbytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(wavshorts);
+						rxDB = signalLevel(wavshorts);
+
+						if(rxDB != NOSIGNAL)
 						{
-							//retrieve the size from the first 2 bytes
-							final byte[] encLengthBytes = new byte[ENC_LENGTH_ACCURACY];
-							System.arraycopy(accumulatorDec, readPos, encLengthBytes, 0, ENC_LENGTH_ACCURACY);
-							final int aacLength = Utils.reassembleInt(encLengthBytes);
-							readPos = readPos+ ENC_LENGTH_ACCURACY;
-
-							//extract the aac chunk
-							final byte[] encbuffer = new byte[aacLength];
-							System.arraycopy(accumulatorDec, readPos, encbuffer, 0, aacLength);
-
-							//decode aac chunk
-							final short[] wavbuffer = new short[WAVBUFFERSIZE];
-							FdkAAC.decode(encbuffer, wavbuffer);
-							rxDB = signalLevel(wavbuffer);
-							wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
-
-							//advance the accumulator read position
-							readPos = readPos + aacLength;
+							wavPlayer.write(wavshorts, 0, WAVBUFFERSIZE);
 						}
+
 					}
-					catch (Exception i) //io or null pointer depending on when the connection dies
+					catch (Exception i)
 					{
-						Utils.logcat(Const.LOGE, tag, "exception reading media: ");
 						Utils.dumpException(tag, i);
-
-						//if the socket died it's impossible to continue the call.
-						//the other person will get a dropped call and you can start the call again.
-						//
-						//kill the sockets so that UserHome's crash recovery will reinitialize them
-						Vars.state = CallState.NONE;
-						//must guarantee that the sockets are killed before going to the home screen. otherwise
-						//the userhome's crash recovery won't kick in. don't leave it to dumb luck (race condition)
-						Utils.killSockets();
-
-						try
-						{
-							onStop();
-						}
-						catch (Exception e)
-						{
-							//see encoder thread for why onStop() is called in a try
-						}
 					}
 				}
-				FdkAAC.closeDecoder();
 				wavPlayer.stop();
-				wavPlayer.flush(); //must flush after stop
-				wavPlayer.release(); //mandatory cleanup to prevent wavPlayer from outliving its usefulness
+				wavPlayer.flush();
+				wavPlayer.release();
 				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has stopped, state:" + Vars.state);
+			}
+
+			private void internalNetworkThread()
+			{
+				Thread networkThread = new Thread(new Runnable()
+				{
+					private static final String tag = "DecodeNetwork";
+
+					@Override
+					public void run()
+					{
+						while(Vars.state == CallState.INCALL)
+						{
+							final byte[] inputBuffer = new byte[Const.SIZE_MEDIA];
+							final DatagramPacket received = new DatagramPacket(inputBuffer, Const.SIZE_MEDIA);
+							try
+							{
+								Vars.mediaUdp.receive(received);
+							}
+							catch (Exception e)
+							{
+								//if the socket has problems, shouldn't continue the call.
+								Utils.dumpException(tag, e);
+								Vars.state = CallState.NONE;
+								Utils.killSockets();
+
+								try
+								{
+									onStop();
+								}
+								catch (Exception inner)
+								{
+									//see encoder thread for why onStop() is called in a try
+								}
+							}
+
+							qMutex.lock();
+							{
+								receiveQ.push(received);
+								wakeup.signal();
+							}
+							qMutex.unlock();
+						}
+					}
+				});
+				networkThread.setName("Media_Decoder_Network");
+				networkThread.start();
 			}
 		});
 		playbackThread.setName("Media_Decoder");
@@ -867,12 +929,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			total = total + Math.abs((long)rawAudio[i]);
 		}
 		final double average = (double)total/(double)rawAudio.length;
-		final double ratio = average / (double)Short.MAX_VALUE;
 
-		if(ratio == 0)
+		if(average == 0)
 		{
 			return NOSIGNAL;
 		}
+
+		final double ratio = average / (double)Short.MAX_VALUE;
 		return 20.00*Math.log(ratio);
 	}
 
