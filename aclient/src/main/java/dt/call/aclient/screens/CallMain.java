@@ -19,7 +19,6 @@ import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -94,7 +93,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private double txDB=0, rxDB=0;
 	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel, rxDBLabel, txDBLabel;
 	private boolean showStats = false;
-	private double minSignal = 0.00;
+	private double minDB = 0.00;
 	private double MIN_DB_EARPIECE = 20.00;
 	private double MIN_DB_SPEAKER = 50.00;
 
@@ -216,7 +215,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						public void run()
 						{
 							callerid.setText(latestStats);
-							uiMindbLimit.setText(formatDouble(minSignal));
+							uiMindbLimit.setText(formatDouble(minDB));
 						}
 					});
 
@@ -612,13 +611,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					}
 					txDB = signalLevel(wavbuffer);
 
-					if((txDB < minSignal) && (txDB != NOSIGNAL))
+					if((txDB < minDB) && (txDB != NOSIGNAL))
 					{
-						minSignal = txDB;
+						minDB = txDB;
 					}
 
 					final double min_db = onSpeaker ? MIN_DB_SPEAKER : MIN_DB_EARPIECE;
-					final boolean seeminglyNothing = txDB < (minSignal + min_db);
+					final boolean seeminglyNothing = txDB < (minDB + min_db);
 					if(micMute || seeminglyNothing)
 					{
 						//if muting, erase the recorded audio
