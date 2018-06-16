@@ -70,8 +70,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private static final int SEQ_LENGTH_ACCURACY = 4;
 
-	private static final double NOSIGNAL = -1000000.00;
-
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
 	private Button stats;
@@ -80,9 +78,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private boolean onSpeaker = false;
 	private boolean screenShowing;
 	private ImageView userImage;
-	private TextView uiMindbLimit;
-	private EditText uiMindbEar;
-	private EditText uiMindbSpeaker;
 	private TextView status;
 	private TextView time;
 	private TextView callerid;
@@ -90,12 +85,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private Timer counter = new Timer();
 	private BroadcastReceiver myReceiver;
 	private int garbage=0, txData=0, rxData=0, rxCount=0, rxSeq=0, txSeq=0, skipped=0;
-	private double txDB=0, rxDB=0;
-	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel, rxDBLabel, txDBLabel;
+	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel;
 	private boolean showStats = false;
-	private double minDB = 0.00;
-	private double MIN_DB_EARPIECE = 20.00;
-	private double MIN_DB_SPEAKER = 50.00;
 
 	//proximity sensor stuff
 	private SensorManager sensorManager;
@@ -134,11 +125,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		time = (TextView)findViewById(R.id.call_main_time);
 		callerid.setText(Utils.getCallerID(Vars.callWith));
 		userImage = (ImageView)findViewById(R.id.call_main_user_image);
-		uiMindbEar = (EditText)findViewById(R.id.call_main_mindb_ear);
-		uiMindbEar.setText(String.valueOf(MIN_DB_EARPIECE));
-		uiMindbSpeaker = (EditText)findViewById(R.id.call_main_mindb_speaker);
-		uiMindbSpeaker.setText(String.valueOf(MIN_DB_SPEAKER));
-		uiMindbLimit = (TextView)findViewById(R.id.call_main_mindb_limit);
 
 		/**
 		 * The stuff under here might look like a lot which has the potential to seriously slow down onCreate()
@@ -202,34 +188,19 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					String rxDisp=formatInternetMeteric(rxData), txDisp=formatInternetMeteric(txData);
 					int missing = txSeq-rxCount;
-					String rxDBString = rxDB == NOSIGNAL ? "//" : formatDouble(rxDB);
 					final String latestStats = missingLabel + ": " + (missing > 0 ? missing : 0) + " " + garbageLabel + ": " + garbage + "\n"
 							+rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp + "\n"
 							+rxSeqLabel + ": " + rxSeq + " "
 							+txSeqLabel + ": " + txSeq + "\n"
-							+skippedLabel + ": " + skipped + "\n"
-							+rxDBLabel + ": " + rxDBString + " " + txDBLabel + ": " + formatDouble(txDB);
+							+skippedLabel + ": " + skipped;
 					runOnUiThread(new Runnable()
 					{
 						@Override
 						public void run()
 						{
 							callerid.setText(latestStats);
-							uiMindbLimit.setText(formatDouble(minDB));
 						}
 					});
-
-					String newMindbEar = uiMindbEar.getText().toString();
-					String newMindbSpeaker = uiMindbSpeaker.getText().toString();
-					try
-					{
-						MIN_DB_EARPIECE = Double.valueOf(newMindbEar);
-						MIN_DB_SPEAKER = Double.valueOf(newMindbSpeaker);
-					}
-					catch(NumberFormatException | NullPointerException n)
-					{
-						Utils.dumpException(tag, n);
-					}
 				}
 			}
 		};
@@ -243,8 +214,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		rxSeqLabel = getString(R.string.call_main_stat_rx_seq);
 		txSeqLabel = getString(R.string.call_main_stat_tx_seq);
 		skippedLabel = getString(R.string.call_main_stat_skipped);
-		rxDBLabel = getString(R.string.call_main_stat_rx_db);
-		txDBLabel = getString(R.string.call_main_stat_tx_db);
 
 		if(!Vars.SHOUDLOG)
 		{
@@ -462,18 +431,12 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			{
 				stats.setTextColor(ContextCompat.getColor(this, R.color.material_green));
 				userImage.setVisibility(View.INVISIBLE);
-				uiMindbEar.setVisibility(View.VISIBLE);
-				uiMindbSpeaker.setVisibility(View.VISIBLE);
-				uiMindbLimit.setVisibility(View.VISIBLE);
 			}
 			else
 			{
 				stats.setTextColor(ContextCompat.getColor(this, android.R.color.white));
 				callerid.setText(Utils.getCallerID(Vars.callWith));
 				userImage.setVisibility(View.VISIBLE);
-				uiMindbEar.setVisibility(View.INVISIBLE);
-				uiMindbSpeaker.setVisibility(View.INVISIBLE);
-				uiMindbLimit.setVisibility(View.INVISIBLE);
 			}
 		}
 	}
@@ -609,16 +572,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						dataRead = wavRecorder.read(wavbuffer, totalRead, WAVBUFFERSIZE - totalRead);
 						totalRead = totalRead + dataRead;
 					}
-					txDB = signalLevel(wavbuffer);
 
-					if((txDB < minDB) && (txDB != NOSIGNAL))
-					{
-						minDB = txDB;
-					}
-
-					final double min_db = onSpeaker ? MIN_DB_SPEAKER : MIN_DB_EARPIECE;
-					final boolean seeminglyNothing = txDB < (minDB + min_db);
-					if(micMute || seeminglyNothing)
+					if(micMute)
 					{
 						//if muting, erase the recorded audio
 						//need to record during mute because a cell phone can generate zeros faster than real time talking
@@ -793,12 +748,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 						final short[] wavshorts = new short[WAVBUFFERSIZE];
 						ByteBuffer.wrap(wavbytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(wavshorts);
-						rxDB = signalLevel(wavshorts);
-
-						if(rxDB != NOSIGNAL)
-						{
-							wavPlayer.write(wavshorts, 0, WAVBUFFERSIZE);
-						}
+						wavPlayer.write(wavshorts, 0, WAVBUFFERSIZE);
 
 					}
 					catch (Exception i)
@@ -918,30 +868,5 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		{
 			return Integer.toString(n);
 		}
-	}
-
-	private double signalLevel(short[] rawAudio) //not decibels but signal level where 0db is max
-	{
-		long total = 0;
-		for(int i=0; i<rawAudio.length; i++)
-		{
-			total = total + Math.abs((long)rawAudio[i]);
-		}
-		final double average = (double)total/(double)rawAudio.length;
-
-		if(average == 0)
-		{
-			return NOSIGNAL;
-		}
-
-		final double ratio = average / (double)Short.MAX_VALUE;
-		return 20.00*Math.log(ratio);
-	}
-
-	private String formatDouble(double d)
-	{
-
-		final DecimalFormat decimalFormat = new DecimalFormat("##.##");
-		return decimalFormat.format(d);
 	}
 }

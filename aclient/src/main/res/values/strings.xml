@@ -80,8 +80,6 @@
     <string name="call_main_stat_tx_seq">Out#</string>
     <string name="call_main_stat_rx_seq">In#</string>
     <string name="call_main_stat_skipped">Skipped</string>
-    <string name="call_main_stat_rx_db">InDB</string>
-    <string name="call_main_stat_tx_db">OutDB</string>
 
     <!-- Incoming call screen -->
     <string name="call_incoming_title">Incoming Call</string>
@@ -106,7 +104,7 @@
     <string name="about_compile_label">Git:</string>
     <string name="about_compile_revision">(FILL IN GIT REVISION HERE)</string>
     <string name="about_version_label">Version:</string>
-    <string name="about_version_number" translatable="false">1.7</string>
+    <string name="about_version_number" translatable="false">1.6</string>
     <string name="about_by_label">Credits:</string>
     <string name="about_people">
         Daniel Tjandra (main)\n
