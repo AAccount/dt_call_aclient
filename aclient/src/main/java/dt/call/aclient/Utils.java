@@ -83,8 +83,16 @@ public class Utils
 			{
 				Log.w(tag, message);
 			}
-			SQLiteDb sqLiteDb = SQLiteDb.getInstance(Vars.applicationContext);
-			sqLiteDb.insertLog(new DBLog(tag, message));
+
+			try
+			{
+				SQLiteDb sqLiteDb = SQLiteDb.getInstance(Vars.applicationContext);
+				sqLiteDb.insertLog(new DBLog(tag, message));
+			}
+			catch(Exception e)
+			{
+				Log.e("dblog","database not writeable");
+			}
 		}
 	}
 
@@ -559,7 +567,7 @@ public class Utils
 		byte[] result = new byte[accuracy];
 		for(int i=0; i<accuracy; i++)
 		{
-			result[i] = (byte)((input >> (Const.SIZEOF_USEBLE_JBYTE*(accuracy-1-i))) & Byte.MAX_VALUE);
+			result[i] = (byte)((input >> (Const.SIZEOF_USEABLE_JBYTE *(accuracy-1-i))) & Byte.MAX_VALUE);
 		}
 		return result;
 	}
@@ -570,7 +578,7 @@ public class Utils
 		int result = 0;
 		for(int i=0; i<disassembled.length; i++)
 		{
-			result = result +((int)disassembled[i]) << (Const.SIZEOF_USEBLE_JBYTE*(disassembled.length-1-i));
+			result = result +((int)disassembled[i]) << (Const.SIZEOF_USEABLE_JBYTE *(disassembled.length-1-i));
 		}
 		return result;
 	}
@@ -697,16 +705,16 @@ public class Utils
 			ret = Sodium.crypto_secretbox_open_easy(messageStorage, cipherText, cipherLength, nonce, Vars.sodiumSymmetricKey);
 		}
 
-		//now that the message has been successfully decrypted, take in on blind faith messageLength makes was ok
-		//	up to the next function to make sure the decryption contents aren't truncated by a malicious messageLength
-		final byte[] message = new byte[messageLength];
-		System.arraycopy(messageStorage, 0, message, 0, messageLength);
-
 		if(ret != 0)
 		{
 			logcat(Const.LOGE, tag, "sodium decryption failed, asym: " + asym + " return code: " + ret);;
 			return null;
 		}
+
+		//now that the message has been successfully decrypted, take in on blind faith messageLength was ok
+		//	up to the next function to make sure the decryption contents aren't truncated by a malicious messageLength
+		final byte[] message = new byte[messageLength];
+		System.arraycopy(messageStorage, 0, message, 0, messageLength);
 		return message;
 	}
 }

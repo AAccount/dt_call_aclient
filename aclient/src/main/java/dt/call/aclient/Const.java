@@ -105,7 +105,7 @@ public class Const
 
 	//maximum disassembly accuracy for taking apart an int into signed chars
 	public static final int JAVA_MAX_PRECISION_INT = 5;
-	public static final int SIZEOF_USEBLE_JBYTE = 7; //8th bit for the sign
+	public static final int SIZEOF_USEABLE_JBYTE = 7; //8th bit for the sign
 
 
 	public static final String SODIUM_PUBLIC_HEADER = "SODIUM PUBLIC KEY\n";
