@@ -15,8 +15,7 @@ import static junit.framework.Assert.assertTrue;
 @RunWith(AndroidJUnit4.class)
 public class SodiumSymmetricDecrypt
 {
-	private static final String TEST_MESSAGE = "testing testing 1 2 3 blah blah blah filler content";
-
+	private static final String TEST_MESSAGE = "symmertric testing testing 1 2 3 blah blah blah filler content";
 
 	@BeforeClass
 	public static void initializeSodium()
@@ -136,7 +135,7 @@ public class SodiumSymmetricDecrypt
 	@Test
 	public void ensureTamperedNonceNull()
 	{
-		byte[] setup = Utils.sodiumSymEncrypt("testing".getBytes());
+		byte[] setup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes());
 		setup[0]++;
 
 		final byte[] decrypted = Utils.sodiumSymDecrypt(setup);
@@ -146,7 +145,7 @@ public class SodiumSymmetricDecrypt
 	@Test
 	public void ensureTamperedCiphertextNull()
 	{
-		byte[] setup = Utils.sodiumSymEncrypt("testing".getBytes());
+		byte[] setup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes());
 		final int nonceLength = Sodium.crypto_secretbox_noncebytes();
 		setup[nonceLength + Const.JAVA_MAX_PRECISION_INT]++;
 
