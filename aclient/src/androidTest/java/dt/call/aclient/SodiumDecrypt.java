@@ -14,6 +14,9 @@ import static junit.framework.Assert.assertNull;
 @RunWith(AndroidJUnit4.class)
 public class SodiumDecrypt
 {
+	private byte[] serverPrivateSodium;
+	private byte[] selfPublicSodium;
+
 	@BeforeClass
 	public static void initializeSodium() throws Exception
 	{
@@ -25,8 +28,12 @@ public class SodiumDecrypt
 	public void setupKeys()
 	{
 		Vars.serverPublicSodium = new byte[Sodium.crypto_box_publickeybytes()];
+		serverPrivateSodium = new byte[Sodium.crypto_box_secretkeybytes()];
+		Sodium.crypto_box_keypair(Vars.serverPublicSodium, serverPrivateSodium);
+
+		selfPublicSodium = new byte[Sodium.crypto_box_publickeybytes()];
 		Vars.privateSodium = new byte[Sodium.crypto_box_secretkeybytes()];
-		Sodium.crypto_box_keypair(Vars.serverPublicSodium, Vars.privateSodium);
+		Sodium.crypto_box_keypair(selfPublicSodium, Vars.privateSodium);
 
 		Vars.sodiumSymmetricKey = new byte[Sodium.crypto_secretbox_keybytes()];
 		Sodium.randombytes_buf(Vars.sodiumSymmetricKey, Sodium.crypto_secretbox_keybytes());
