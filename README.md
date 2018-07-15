@@ -1,11 +1,14 @@
-# dt_call_aclient
-Android Client for my VoIP
+# Android Client for my complete VoIP Solution
 
-Mobile aware android client for **making encrypted calls** on my VoIP server. (Mostly mobile aware.) Tries its best to reconnect you to the server when you loose internet connectivity. It uses 2 strategies to reconnect you based on if you're android 6 above or below. Under android 6 uses the standrad connectivity broadcast while above uses a new job service based approach required for android 7.0+. This reconnection is the hardest part to get right as there are many subtle timing intricacies that are impossible to reproduce by just sitting down and toggling wifi/lte.
+Android client for **making encrypted calls** using my call operator 
+* [UNIX version](https://github.com/AAccount/dt_call_server)
+* (Unmaintained) [Windows version](https://github.com/AAccount/dt_call_server-windows-).
 
-Every effort was put into documenting how this client works. Every effort was also put into reduce duplicate code because having 2 or more things that do the same things usually leads to unreliability.There is also a standard naming convention for xml resources such as strings, layouts, etc and UI component names. Constants and session variables are also located in a common area. Constants also have a naming formula to be easily distinguishable.
+All calls are **end to end encrypted** using libsoidum symmetric cryptography. The sodium symmetric key is single use per call and shared by sodium asymmetric cryptography. AClient does not rely on publicly accepted certificate authorities. Instead, it requires you to get a copy of the server's public key and supply it to AClient. This way you can guarantee the server you're connecting to is really the one you're expecting.
 
-All calls are **end to end encrypted** using libsoidum symmetric cryptography. The sodium symmetric key is single use per call and shared by sodium asymmetric cryptography. AClient does not rely on publicly accepted certificate authorities. Instead, it requires you to get a copy of the server's public key and supply it to AClient. This way you can guarantee the server you're connecting to is really the one you're expecting. Encryption is only guaranteed from client to server, not client to client. You need to trust the person running the server.
+Tries its best to reconnect you to the server when you loose internet connectivity. It uses 2 strategies to reconnect you based on if you're android 6 above or below. Under android 6 uses the standrad connectivity broadcast while above uses a new job service based approach required for android 7.0+. This reconnection is the hardest part to get right as there are many subtle timing intricacies that are impossible to reproduce by just sitting down and toggling wifi/lte.
+
+Every effort was put into documenting how this client works. Every effort was also put into reduce duplicate code because having 2 or more things that do the same things usually leads to unreliability. There is also a standard naming convention for xml resources such as strings, layouts, etc and UI component names. Constants and session variables are also located in a common area. Constants also have a naming formula to be easily distinguishable.
 
 For debugging purposes, the client does its own internal adb style logging accessible form the home screen's DB Logs menu entry.
 
@@ -24,7 +27,7 @@ End note: there are no plans to make an iOS client because there are no good res
 ![In Call Screen](https://github.com/AAccount/dt_call_aclient/blob/master/screenshots/Main%20Call.png)
 
 ## Changelog
-**V 1.6:** libsodium cryptography instead of hand rolled TLS knock-off
+**V 1.6:** libsodium cryptography instead of hand rolled TLS knock-off, keep track of other users's public keys, back to uncompressed 8KHz audio for now (all native libraries mysteriously crash the UI thread)
 
 **V 1.5:** keep track of voice UDP packet sequence numbers to avoid playing duplicates
 
