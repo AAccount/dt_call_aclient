@@ -15,7 +15,7 @@ import static junit.framework.Assert.assertTrue;
 @RunWith(AndroidJUnit4.class)
 public class SodiumSymmetricDecrypt
 {
-	private static final String TEST_MESSAGE = "symmertric testing testing 1 2 3 blah blah blah filler content";
+	private static final String TEST_MESSAGE = "symmetric testing testing 1 2 3 blah blah blah filler content";
 
 	@BeforeClass
 	public static void initializeSodium()
@@ -27,14 +27,6 @@ public class SodiumSymmetricDecrypt
 	@Before
 	public void setupKeys()
 	{
-		Vars.serverPublicSodium = new byte[Sodium.crypto_box_publickeybytes()];
-		byte[] serverPrivateSodium = new byte[Sodium.crypto_box_secretkeybytes()];
-		Sodium.crypto_box_keypair(Vars.serverPublicSodium, serverPrivateSodium);
-
-		byte[] selfPublicSodium = new byte[Sodium.crypto_box_publickeybytes()];
-		Vars.privateSodium = new byte[Sodium.crypto_box_secretkeybytes()];
-		Sodium.crypto_box_keypair(selfPublicSodium, Vars.privateSodium);
-
 		Vars.sodiumSymmetricKey = new byte[Sodium.crypto_secretbox_keybytes()];
 		Sodium.randombytes_buf(Vars.sodiumSymmetricKey, Sodium.crypto_secretbox_keybytes());
 	}

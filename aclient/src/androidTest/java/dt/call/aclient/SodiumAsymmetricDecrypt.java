@@ -10,6 +10,7 @@ import org.libsodium.jni.NaCl;
 import org.libsodium.jni.Sodium;
 
 import static junit.framework.Assert.assertNull;
+import static junit.framework.Assert.assertTrue;
 
 @RunWith(AndroidJUnit4.class)
 public class SodiumAsymmetricDecrypt
@@ -120,6 +121,99 @@ public class SodiumAsymmetricDecrypt
 		setupAsMe();
 		final byte[] decrypted = Utils.sodiumAsymDecrypt(lengthAndNonce, otherPublic);
 		assertNull(decrypted);
+	}
+
+	@Test
+	public void ensureFakeCiphertextNull()
+	{
+		final int fakeCiphertextLength = 10;
+		final int nonceLength = Sodium.crypto_box_noncebytes();
+		byte[] setup = new byte[Const.JAVA_MAX_PRECISION_INT + nonceLength + fakeCiphertextLength];
+		final byte[] nonce = new byte[nonceLength];
+		Sodium.randombytes_buf(nonce, nonceLength);
+		System.arraycopy(nonce, 0, setup, 0, nonceLength);
+
+		setup[nonceLength+(Const.JAVA_MAX_PRECISION_INT-1)] = fakeCiphertextLength;
+
+		final byte[] fakeCiphertext = new byte[fakeCiphertextLength];
+		Sodium.randombytes(fakeCiphertext, fakeCiphertextLength);
+		System.arraycopy(fakeCiphertext, 0, setup, Const.JAVA_MAX_PRECISION_INT + nonceLength, fakeCiphertextLength);
+
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic);
+		assertNull(decrypted);
+	}
+
+	@Test
+	public void ensureTamperedNonceNull()
+	{
+		setupAsOther();
+		byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), selfPublicSodium);
+		setup[0]++;
+
+		setupAsMe();
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic);
+		assertNull(decrypted);
+	}
+
+	@Test
+	public void ensureTamperedCiphertextNull()
+	{
+		setupAsOther();
+		byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), selfPublicSodium);
+		final int nonceLength = Sodium.crypto_box_noncebytes();
+		setup[nonceLength + Const.JAVA_MAX_PRECISION_INT]++;
+
+		setupAsMe();
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic);
+		assertNull(decrypted);
+	}
+
+	@Test
+	public void ensureTrimmedLengthNoCrash()
+	{
+		setupAsOther();
+		byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), selfPublicSodium);
+		final int nonceLength = Sodium.crypto_box_noncebytes();
+		byte endLengthByte = setup[nonceLength + Const.JAVA_MAX_PRECISION_INT - 1];
+		endLengthByte = (byte)((int)endLengthByte / 2);
+		setup[nonceLength + Const.JAVA_MAX_PRECISION_INT - 1] = endLengthByte;
+
+		setupAsMe();
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic);
+		assertTrue(decrypted.length == endLengthByte);
+		//it has no way of knowing what the original length was, the best
+		//it can do is just trim the output to whatever length you say
+	}
+
+	@Test
+	public void ensureSodiumAsymmDecryptActuallyWorks()
+	{
+		setupAsOther();
+		final byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), selfPublicSodium);
+
+		setupAsMe();
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic);
+		final String message = new String(decrypted);
+		assertTrue(message.equals(TEST_MESSAGE));
+	}
+
+	@Test
+	public void ensureCompleteGarbageNull()
+	{
+		final byte[] nothing = Utils.sodiumAsymDecrypt(TEST_MESSAGE.getBytes(), otherPublic);
+		assertNull(nothing);
+	}
+
+	@Test
+	public void ensureWrongSignerNull()
+	{
+		//TODO: sign using the wrong key
+	}
+
+	@Test
+	public void ensureNotAddressedForMeNull()
+	{
+		//TODO: encrypt using the wrong public key
 	}
 
 	private void setupAsMe()
