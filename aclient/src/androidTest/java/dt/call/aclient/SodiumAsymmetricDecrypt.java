@@ -15,7 +15,7 @@ import static junit.framework.Assert.assertTrue;
 @RunWith(AndroidJUnit4.class)
 public class SodiumAsymmetricDecrypt
 {
-	private static final String TEST_MESSAGE = "asymmetric testing testing 1 2 3 blah blah blah filler content";
+	private static final String TEST_MESSAGE = "mini";
 
 	private byte[] otherPublic;
 	private byte[] otherPrivate;
@@ -44,6 +44,8 @@ public class SodiumAsymmetricDecrypt
 
 		otherPublic = new byte[Sodium.crypto_box_publickeybytes()];
 		otherPrivate = new byte[Sodium.crypto_box_secretkeybytes()];
+		Sodium.crypto_box_keypair(otherPublic, otherPrivate);
+
 	}
 
 	@Test
@@ -207,13 +209,29 @@ public class SodiumAsymmetricDecrypt
 	@Test
 	public void ensureWrongSignerNull()
 	{
-		//TODO: sign using the wrong key
+		byte[] mysteryPublic = new byte[Sodium.crypto_box_publickeybytes()];
+		byte[] mysteryPrivate  = new byte[Sodium.crypto_box_secretkeybytes()];
+		Sodium.crypto_box_keypair(mysteryPublic, mysteryPrivate);
+		System.arraycopy(mysteryPrivate, 0, Vars.privateSodium, 0, Sodium.crypto_box_secretkeybytes());
+		final byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), selfPublicSodium);
+
+		setupAsMe();
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic);
+		assertTrue(decrypted == null);
 	}
 
 	@Test
 	public void ensureNotAddressedForMeNull()
 	{
-		//TODO: encrypt using the wrong public key
+		byte[] mysteryPublic = new byte[Sodium.crypto_box_publickeybytes()];
+		byte[] mysteryPrivate  = new byte[Sodium.crypto_box_secretkeybytes()];
+		Sodium.crypto_box_keypair(mysteryPublic, mysteryPrivate);
+		System.arraycopy(mysteryPrivate, 0, Vars.privateSodium, 0, Sodium.crypto_box_secretkeybytes());
+		final byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), otherPublic);
+
+		setupAsMe();
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic);
+		assertTrue(decrypted == null);
 	}
 
 	private void setupAsMe()
