@@ -66,16 +66,16 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 
 		//setup server information activity if the information hasn't already been saved
 		setContentView(R.layout.activity_initial_server);
-		addr = (EditText)findViewById(R.id.initial_server_addr);
-		commandPort = (EditText)findViewById(R.id.initial_server_command);
-		mediaPort = (EditText)findViewById(R.id.initial_server_media);
-		cert = (Button)findViewById(R.id.initial_server_certificate);
+		addr = findViewById(R.id.initial_server_addr);
+		commandPort = findViewById(R.id.initial_server_command);
+		mediaPort = findViewById(R.id.initial_server_media);
+		cert = findViewById(R.id.initial_server_certificate);
 		cert.setOnClickListener(this);
 		cert.setAllCaps(false);
-		sodium = (Button)findViewById(R.id.initial_server_sodium);
+		sodium = findViewById(R.id.initial_server_sodium);
 		sodium.setOnClickListener(this);
 		sodium.setAllCaps(false);
-		next = (FloatingActionButton)findViewById(R.id.initial_server_next);
+		next = findViewById(R.id.initial_server_next);
 		next.setOnClickListener(this);
 
 		if(!Vars.serverAddress.equals(""))

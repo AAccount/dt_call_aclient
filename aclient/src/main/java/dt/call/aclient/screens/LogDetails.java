@@ -22,13 +22,13 @@ public class LogDetails extends AppCompatActivity
 
 		DBLog log = (DBLog)getIntent().getSerializableExtra(Const.EXTRA_LOG);
 
-		TextView date = (TextView) findViewById(R.id.log_details_value_date);
+		TextView date = findViewById(R.id.log_details_value_date);
 		date.setText(" " + log.getDateOnly());
-		TextView time = (TextView) findViewById(R.id.log_details_value_time);
+		TextView time = findViewById(R.id.log_details_value_time);
 		time.setText(" " + log.getTimeOnly());
-		TextView tag = (TextView) findViewById(R.id.log_details_value_tag);
+		TextView tag = findViewById(R.id.log_details_value_tag);
 		tag.setText(" " + log.getTag());
-		TextView message = (TextView) findViewById(R.id.log_details_value_message);
+		TextView message = findViewById(R.id.log_details_value_message);
 		message.setText(log.getMessage());
 	}
 }

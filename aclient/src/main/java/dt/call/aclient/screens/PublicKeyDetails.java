@@ -36,7 +36,7 @@ public class PublicKeyDetails extends AppCompatActivity
 		setContentView(R.layout.activity_public_key_details);
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-		dumpArea = (TextView)findViewById(R.id.public_key_details_dump);
+		dumpArea = findViewById(R.id.public_key_details_dump);
 		correspondingUser = getIntent().getStringExtra(Const.EXTRA_UNAME);
 		String publickeyDump = Vars.publicSodiumDumps.get(correspondingUser);
 		if(publickeyDump == null)

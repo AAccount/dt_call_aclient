@@ -110,21 +110,21 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		window.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);
 		window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
 
-		end = (FloatingActionButton)findViewById(R.id.call_main_end_call);
+		end = findViewById(R.id.call_main_end_call);
 		end.setOnClickListener(this);
-		mic = (FloatingActionButton)findViewById(R.id.call_main_mic);
+		mic = findViewById(R.id.call_main_mic);
 		mic.setOnClickListener(this);
 		mic.setEnabled(false);
-		speaker = (FloatingActionButton)findViewById(R.id.call_main_spk);
+		speaker = findViewById(R.id.call_main_spk);
 		speaker.setOnClickListener(this);
 		speaker.setEnabled(false);
-		stats = (Button)findViewById(R.id.call_main_stats);
+		stats = findViewById(R.id.call_main_stats);
 		stats.setOnClickListener(this);
-		status = (TextView)findViewById(R.id.call_main_status); //by default ringing. change it when in a call
-		callerid = (TextView) findViewById(R.id.call_main_callerid);
-		time = (TextView)findViewById(R.id.call_main_time);
+		status = findViewById(R.id.call_main_status); //by default ringing. change it when in a call
+		callerid = findViewById(R.id.call_main_callerid);
+		time = findViewById(R.id.call_main_time);
 		callerid.setText(Utils.getCallerID(Vars.callWith));
-		userImage = (ImageView)findViewById(R.id.call_main_user_image);
+		userImage = findViewById(R.id.call_main_user_image);
 
 		/**
 		 * The stuff under here might look like a lot which has the potential to seriously slow down onCreate()

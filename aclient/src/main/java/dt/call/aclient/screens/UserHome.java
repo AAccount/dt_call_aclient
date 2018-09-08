@@ -57,12 +57,12 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 	{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_user_home);
-		actionbox = (EditText)findViewById(R.id.user_home_actionbox);
-		call = (FloatingActionButton)findViewById(R.id.user_home_call);
+		actionbox = findViewById(R.id.user_home_actionbox);
+		call = findViewById(R.id.user_home_call);
 		call.setOnClickListener(this);
-		add = (FloatingActionButton)findViewById(R.id.user_home_add);
+		add = findViewById(R.id.user_home_add);
 		add.setOnClickListener(this);
-		contactList = (LinearLayout)findViewById(R.id.user_home_contact_list);
+		contactList = findViewById(R.id.user_home_contact_list);
 
 		/*
 		sometimes the app gets randomly killed even after saying "ignore power savings optimization".
@@ -383,9 +383,9 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 
 				//setup the nickname popup
 				View alertCustom = View.inflate(this, R.layout.alert_rename_contact, null);
-				TextView instructionsView = (TextView)alertCustom.findViewById(R.id.alert_rename_instructions);
+				TextView instructionsView = alertCustom.findViewById(R.id.alert_rename_instructions);
 				instructionsView.setText(instructions);
-				final EditText chNick = (EditText)alertCustom.findViewById(R.id.alert_rename_rename);
+				final EditText chNick = alertCustom.findViewById(R.id.alert_rename_rename);
 				chNick.setText(currentNick);
 
 				//build the alert dialog now that everything is prefilled

@@ -22,7 +22,7 @@ public class PublicKeyManagement extends AppCompatActivity implements View.OnCli
 	{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_public_key_management);
-		mainLayout = (LinearLayout)findViewById(R.id.public_key_mgmt_layout);
+		mainLayout = findViewById(R.id.public_key_mgmt_layout);
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 	}
 
@@ -75,7 +75,7 @@ public class PublicKeyManagement extends AppCompatActivity implements View.OnCli
 		}
 
 		//somehow that button doesn't have a string tag? can't do anything
-		if(((Button)v).getTag().getClass() != String.class)
+		if(v.getTag().getClass() != String.class)
 		{
 			return;
 		}

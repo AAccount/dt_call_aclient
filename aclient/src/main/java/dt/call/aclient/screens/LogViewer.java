@@ -38,15 +38,15 @@ public class LogViewer extends AppCompatActivity implements View.OnClickListener
 		setContentView(R.layout.activity_log_viewer);
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-		clear = (Button)findViewById(R.id.log_viewer_clear);
+		clear = findViewById(R.id.log_viewer_clear);
 		clear.setOnClickListener(this);
 		clear.setTag(null);
-		enable = (CheckBox)findViewById(R.id.log_viewer_enable);
+		enable = findViewById(R.id.log_viewer_enable);
 		enable.setOnClickListener(this);
-		more = (Button)findViewById(R.id.log_viewer_more);
+		more = findViewById(R.id.log_viewer_more);
 		more.setOnClickListener(this);
-		logTable = (LinearLayout)findViewById(R.id.log_viewer_scroller_table);
-		sqliteDb = sqliteDb.getInstance(getApplicationContext());
+		logTable = findViewById(R.id.log_viewer_scroller_table);
+		sqliteDb = SQLiteDb.getInstance(getApplicationContext());
 
 		if(Vars.SHOUDLOG)
 		{
@@ -99,9 +99,9 @@ public class LogViewer extends AppCompatActivity implements View.OnClickListener
 			//create a new table row for each log
 			DBLog log = logs.get(i);
 			LinearLayout logRow = (LinearLayout) View.inflate(this, R.layout.row_log_viewer, null);
-			TextView ts = (TextView)logRow.findViewById(R.id.row_log_viewer_timestamp);
+			TextView ts = logRow.findViewById(R.id.row_log_viewer_timestamp);
 			ts.setText(log.getHumanReadableTimestampShort());
-			Button tag = (Button)logRow.findViewById(R.id.row_log_viewer_tag);
+			Button tag = logRow.findViewById(R.id.row_log_viewer_tag);
 			tag.setText(log.getTag());
 			tag.setOnClickListener(this);
 			tag.setTag(log);

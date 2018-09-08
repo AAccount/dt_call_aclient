@@ -42,11 +42,11 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 		setContentView(R.layout.activity_initial_user_info);
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-		uname = (EditText)findViewById(R.id.initial_user_uname);
-		privateKeyButton = (Button)findViewById(R.id.initial_user_private_key);
+		uname = findViewById(R.id.initial_user_uname);
+		privateKeyButton = findViewById(R.id.initial_user_private_key);
 		privateKeyButton.setOnClickListener(this);
 		privateKeyButton.setAllCaps(false);
-		next = (FloatingActionButton)findViewById(R.id.initial_user_next);
+		next = findViewById(R.id.initial_user_next);
 		next.setOnClickListener(this);
 
 		//load the saved information if it's there and preset the edittexts

@@ -65,11 +65,11 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 			Vars.wakeLock = null;
 		}
 
-		accept = (FloatingActionButton)findViewById(R.id.call_incoming_accept);
+		accept = findViewById(R.id.call_incoming_accept);
 		accept.setOnClickListener(this);
-		reject = (FloatingActionButton)findViewById(R.id.call_incoming_reject);
+		reject = findViewById(R.id.call_incoming_reject);
 		reject.setOnClickListener(this);
-		TextView callerid = (TextView) findViewById(R.id.call_incoming_callerid);
+		TextView callerid = findViewById(R.id.call_incoming_callerid);
 		callerid.setText(Utils.getCallerID(Vars.callWith));
 
 
