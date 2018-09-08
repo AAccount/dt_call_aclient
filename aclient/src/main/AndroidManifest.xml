@@ -9,7 +9,8 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/> <!-- so the other person can hear you talk -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/> <!-- switch ear piece/speaker phone -->
     <uses-permission android:name="android.permission.VIBRATE"/> <!-- vibrate when in silent mode -->
-    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/> <!-- turn on the screen for an incoming call -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/> <!-- place to run voip network io that won't throttle on screen off -->
 
     <!-- turn on the screen after the cell phone hasn't been used in a while -->
     <!-- allowBackup=false to prevent automatic cloud backup which will unknowingly leak your information. -->
@@ -48,7 +49,7 @@
 
         <!-- First run server information screen -->
         <activity
-            android:name=".screens.InitialServer"
+            android:name=".screens.initial.InitialServer"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -59,17 +60,17 @@
 
         <!-- First run user information screen -->
         <activity
-            android:name=".screens.InitialUserInfo"
+            android:name=".screens.initial.InitialUserInfo"
             android:label="@string/initial_user_title"
-            android:parentActivityName=".screens.InitialServer">
+            android:parentActivityName=".screens.initial.InitialServer">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value=".screens.InitialServer"/>
+                android:value=".screens.initial.InitialServer"/>
         </activity>
 
         <!-- User main/home screen -->
         <activity
-            android:name=".screens.UserHome"
+            android:name=".screens.main.UserHome"
             android:label="@string/user_home_title"
             android:launchMode="singleTop">
         </activity>
@@ -78,11 +79,11 @@
         <!-- Don't allow orientation changes because the activity is recreated while the 2 threads are still alive... -->
         <!-- causes some bad stuff to happen. Also no value of the landscape layout for this screen -->
         <activity
-            android:name=".screens.CallMain"
+            android:name=".screens.voip.CallMain"
             android:configChanges="orientation|keyboardHidden"
             android:label="@string/call_main_title"
             android:launchMode="singleTop"
-            android:parentActivityName=".screens.UserHome"
+            android:parentActivityName=".screens.main.UserHome"
             android:screenOrientation="portrait">
         </activity>
 
@@ -90,7 +91,7 @@
         <!-- Orientation change doesn't look right. Also causes a crash with the vibrator and ringtone objects disappearing -->
         <!-- and reappearing while the old ones were still doing something. -->
         <activity
-            android:name=".screens.CallIncoming"
+            android:name=".screens.main.CallIncoming"
             android:configChanges="orientation|keyboardHidden"
             android:label="@string/call_incoming_title"
             android:launchMode="singleTop"
@@ -99,63 +100,63 @@
 
         <!-- Database debug logs listing -->
         <activity
-            android:name=".screens.LogViewer"
+            android:name=".screens.log.LogViewer"
             android:label="@string/log_viewer_title"
             android:launchMode="singleTop">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value=".screens.UserHome"/>
+                android:value=".screens.main.UserHome"/>
         </activity>
 
         <!-- Database debug log details -->
         <activity
-            android:name=".screens.LogDetails"
+            android:name=".screens.log.LogDetails"
             android:label="@string/log_details_title"
             android:launchMode="singleTop">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value=".screens.LogViewer"/>
+                android:value=".screens.log.LogViewer"/>
         </activity>
 
         <!-- About this app screen -->
         <activity
-            android:name=".screens.About"
+            android:name=".screens.main.About"
             android:label="@string/about_title"
             android:launchMode="singleTop">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value=".screens.UserHome"/>
+                android:value=".screens.main.UserHome"/>
         </activity>
 
         <!-- Public key management screen -->
         <activity
-            android:name=".screens.PublicKeyManagement"
+            android:name=".screens.keymgmt.PublicKeyManagement"
             android:label="@string/public_key_mgmt_title"
             android:launchMode="singleTop">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value=".screens.UserHome"/>
+                android:value=".screens.main.UserHome"/>
         </activity>
 
         <!-- Public key details screen -->
         <activity
-            android:name=".screens.PublicKeyDetails"
+            android:name=".screens.keymgmt.PublicKeyDetails"
             android:label="@string/public_key_deatils_title"
-            android:parentActivityName=".screens.PublicKeyManagement"
+            android:parentActivityName=".screens.keymgmt.PublicKeyManagement"
             android:launchMode="singleTop">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="dt.call.aclient.screens.PublicKeyManagement"/>
+                android:value="dt.call.aclient.screens.keymgmt.PublicKeyManagement"/>
         </activity>
 
         <!-- DTSettings screen -->
         <activity
-            android:name=".screens.DTSettings"
+            android:name=".screens.main.DTSettings"
             android:label="@string/settings_title"
-            android:parentActivityName=".screens.UserHome">
+            android:parentActivityName=".screens.main.UserHome">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="dt.call.aclient.screens.UserHome"/>
+                android:value="dt.call.aclient.screens.main.UserHome"/>
         </activity>
 
     </application>

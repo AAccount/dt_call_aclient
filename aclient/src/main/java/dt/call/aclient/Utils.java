@@ -36,9 +36,9 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 
 import dt.call.aclient.background.BackgroundManager;
-import dt.call.aclient.screens.CallIncoming;
-import dt.call.aclient.screens.CallMain;
-import dt.call.aclient.screens.UserHome;
+import dt.call.aclient.screens.main.CallIncoming;
+import dt.call.aclient.screens.voip.CallMain;
+import dt.call.aclient.screens.main.UserHome;
 import dt.call.aclient.sqlite.DBLog;
 import dt.call.aclient.sqlite.SQLiteDb;
 

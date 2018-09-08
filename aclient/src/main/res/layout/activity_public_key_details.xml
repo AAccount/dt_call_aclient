@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="dt.call.aclient.screens.PublicKeyDetails">
+    tools:context="dt.call.aclient.screens.keymgmt.PublicKeyDetails">
 
     <TextView
         android:id="@+id/public_key_details_dump"

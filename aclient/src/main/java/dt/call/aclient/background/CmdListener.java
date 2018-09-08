@@ -20,7 +20,7 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.CommandEndAsync;
-import dt.call.aclient.screens.CallIncoming;
+import dt.call.aclient.screens.main.CallIncoming;
 import dt.call.aclient.sqlite.SQLiteDb;
 
 /**

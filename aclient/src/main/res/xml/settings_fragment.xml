@@ -10,7 +10,7 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context="dt.call.aclient.screens.DTSettings">
+    tools:context="dt.call.aclient.screens.main.DTSettings">
 
     <PreferenceCategory
         android:title="@string/initial_server_title">
