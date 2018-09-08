@@ -169,7 +169,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					new CommandEndAsync().execute();
 					Vars.state = CallState.NONE; //guarantee state == NONE. don't leave it to chance
-					onStop();
+					onStopWrapper();
 				}
 
 				if(screenShowing)
@@ -240,7 +240,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 					//media read/write are stopped in command listener when it got the call end
 					//Vars.state would've already been set by the server command that's broadcasting a call end
-					onStop();
+					onStopWrapper();
 				}
 			}
 		};
@@ -301,8 +301,27 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		sensorManager.unregisterListener(this);
 	}
 
+	protected void onStopWrapper()
+	{
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+		{
+			runOnUiThread(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					onStop();
+				}
+			});
+		}
+		else
+		{
+			onStop();
+		}
+	}
+
 	@Override
-	protected  void onStop()
+	protected void onStop()
 	{
 		super.onStop();
 		screenShowing = false;
@@ -621,7 +640,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 				try
 				{
-					onStop();
+					onStopWrapper();
 				}
 				catch (Exception e)
 				{
@@ -788,7 +807,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 								try
 								{
-									onStop();
+									onStopWrapper();
 								}
 								catch (Exception inner)
 								{
