@@ -23,7 +23,6 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -36,13 +35,10 @@ import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.text.DecimalFormat;
-import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
@@ -522,10 +518,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			private static final int MONO = AudioFormat.CHANNEL_IN_MONO;
 			private static final int MIC = MediaRecorder.AudioSource.DEFAULT;
 
-			private final ArrayDeque<DatagramPacket> sendQ = new ArrayDeque<DatagramPacket>();
-			private final Lock qMutex = new ReentrantLock();
-			private final Condition wakeup = qMutex.newCondition();
-			private volatile int qLength;
+			private final LinkedBlockingQueue<DatagramPacket> sendQ = new LinkedBlockingQueue<DatagramPacket>();
 
 			@Override
 			public void run()
@@ -618,12 +611,15 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					final byte[] accumulatorEncrypted = Utils.sodiumSymEncrypt(accumulatorTrimmed);
 
 					DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length, Vars.callServer, Vars.mediaPort);
-					qMutex.lock();
+					try
 					{
-						sendQ.push(packet);
+						sendQ.put(packet);
 					}
-					wakeup.signal();
-					qMutex.unlock();
+					catch (InterruptedException e)
+					{
+						Utils.dumpException(tag, e);
+					}
+
 					txData = txData + accumulatorEncrypted.length + HEADERS;
 					txSeq++;
 				}
@@ -660,31 +656,19 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					{
 						while(Vars.state == CallState.INCALL)
 						{
-							qMutex.lock();
-							while(sendQ.isEmpty())
-							{
-								try
-								{
-									wakeup.await();
-								}
-								catch (InterruptedException e)
-								{
-									Utils.dumpException(tag, e);
-								}
-								qMutex.unlock();
-							}
-
-							qMutex.lock();
-								final DatagramPacket packet = sendQ.remove();
-							qMutex.unlock();
 							try
 							{
+								final DatagramPacket packet = sendQ.take();
 								Vars.mediaUdp.send(packet);
 							}
 							catch (IOException e)
 							{
 								Utils.dumpException(tag, e);
 								endThread();
+							}
+							catch (InterruptedException e)
+							{
+								Utils.dumpException(tag, e);
 							}
 						}
 					}
@@ -704,9 +688,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			private static final String tag = "DecodingThread";
 			private static final int MONO = AudioFormat.CHANNEL_OUT_MONO;
 
-			private final ArrayDeque<DatagramPacket> receiveQ = new ArrayDeque<DatagramPacket>();
-			private final Lock qMutex = new ReentrantLock();
-			private final Condition wakeup = qMutex.newCondition();
+			private final LinkedBlockingQueue<DatagramPacket> receiveQ = new LinkedBlockingQueue<DatagramPacket>();
 
 			@Override
 			public void run()
@@ -723,16 +705,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					try
 					{
 						//read encrypted aac
-						qMutex.lock();
-						while(receiveQ.isEmpty())
-						{
-							wakeup.await();
-						}
-						qMutex.unlock();
-
-						qMutex.lock();
-							final DatagramPacket received = receiveQ.remove();
-						qMutex.unlock();
+						final DatagramPacket received = receiveQ.take();
 
 						//decrypt
 						rxData = rxData + received.getLength() + HEADERS;
@@ -797,8 +770,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							try
 							{
 								Vars.mediaUdp.receive(received);
+								receiveQ.put(received);
 							}
-							catch (Exception e)
+							catch(InterruptedException e)
+							{
+								Utils.dumpException(tag, e);
+							}
+							catch (IOException e)
 							{
 								//if the socket has problems, shouldn't continue the call.
 								Utils.dumpException(tag, e);
@@ -814,13 +792,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 									//see encoder thread for why onStop() is called in a try
 								}
 							}
-
-							qMutex.lock();
-							{
-								receiveQ.push(received);
-								wakeup.signal();
-							}
-							qMutex.unlock();
 						}
 					}
 				});
