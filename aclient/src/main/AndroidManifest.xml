@@ -86,6 +86,9 @@
             android:parentActivityName=".screens.main.UserHome"
             android:screenOrientation="portrait">
         </activity>
+        <service
+            android:name=".screens.voip.NetworkIO"
+            android:exported="false"/>
 
         <!-- Incoming call screen -->
         <!-- Orientation change doesn't look right. Also causes a crash with the vibrator and ringtone objects disappearing -->
