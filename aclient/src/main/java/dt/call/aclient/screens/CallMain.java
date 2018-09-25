@@ -16,6 +16,7 @@ import android.media.AudioTrack;
 import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -275,6 +276,21 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				Utils.dumpException(tag, e);
 			}
 		}
+
+		//android 9.0 (and probably newer) has a stupid "power saving feature" where sending data
+		//	is heavily throttled when the screen is off. No workaround exists whether using JNI to
+		//	send data or using a foreground service.
+		//ABSOLUTELY MUST keep the screen on while talking to keep the conversation going
+		//https://issuetracker.google.com/issues/115563758
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+		{
+			final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+			Vars.incallA9Workaround = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE, Const.WAKELOCK_INCALLA9);
+			Vars.incallA9Workaround.acquire();
+
+			//some kind of indication that the battery killing android 9 workaround is being used
+			status.setTextColor(ContextCompat.getColor(this, R.color.material_yellow));
+		}
 	}
 
 	@Override
@@ -395,8 +411,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				}
 			}
 
-			//clear the symmetric key
 			Vars.sodiumSymmetricKey = null;
+
+			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+			{
+				Vars.incallA9Workaround.release();
+				Vars.incallA9Workaround = null;
+			}
 
 			//go back to the home screen and clear the back history so there is no way to come back to
 			//call main

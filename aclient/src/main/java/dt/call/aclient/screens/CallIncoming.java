@@ -59,10 +59,10 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 
 
 		//cell phone now awake. release the wakelock
-		if(Vars.wakeLock != null)
+		if(Vars.incomingCallLock != null)
 		{
-			Vars.wakeLock.release();
-			Vars.wakeLock = null;
+			Vars.incomingCallLock.release();
+			Vars.incomingCallLock = null;
 		}
 
 		accept = findViewById(R.id.call_incoming_accept);

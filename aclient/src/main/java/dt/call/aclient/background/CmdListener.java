@@ -98,8 +98,8 @@ public class CmdListener extends IntentService
 				{
 					//wake up the cell phone
 					final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-					Vars.wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE, Const.WAKELOCK_TAG);
-					Vars.wakeLock.acquire();
+					Vars.incomingCallLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE, Const.WAKELOCK_INCOMING);
+					Vars.incomingCallLock.acquire();
 
 					//build the contacts list if it doesn't already exist
 					if(Vars.contactTable == null)

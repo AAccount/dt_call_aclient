@@ -35,7 +35,8 @@ public class Vars
 	//call related information
 	public volatile static CallState state = CallState.NONE;
 	public static String callWith;
-	public static PowerManager.WakeLock wakeLock = null;
+	public static PowerManager.WakeLock incomingCallLock = null;
+	public static PowerManager.WakeLock incallA9Workaround = null;
 	public static byte[] sodiumSymmetricKey = null;
 
 	//contacts hash table to avoid having to lookup the db for incoming calls
