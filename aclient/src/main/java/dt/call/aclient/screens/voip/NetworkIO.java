@@ -17,6 +17,7 @@ public class NetworkIO extends IntentService
 {
 	private static final String tag = "VoIP_Network_IO";
 	private CallMain parent;
+
 	public NetworkIO()
 	{
 		super(tag);
@@ -26,7 +27,7 @@ public class NetworkIO extends IntentService
 	protected void onHandleIntent(Intent intent)
 	{
 		startForeground(Const.STATE_NOTIFICATION_ID, Vars.stateNotification);
-		parent = (CallMain)intent.getSerializableExtra(Const.CALL_MAIN_PARENT);
+		parent = CallMain.current;
 
 		receiveThread();
 		transmitThread();
@@ -97,7 +98,6 @@ public class NetworkIO extends IntentService
 					{
 						Utils.dumpException(tag, e);
 						Vars.state = CallState.NONE;
-						//kill the socket in case it's the reason end thread is being called.
 						Utils.killSockets();
 
 						try

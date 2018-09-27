@@ -112,5 +112,6 @@ public class Const
 	public static final String SODIUM_PRIVATE_HEADER = "SODIUM PRIVATE KEY\n";
 	public static final String EXTRA_UNAME = "user_name_extra";
 
-	public static final String CALL_MAIN_PARENT = "call_main_parent";
+//	public static final String CALL_MAIN_RXQ = "receiveQ";
+//	public static final String CALL_MAIN_TXQ = "sendQ";
 }

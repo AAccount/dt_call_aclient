@@ -156,6 +156,7 @@ public class Utils
 				stateNotificationChannel.setShowBadge(false);
 				Vars.notificationManager.createNotificationChannel(stateNotificationChannel);
 			}
+			Vars.stateNotification = Vars.stateNotificationBuilder.build();
 			Vars.notificationManager.notify(Const.STATE_NOTIFICATION_ID, Vars.stateNotification);
 		}
 		else

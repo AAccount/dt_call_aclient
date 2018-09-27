@@ -53,6 +53,8 @@ import dt.call.aclient.screens.main.UserHome;
 
 public class CallMain extends AppCompatActivity implements View.OnClickListener, SensorEventListener, Serializable
 {
+	protected static CallMain current = null;
+
 	private static final String tag = "CallMain";
 
 	private static final int HEADERS = 52;
@@ -403,6 +405,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			//clear the symmetric key
 			Vars.sodiumSymmetricKey = null;
 			Utils.killSockets();
+			CallMain.current = null;
 
 			//go back to the home screen and clear the back history so there is no way to come back to
 			//call main
@@ -514,7 +517,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		startMediaEncodeThread();
 		startMediaDecodeThread();
 		Intent voipIO = new Intent(this, NetworkIO.class);
-		voipIO.putExtra(Const.CALL_MAIN_PARENT, this);
+//		voipIO.putExtra(Const.CALL_MAIN_RXQ, receiveQ);
+//		voipIO.putExtra(Const.CALL_MAIN_TXQ, sendQ);
+		CallMain.current = this;
 		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
 		{
 			startForegroundService(voipIO);
