@@ -6,7 +6,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.PowerManager;
 
-import org.libsodium.jni.Sodium;
+import com.goterl.lazycode.lazysodium.LazySodium;
+import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
+import com.goterl.lazycode.lazysodium.SodiumAndroid;
+import com.goterl.lazycode.lazysodium.interfaces.SecretBox;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -38,6 +41,7 @@ public class CmdListener extends IntentService
 	private boolean haveAesKey = false;
 	private boolean preparationsComplete = false;
 	private boolean isCallInitiator = false;
+	private LazySodium lazySodium = null;
 
 	public CmdListener()
 	{
@@ -48,6 +52,7 @@ public class CmdListener extends IntentService
 	protected void onHandleIntent(Intent workIntent)
 	{
 		Utils.logcat(Const.LOGD, tag, "command listener INTENT SERVICE started");
+		lazySodium = new LazySodiumAndroid(new SodiumAndroid());
 
 		while(inputValid)
 		{
@@ -183,9 +188,7 @@ public class CmdListener extends IntentService
 					if(isCallInitiator)
 					{
 						//choose sodium key
-						Sodium.sodium_init();
-						Vars.sodiumSymmetricKey = new byte[Sodium.crypto_secretbox_keybytes()];
-						Sodium.randombytes_buf(Vars.sodiumSymmetricKey, Sodium.crypto_secretbox_keybytes());
+						Vars.sodiumSymmetricKey = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
 
 						//have sodium encrypt its key
 						final byte[] sodiumAsymmCrypted = Utils.sodiumAsymEncrypt(Vars.sodiumSymmetricKey, expectedKey);

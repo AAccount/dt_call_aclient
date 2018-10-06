@@ -28,8 +28,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.libsodium.jni.Sodium;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.DatagramPacket;
@@ -297,7 +295,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	protected void onResume()
 	{
 		super.onResume();
-		Sodium.sodium_init();
 		screenShowing = true;
 		if(proximity != null)
 		{

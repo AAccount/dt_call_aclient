@@ -27,8 +27,6 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import org.libsodium.jni.Sodium;
-
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
@@ -69,7 +67,6 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		since the ongoing notification goes to this screen, make sure that when it comes back from the dead,
 		the annoying android context is available. be a good zombie coming back from the dead and not crash
 		*/
-		Sodium.sodium_init();
 		Vars.applicationContext = getApplicationContext();
 		sqliteDb = SQLiteDb.getInstance(getApplicationContext());
 

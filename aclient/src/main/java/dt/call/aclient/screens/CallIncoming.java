@@ -17,8 +17,6 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.TextView;
 
-import org.libsodium.jni.Sodium;
-
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -123,7 +121,6 @@ public class CallIncoming extends AppCompatActivity implements View.OnClickListe
 	protected void onResume()
 	{
 		super.onResume();
-		Sodium.sodium_init();
 
 		registerReceiver(myReceiver, new IntentFilter(Const.BROADCAST_CALL));
 

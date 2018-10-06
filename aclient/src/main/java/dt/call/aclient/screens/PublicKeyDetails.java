@@ -164,7 +164,7 @@ public class PublicKeyDetails extends AppCompatActivity
 			Uri uri = data.getData();
 
 			//read the key from file
-			byte[] keyBytes = Utils.readFileBytes(uri, getApplicationContext());
+			byte[] keyBytes = Utils.readSodiumKeyFileBytes(uri, getApplicationContext());
 			if(keyBytes == null)
 			{
 				Utils.showOk(this, getString(R.string.alert_corrupted_key));

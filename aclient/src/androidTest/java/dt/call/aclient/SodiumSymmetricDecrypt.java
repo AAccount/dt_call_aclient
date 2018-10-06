@@ -2,12 +2,15 @@ package dt.call.aclient;
 
 import android.support.test.runner.AndroidJUnit4;
 
+import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
+import com.goterl.lazycode.lazysodium.SodiumAndroid;
+import com.goterl.lazycode.lazysodium.interfaces.SecretBox;
+
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.libsodium.jni.NaCl;
-import org.libsodium.jni.Sodium;
+
+import java.util.Arrays;
 
 import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
@@ -16,19 +19,12 @@ import static junit.framework.Assert.assertTrue;
 public class SodiumSymmetricDecrypt
 {
 	private static final String TEST_MESSAGE = "symmetric testing testing 1 2 3 blah blah blah filler content";
-
-	@BeforeClass
-	public static void initializeSodium()
-	{
-		NaCl.sodium();
-		Sodium.sodium_init();
-	}
+	private LazySodiumAndroid lazySodium= new LazySodiumAndroid(new SodiumAndroid());
 
 	@Before
 	public void setupKeys()
 	{
-		Vars.sodiumSymmetricKey = new byte[Sodium.crypto_secretbox_keybytes()];
-		Sodium.randombytes_buf(Vars.sodiumSymmetricKey, Sodium.crypto_secretbox_keybytes());
+		Vars.sodiumSymmetricKey = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
 	}
 
 	//input[nonce|message length|encrypted]
@@ -44,7 +40,7 @@ public class SodiumSymmetricDecrypt
 	@Test
 	public void ensureOnlyLengthAndNonceNull()
 	{
-		final int nonceLength = Sodium.crypto_secretbox_noncebytes();
+		final int nonceLength = SecretBox.NONCEBYTES;
 		final int headerLength = Const.JAVA_MAX_PRECISION_INT + nonceLength;
 		final byte[] wholeSetup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes());
 		byte[] lengthAndNonce = new byte[headerLength];
@@ -57,10 +53,9 @@ public class SodiumSymmetricDecrypt
 	@Test
 	public void ensureOnlyLengthNonceWithRiggedLengthNull()
 	{
-		final int nonceLength = Sodium.crypto_secretbox_noncebytes();
+		final int nonceLength = SecretBox.NONCEBYTES;
 		byte[] lengthAndNonce = new byte[Const.JAVA_MAX_PRECISION_INT + nonceLength];
-		final byte[] nonce = new byte[nonceLength];
-		Sodium.randombytes_buf(nonce, nonceLength);
+		final byte[] nonce = lazySodium.randomBytesBuf(nonceLength);
 		System.arraycopy(nonce, 0, lengthAndNonce, 0, nonceLength);
 
 		//length = 100
@@ -73,10 +68,9 @@ public class SodiumSymmetricDecrypt
 	@Test
 	public void ensureOnlyLengthNonceWithNegativeLengthNull()
 	{
-		final int nonceLength = Sodium.crypto_secretbox_noncebytes();
+		final int nonceLength = SecretBox.NONCEBYTES;
 		byte[] lengthAndNonce = new byte[Const.JAVA_MAX_PRECISION_INT + nonceLength];
-		final byte[] nonce = new byte[nonceLength];
-		Sodium.randombytes_buf(nonce, nonceLength);
+		final byte[] nonce = lazySodium.randomBytesBuf(nonceLength);
 		System.arraycopy(nonce, 0, lengthAndNonce, 0, nonceLength);
 
 		//length = 100
@@ -89,10 +83,9 @@ public class SodiumSymmetricDecrypt
 	@Test
 	public void ensureOnlyLengthNonceWithLargerThanIntLengthNull()
 	{
-		final int nonceLength = Sodium.crypto_secretbox_noncebytes();
+		final int nonceLength = SecretBox.NONCEBYTES;
 		byte[] lengthAndNonce = new byte[Const.JAVA_MAX_PRECISION_INT + nonceLength];
-		final byte[] nonce = new byte[nonceLength];
-		Sodium.randombytes_buf(nonce, nonceLength);
+		final byte[] nonce = lazySodium.randomBytesBuf(nonceLength);
 		System.arraycopy(nonce, 0, lengthAndNonce, 0, nonceLength);
 
 		for(int i=0; i<Const.JAVA_MAX_PRECISION_INT; i++)
@@ -108,16 +101,14 @@ public class SodiumSymmetricDecrypt
 	public void ensureFakeCiphertextNull()
 	{
 		final int fakeCiphertextLength = 10;
-		final int nonceLength = Sodium.crypto_secretbox_noncebytes();
+		final int nonceLength = SecretBox.NONCEBYTES;
 		byte[] setup = new byte[Const.JAVA_MAX_PRECISION_INT + nonceLength + fakeCiphertextLength];
-		final byte[] nonce = new byte[nonceLength];
-		Sodium.randombytes_buf(nonce, nonceLength);
+		final byte[] nonce = lazySodium.randomBytesBuf(nonceLength);
 		System.arraycopy(nonce, 0, setup, 0, nonceLength);
 
 		setup[nonceLength+(Const.JAVA_MAX_PRECISION_INT-1)] = fakeCiphertextLength;
 
-		final byte[] fakeCiphertext = new byte[fakeCiphertextLength];
-		Sodium.randombytes(fakeCiphertext, fakeCiphertextLength);
+		final byte[] fakeCiphertext = lazySodium.randomBytesBuf(fakeCiphertextLength);
 		System.arraycopy(fakeCiphertext, 0, setup, Const.JAVA_MAX_PRECISION_INT + nonceLength, fakeCiphertextLength);
 
 		final byte[] decrypted = Utils.sodiumSymDecrypt(setup);
@@ -138,7 +129,7 @@ public class SodiumSymmetricDecrypt
 	public void ensureTamperedCiphertextNull()
 	{
 		byte[] setup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes());
-		final int nonceLength = Sodium.crypto_secretbox_noncebytes();
+		final int nonceLength = SecretBox.NONCEBYTES;
 		setup[nonceLength + Const.JAVA_MAX_PRECISION_INT]++;
 
 		final byte[] decrypted = Utils.sodiumSymDecrypt(setup);
@@ -149,7 +140,7 @@ public class SodiumSymmetricDecrypt
 	public void ensureTrimmedLengthNoCrash()
 	{
 		byte[] setup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes());
-		final int nonceLength = Sodium.crypto_secretbox_noncebytes();
+		final int nonceLength = SecretBox.NONCEBYTES;
 		byte endLengthByte = setup[nonceLength + Const.JAVA_MAX_PRECISION_INT - 1];
 		endLengthByte = (byte)((int)endLengthByte / 2);
 		setup[nonceLength + Const.JAVA_MAX_PRECISION_INT - 1] = endLengthByte;
@@ -171,16 +162,29 @@ public class SodiumSymmetricDecrypt
 	}
 
 	@Test
+	public void ensureSodiumSymmEndurance()
+	{
+		final int SIMULATED_TOTAL_PACKETS = 90000;
+		for(int i=0; i<SIMULATED_TOTAL_PACKETS; i++)
+		{
+			final int PACKETSIZE = 1200;
+			final byte[] sampleVoice = lazySodium.randomBytesBuf(PACKETSIZE);
+			final byte[] setup = Utils.sodiumSymEncrypt(sampleVoice);
+			final byte[] decrypted = Utils.sodiumSymDecrypt(setup);
+			assertTrue(Arrays.equals(decrypted, sampleVoice));
+		}
+	}
+
+	@Test
 	public void ensureWrongKeyNull()
 	{
-		byte[] originalSymmetricKey = new byte[Sodium.crypto_secretbox_keybytes()];
-		System.arraycopy(Vars.sodiumSymmetricKey, 0, originalSymmetricKey, 0, Sodium.crypto_secretbox_keybytes());
-		Vars.sodiumSymmetricKey = new byte[Sodium.crypto_secretbox_keybytes()];
-		Sodium.randombytes_buf(Vars.sodiumSymmetricKey, Sodium.crypto_secretbox_keybytes());
+		byte[] originalSymmetricKey = new byte[SecretBox.KEYBYTES];
+		System.arraycopy(Vars.sodiumSymmetricKey, 0, originalSymmetricKey, 0, SecretBox.KEYBYTES);
+		Vars.sodiumSymmetricKey = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
 
 		final byte[] wrongSetup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes());
 
-		System.arraycopy(originalSymmetricKey, 0, Vars.sodiumSymmetricKey, 0, Sodium.crypto_secretbox_keybytes());
+		System.arraycopy(originalSymmetricKey, 0, Vars.sodiumSymmetricKey, 0, SecretBox.KEYBYTES);
 		final byte[] decrypted = Utils.sodiumSymDecrypt(wrongSetup);
 		assertNull(decrypted);
 	}

@@ -20,8 +20,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
-import org.libsodium.jni.NaCl;
-
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
@@ -64,7 +62,6 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 
 		//check if the private key dump is any good first. if it isn't, reset the saved private key info
 		//	because what is stored is unusable. need to get the private key again.
-		NaCl.sodium();
 		if(!Vars.privateSodiumDump.equals(""))
 		{
 			Vars.privateSodium = Utils.interpretSodiumPrivateKey(Vars.privateSodiumDump);

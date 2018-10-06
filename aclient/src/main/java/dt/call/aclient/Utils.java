@@ -22,8 +22,10 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
 import android.util.Log;
 
-import org.libsodium.jni.NaCl;
-import org.libsodium.jni.Sodium;
+import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
+import com.goterl.lazycode.lazysodium.SodiumAndroid;
+import com.goterl.lazycode.lazysodium.interfaces.Box;
+import com.goterl.lazycode.lazysodium.interfaces.SecretBox;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
@@ -50,6 +52,7 @@ import dt.call.aclient.sqlite.SQLiteDb;
 public class Utils
 {
 	private static final String tag = "Utils";
+	private static LazySodiumAndroid lazySodium = new LazySodiumAndroid(new SodiumAndroid());;
 
 	//Linux time(NULL) system call automatically calculates GMT-0/UTC time
 	//so does currentTimeMillis. No need to do timezone conversions
@@ -319,7 +322,8 @@ public class Utils
 	//for cases when Vars.(shared prefs variable) goes missing or the initial load
 	public static void loadPrefs()
 	{
-		NaCl.sodium();
+		lazySodium = new LazySodiumAndroid(new SodiumAndroid());
+
 		SharedPreferences sharedPreferences = Vars.applicationContext.getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
 		Vars.uname = sharedPreferences.getString(Const.PREF_UNAME, "");
 		Vars.serverAddress = sharedPreferences.getString(Const.PREF_ADDR, "");
@@ -368,11 +372,8 @@ public class Utils
 
 	public static byte[] interpretSodiumPublicKey(String dump)
 	{
-		int h = Const.SODIUM_PUBLIC_HEADER.length();
-		int k = Sodium.crypto_box_publickeybytes()*3;
-		int expectedLength = h + k;
-		int l = dump.length();
-		if(l != expectedLength)
+		int expectedLength = Const.SODIUM_PUBLIC_HEADER.length() + Box.PUBLICKEYBYTES*3;
+		if(dump.length() != expectedLength)
 		{
 			return null;
 		}
@@ -383,7 +384,7 @@ public class Utils
 
 	public static byte[] interpretSodiumPrivateKey(String dump)
 	{
-		int expectedLength = Const.SODIUM_PRIVATE_HEADER.length() + Sodium.crypto_box_publickeybytes()*3;
+		int expectedLength = Const.SODIUM_PRIVATE_HEADER.length() + Box.SECRETKEYBYTES*3;
 		if(dump.length() != expectedLength)
 		{
 			return null;
@@ -419,7 +420,7 @@ public class Utils
 		}
 	}
 
-	public static byte[] readFileBytes(Uri uri, Context context)
+	public static byte[] readSodiumKeyFileBytes(Uri uri, Context context)
 	{
 		try
 		{
@@ -427,7 +428,7 @@ public class Utils
 			ContentResolver resolver = context.getContentResolver();
 			InputStream inputStream = resolver.openInputStream(uri);
 			int longerHeader = Math.max(Const.SODIUM_PRIVATE_HEADER.length(), Const.SODIUM_PUBLIC_HEADER.length());
-			byte[] fileBytes = new byte[longerHeader + Sodium.crypto_box_publickeybytes()*3];
+			byte[] fileBytes = new byte[longerHeader + Box.PUBLICKEYBYTES*3];
 			int amountRead = inputStream.read(fileBytes);
 			inputStream.close();
 			byte[] result = new byte[amountRead];
@@ -444,7 +445,7 @@ public class Utils
 	//for dtsettings and initial user: read the user's private key and set it up for use
 	public static boolean readUserSodiumPrivate(Uri uri, Context context)
 	{
-		byte[] keyBytes = readFileBytes(uri, context);
+		byte[] keyBytes = readSodiumKeyFileBytes(uri, context);
 		if(keyBytes == null)
 		{
 			return false;
@@ -466,7 +467,7 @@ public class Utils
 	//for dtsettings and initial server: read the server's public sodium key and set it up for use
 	public static boolean readServerSodiumPublic(Uri uri, Context context)
 	{
-		byte[] keyBytes = readFileBytes(uri, context);
+		byte[] keyBytes = readSodiumKeyFileBytes(uri, context);
 		if(keyBytes == null)
 		{
 			return false;
@@ -595,41 +596,39 @@ public class Utils
 
 	private static byte[] sodiumEncrypt(byte[] message, boolean asym, byte[] receiver)
 	{
-		Sodium.sodium_init();
-
 		//setup nonce (like a password salt)
 		int nonceLength = 0;
 		if(asym)
 		{
-			nonceLength = Sodium.crypto_box_noncebytes();
+			nonceLength = Box.NONCEBYTES;
 		}
 		else
 		{
-			nonceLength = Sodium.crypto_secretbox_noncebytes();
+			nonceLength = SecretBox.NONCEBYTES;
 		}
-		final byte[] nonce = new byte[nonceLength];
-		Sodium.randombytes_buf(nonce, nonceLength);
+		byte[] nonce = lazySodium.randomBytesBuf(nonceLength);
 
 		//setup cipher text
-		int cipherTextLength = 0, ret = 0;
+		int cipherTextLength = 0;
+		boolean libsodiumOK = false;
 		byte[]cipherText;
 		if(asym)
 		{
-			cipherTextLength = Sodium.crypto_box_macbytes() + message.length;
+			cipherTextLength = Box.MACBYTES + message.length;
 			cipherText = new byte[cipherTextLength];
-			ret = Sodium.crypto_box_easy(cipherText, message, message.length, nonce, receiver, Vars.privateSodium);
+			libsodiumOK = lazySodium.cryptoBoxEasy(cipherText, message, message.length, nonce, receiver, Vars.privateSodium);
 		}
 		else
 		{
-			cipherTextLength = Sodium.crypto_secretbox_macbytes() + message.length;
+			cipherTextLength = SecretBox.MACBYTES + message.length;
 			cipherText = new byte[cipherTextLength];
-			ret = Sodium.crypto_secretbox_easy(cipherText, message, message.length, nonce, Vars.sodiumSymmetricKey);
+			libsodiumOK = lazySodium.cryptoSecretBoxEasy(cipherText, message, message.length, nonce, Vars.sodiumSymmetricKey);
 		}
 
 		//something went wrong with the encryption
-		if(ret != 0)
+		if(!libsodiumOK)
 		{
-			logcat(Const.LOGE, tag, "sodium encryption failed, asym: " + asym + " return code: " + ret);;
+			logcat(Const.LOGE, tag, "sodium encryption failed, asym: " + asym + " return code: " + libsodiumOK);;
 			return null;
 		}
 
@@ -655,17 +654,15 @@ public class Utils
 
 	private static byte[] sodiumDecrypt(byte[] setup, boolean asym, byte[] from)
 	{
-		Sodium.sodium_init();
-
 		//[nonce|message length|encrypted message]
 		int nonceLength = 0;
 		if(asym)
 		{
-			nonceLength = Sodium.crypto_box_noncebytes();
+			nonceLength = Box.NONCEBYTES;
 		}
 		else
 		{
-			nonceLength = Sodium.crypto_secretbox_noncebytes();
+			nonceLength = SecretBox.NONCEBYTES;
 		}
 
 		//check if the nonce and message length are there
@@ -695,19 +692,19 @@ public class Utils
 		System.arraycopy(setup, nonceLength+Const.JAVA_MAX_PRECISION_INT, cipherText, 0, cipherLength);
 		final byte[] messageStorage= new byte[cipherLength];//store the message in somewhere it is guaranteed to fit in case messageLength is bogus/malicious
 
-		int ret;
+		boolean libsodiumOK = false;
 		if(asym)
 		{
-			ret = Sodium.crypto_box_open_easy(messageStorage, cipherText, cipherLength, nonce, from, Vars.privateSodium);
+			libsodiumOK = lazySodium.cryptoBoxOpenEasy(messageStorage, cipherText, cipherLength, nonce, from, Vars.privateSodium);
 		}
 		else
 		{
-			ret = Sodium.crypto_secretbox_open_easy(messageStorage, cipherText, cipherLength, nonce, Vars.sodiumSymmetricKey);
+			libsodiumOK = lazySodium.cryptoSecretBoxOpenEasy(messageStorage, cipherText, cipherLength, nonce, Vars.sodiumSymmetricKey);
 		}
 
-		if(ret != 0)
+		if(!libsodiumOK)
 		{
-			logcat(Const.LOGE, tag, "sodium decryption failed, asym: " + asym + " return code: " + ret);;
+			logcat(Const.LOGE, tag, "sodium decryption failed, asym: " + asym + " return code: " + libsodiumOK);;
 			return null;
 		}
 
