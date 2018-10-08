@@ -584,17 +584,17 @@ public class Utils
 		return result;
 	}
 
-	public static byte[] sodiumAsymEncrypt(byte[] message, byte[] receiver)
+	public static byte[] sodiumAsymEncrypt(byte[] message, byte[] receiverPublic, byte[] myPrivate)
 	{
-		return sodiumEncrypt(message, true, receiver);
+		return sodiumEncrypt(message, true, receiverPublic, myPrivate);
 	}
 
 	public static byte[] sodiumSymEncrypt(byte[] message, byte[] symkey)
 	{
-		return sodiumEncrypt(message, false, symkey);
+		return sodiumEncrypt(message, false, null, symkey);
 	}
 
-	private static byte[] sodiumEncrypt(byte[] message, boolean asym, byte[] receiver)
+	private static byte[] sodiumEncrypt(byte[] message, boolean asym, byte[] receiverPublic, byte[] myPrivate)
 	{
 		//setup nonce (like a password salt)
 		int nonceLength = 0;
@@ -616,13 +616,13 @@ public class Utils
 		{
 			cipherTextLength = Box.MACBYTES + message.length;
 			cipherText = new byte[cipherTextLength];
-			libsodiumOK = lazySodium.cryptoBoxEasy(cipherText, message, message.length, nonce, receiver, Vars.privateSodium);
+			libsodiumOK = lazySodium.cryptoBoxEasy(cipherText, message, message.length, nonce, receiverPublic, myPrivate);
 		}
 		else
 		{
 			cipherTextLength = SecretBox.MACBYTES + message.length;
 			cipherText = new byte[cipherTextLength];
-			libsodiumOK = lazySodium.cryptoSecretBoxEasy(cipherText, message, message.length, nonce, receiver);
+			libsodiumOK = lazySodium.cryptoSecretBoxEasy(cipherText, message, message.length, nonce, myPrivate);
 		}
 
 		//something went wrong with the encryption
@@ -642,17 +642,17 @@ public class Utils
 		return finalSetup;
 	}
 
-	public static byte[] sodiumAsymDecrypt(byte[] setup, byte[] from)
+	public static byte[] sodiumAsymDecrypt(byte[] setup, byte[] senderPublic, byte[] myPrivate)
 	{
-		return sodiumDecrypt(setup, true, from);
+		return sodiumDecrypt(setup, true, senderPublic, myPrivate);
 	}
 
 	public static byte[] sodiumSymDecrypt(byte[] setup, byte[] symkey)
 	{
-		return sodiumDecrypt(setup, false, symkey);
+		return sodiumDecrypt(setup, false, null, symkey);
 	}
 
-	private static byte[] sodiumDecrypt(byte[] setup, boolean asym, byte[] from)
+	private static byte[] sodiumDecrypt(byte[] setup, boolean asym, byte[] senderPublic, byte[] myPrivate)
 	{
 		//[nonce|message length|encrypted message]
 		int nonceLength = 0;
@@ -695,11 +695,11 @@ public class Utils
 		boolean libsodiumOK = false;
 		if(asym)
 		{
-			libsodiumOK = lazySodium.cryptoBoxOpenEasy(messageStorage, cipherText, cipherLength, nonce, from, Vars.privateSodium);
+			libsodiumOK = lazySodium.cryptoBoxOpenEasy(messageStorage, cipherText, cipherLength, nonce, senderPublic, myPrivate);
 		}
 		else
 		{
-			libsodiumOK = lazySodium.cryptoSecretBoxOpenEasy(messageStorage, cipherText, cipherLength, nonce, from);
+			libsodiumOK = lazySodium.cryptoSecretBoxOpenEasy(messageStorage, cipherText, cipherLength, nonce, myPrivate);
 		}
 
 		if(!libsodiumOK)

@@ -22,7 +22,7 @@ public class SodiumAsymmetricDecrypt
 
 	private byte[] otherPublic;
 	private byte[] otherPrivate;
-	private byte[] selfPublicSodium;
+	private byte[] myPublicSodium;
 	private byte[] myPrivateKey;
 	private LazySodiumAndroid lazySodium= new LazySodiumAndroid(new SodiumAndroid());
 
@@ -34,11 +34,9 @@ public class SodiumAsymmetricDecrypt
 			KeyPair serverKeys = lazySodium.cryptoBoxKeypair();
 			Vars.serverPublicSodium = serverKeys.getPublicKey().getAsBytes();
 
-			myPrivateKey = new byte[Box.SECRETKEYBYTES];
 			KeyPair myKeys = lazySodium.cryptoBoxKeypair();
-			selfPublicSodium = myKeys.getPublicKey().getAsBytes();
-			Vars.privateSodium = myKeys.getSecretKey().getAsBytes();
-			System.arraycopy(Vars.privateSodium, 0, myPrivateKey, 0, Box.SECRETKEYBYTES);
+			myPublicSodium = myKeys.getPublicKey().getAsBytes();
+			myPrivateKey = myKeys.getSecretKey().getAsBytes();
 
 			KeyPair otherKeys = lazySodium.cryptoBoxKeypair();
 			otherPublic = otherKeys.getPublicKey().getAsBytes();
@@ -54,7 +52,7 @@ public class SodiumAsymmetricDecrypt
 	public void ensureEmptyInputNull()
 	{
 		final byte[] nothing = new byte[0];
-		final byte[] decrypted = Utils.sodiumAsymDecrypt(nothing, otherPublic);
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(nothing, otherPublic, myPrivateKey);
 		assertNull(decrypted);
 	}
 
@@ -63,13 +61,11 @@ public class SodiumAsymmetricDecrypt
 	{
 		final int nonceLength = Box.NONCEBYTES;
 		final int headerLength = Const.JAVA_MAX_PRECISION_INT + nonceLength;
-		setupAsOther();
-		final byte[] wholeSetup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), selfPublicSodium);
+		final byte[] wholeSetup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), myPublicSodium, otherPrivate);
 		byte[] lengthAndNonce = new byte[headerLength];
 		System.arraycopy(wholeSetup, 0, lengthAndNonce, 0, headerLength);
 
-		setupAsMe();
-		final byte[] decrypted = Utils.sodiumAsymDecrypt(lengthAndNonce, otherPublic);
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(lengthAndNonce, otherPublic, myPrivateKey);
 		assertNull(decrypted);
 	}
 
@@ -81,11 +77,9 @@ public class SodiumAsymmetricDecrypt
 		final byte[] nonce = lazySodium.randomBytesBuf( nonceLength);
 		System.arraycopy(nonce, 0, lengthAndNonce, 0, nonceLength);
 
-		//length = 100
 		lengthAndNonce[nonceLength+(Const.JAVA_MAX_PRECISION_INT-1)] = 100;
 
-		setupAsMe();
-		final byte[] decrypted = Utils.sodiumAsymDecrypt(lengthAndNonce, otherPublic);
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(lengthAndNonce, otherPublic, myPrivateKey);
 		assertNull(decrypted);
 	}
 
@@ -98,11 +92,9 @@ public class SodiumAsymmetricDecrypt
 		final byte[] nonce = lazySodium.randomBytesBuf( nonceLength);
 		System.arraycopy(nonce, 0, lengthAndNonce, 0, nonceLength);
 
-		//length = 100
 		lengthAndNonce[nonceLength+(Const.JAVA_MAX_PRECISION_INT-1)] = -100;
 
-		setupAsMe();
-		final byte[] decrypted = Utils.sodiumAsymDecrypt(lengthAndNonce, otherPublic);
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(lengthAndNonce, otherPublic, myPrivateKey);
 		assertNull(decrypted);
 	}
 
@@ -119,8 +111,7 @@ public class SodiumAsymmetricDecrypt
 			lengthAndNonce[nonceLength+i] = Byte.MAX_VALUE;
 		}
 
-		setupAsMe();
-		final byte[] decrypted = Utils.sodiumAsymDecrypt(lengthAndNonce, otherPublic);
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(lengthAndNonce, otherPublic, myPrivateKey);
 		assertNull(decrypted);
 	}
 
@@ -138,47 +129,41 @@ public class SodiumAsymmetricDecrypt
 		final byte[] fakeCiphertext = lazySodium.randomBytesBuf(fakeCiphertextLength);
 		System.arraycopy(fakeCiphertext, 0, setup, Const.JAVA_MAX_PRECISION_INT + nonceLength, fakeCiphertextLength);
 
-		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic);
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic, myPrivateKey);
 		assertNull(decrypted);
 	}
 
 	@Test
 	public void ensureTamperedNonceNull()
 	{
-		setupAsOther();
-		byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), selfPublicSodium);
+		byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), myPublicSodium, otherPrivate);
 		setup[0]++;
 
-		setupAsMe();
-		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic);
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic, myPrivateKey);
 		assertNull(decrypted);
 	}
 
 	@Test
 	public void ensureTamperedCiphertextNull()
 	{
-		setupAsOther();
-		byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), selfPublicSodium);
+		byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), myPublicSodium, otherPrivate);
 		final int nonceLength = Box.NONCEBYTES;
 		setup[nonceLength + Const.JAVA_MAX_PRECISION_INT]++;
 
-		setupAsMe();
-		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic);
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic, myPrivateKey);
 		assertNull(decrypted);
 	}
 
 	@Test
 	public void ensureTrimmedLengthNoCrash()
 	{
-		setupAsOther();
-		byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), selfPublicSodium);
+		byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), myPublicSodium, otherPrivate);
 		final int nonceLength = Box.NONCEBYTES;
 		byte endLengthByte = setup[nonceLength + Const.JAVA_MAX_PRECISION_INT - 1];
 		endLengthByte = (byte)((int)endLengthByte / 2);
 		setup[nonceLength + Const.JAVA_MAX_PRECISION_INT - 1] = endLengthByte;
 
-		setupAsMe();
-		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic);
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic, myPrivateKey);
 		assertTrue(decrypted.length == endLengthByte);
 		//it has no way of knowing what the original length was, the best
 		//it can do is just trim the output to whatever length you say
@@ -187,11 +172,9 @@ public class SodiumAsymmetricDecrypt
 	@Test
 	public void ensureSodiumAsymmDecryptActuallyWorks()
 	{
-		setupAsOther();
-		final byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), selfPublicSodium);
+		final byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), myPublicSodium, otherPrivate);
 
-		setupAsMe();
-		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic);
+		final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic, myPrivateKey);
 		final String message = new String(decrypted);
 		assertTrue(message.equals(TEST_MESSAGE));
 	}
@@ -199,7 +182,7 @@ public class SodiumAsymmetricDecrypt
 	@Test
 	public void ensureCompleteGarbageNull()
 	{
-		final byte[] nothing = Utils.sodiumAsymDecrypt(TEST_MESSAGE.getBytes(), otherPublic);
+		final byte[] nothing = Utils.sodiumAsymDecrypt(TEST_MESSAGE.getBytes(), otherPublic, myPrivateKey);
 		assertNull(nothing);
 	}
 
@@ -210,11 +193,9 @@ public class SodiumAsymmetricDecrypt
 		{
 			KeyPair mysteryKeys = lazySodium.cryptoBoxKeypair();
 			byte[] mysteryPrivate = mysteryKeys.getSecretKey().getAsBytes();
-			System.arraycopy(mysteryPrivate, 0, Vars.privateSodium, 0, Box.SECRETKEYBYTES);
-			final byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), selfPublicSodium);
+			final byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), myPublicSodium, mysteryPrivate);
 
-			setupAsMe();
-			final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic);
+			final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic, myPrivateKey);
 			assertTrue(decrypted == null);
 		}
 		catch(Exception e)
@@ -231,11 +212,9 @@ public class SodiumAsymmetricDecrypt
 		{
 			KeyPair mysteryKeys = lazySodium.cryptoBoxKeypair();
 			byte[] mysteryPrivate = mysteryKeys.getSecretKey().getAsBytes();
-			System.arraycopy(mysteryPrivate, 0, Vars.privateSodium, 0, Box.SECRETKEYBYTES);
-			final byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), otherPublic);
+			final byte[] setup = Utils.sodiumAsymEncrypt(TEST_MESSAGE.getBytes(), otherPublic, mysteryPrivate);
 
-			setupAsMe();
-			final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic);
+			final byte[] decrypted = Utils.sodiumAsymDecrypt(setup, otherPublic, myPrivateKey);
 			assertTrue(decrypted == null);
 		}
 		catch(Exception e)
@@ -243,15 +222,5 @@ public class SodiumAsymmetricDecrypt
 			e.printStackTrace();
 			fail();
 		}
-	}
-
-	private void setupAsMe()
-	{
-		System.arraycopy(myPrivateKey, 0, Vars.privateSodium, 0, Box.SECRETKEYBYTES);
-	}
-
-	private void setupAsOther()
-	{
-		System.arraycopy(otherPrivate, 0, Vars.privateSodium, 0, Box.SECRETKEYBYTES);
 	}
 }

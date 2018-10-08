@@ -80,29 +80,17 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			byte[] tempPublic = tempKeys.getPublicKey().getAsBytes();
 			byte[] tempPrivate = tempKeys.getSecretKey().getAsBytes();
 			Vars.commandSocket.getOutputStream().write(tempPublic);
-			byte[] tempKeyResponse = new byte[Box.SEALBYTES /*+ Sign.BYTES*/ + SecretBox.KEYBYTES];
+
+			//establish tcp symmetric encryption key
+			byte[] tempKeyResponse = new byte[Const.SIZE_COMMAND];
 			int read = Vars.commandSocket.getInputStream().read(tempKeyResponse);
-			//on the off chance the socket crapped out right from the get go, now you'll know
-			if(read < 0)
-			{
-				abort("couldn't read tcp key");
-				return false;
-			}
-			byte[] tempKeyResponseDec = new byte[/*Sign.BYTES +*/ SecretBox.KEYBYTES];
-			boolean unsealOK = lazySodium.cryptoBoxSealOpen(tempKeyResponseDec, tempKeyResponse, tempKeyResponse.length, tempPublic, tempPrivate);
-			if(!unsealOK)
+			byte[] tempKeyResponseTrimmed = Utils.trimArray(tempKeyResponse, read);
+			byte[] tempKeyResponseDec = Utils.sodiumAsymDecrypt(tempKeyResponseTrimmed, Vars.serverPublicSodium, tempPrivate);
+			if(tempKeyResponseDec == null)
 			{
 				abort("decrypting tcp key failed");
-				return false;
 			}
-			Vars.tcpKey = tempKeyResponseDec; //new byte[SecretBox.KEYBYTES];
-//			long [] tcpkeylen = new long[1];
-//			boolean tcpKeySignOK = lazySodium.cryptoSignOpen(Vars.tcpKey, tcpkeylen, tempKeyResponseDec, tempKeyResponseDec.length, Vars.serverPublicSodium);
-//			if(!tcpKeySignOK)
-//			{
-//				abort("tcp key signature failed");
-//				return false;
-//			}
+			Vars.tcpKey = tempKeyResponseDec;
 
 			//request login challenge
 			String login = Utils.currentTimeSeconds() + "|login1|" + Vars.uname;
@@ -151,7 +139,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			byte[] challengeBytes = Utils.destringify(challenge, false);
 
 			//answer the challenge
-			byte[] decrypted = Utils.sodiumAsymDecrypt(challengeBytes, Vars.serverPublicSodium);
+			byte[] decrypted = Utils.sodiumAsymDecrypt(challengeBytes, Vars.serverPublicSodium, Vars.privateSodium);
 			if(decrypted == null)
 			{
 				Utils.logcat(Const.LOGW, tag, "sodium asymmetric decryption failed");

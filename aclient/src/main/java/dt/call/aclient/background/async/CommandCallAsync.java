@@ -19,10 +19,11 @@ public class CommandCallAsync extends AsyncTask<String, String, Boolean>
 	{
 		String who = params[0];
 		String request = Utils.currentTimeSeconds() + "|call|" + who + "|" + Vars.sessionKey;
+		byte[] requestEnc = Utils.sodiumSymEncrypt(request.getBytes(), Vars.tcpKey);
 		Utils.logcat(Const.LOGD, tag, "Call request: " + request);
 		try
 		{
-			Vars.commandSocket.getOutputStream().write(request.getBytes());
+			Vars.commandSocket.getOutputStream().write(requestEnc);
 			Vars.callWith = who;
 			return true;
 		}

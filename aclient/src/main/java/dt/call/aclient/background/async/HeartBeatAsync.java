@@ -25,7 +25,8 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 
 		try
 		{
-			Vars.commandSocket.getOutputStream().write(Const.JBYTE.getBytes());
+			byte[] jbyteEnc = Utils.sodiumSymEncrypt(Const.JBYTE.getBytes(), Vars.tcpKey);
+			Vars.commandSocket.getOutputStream().write(jbyteEnc);
 			Utils.setExactWakeup(Vars.pendingHeartbeat, Vars.pendingHeartbeat2ndary);
 			Utils.logcat(Const.LOGD, tag, "heart beat sent and ok");
 			return true;

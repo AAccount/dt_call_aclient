@@ -196,15 +196,16 @@ public class CmdListener extends IntentService
 						Vars.sodiumSymmetricKey = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
 
 						//have sodium encrypt its key
-						final byte[] sodiumAsymmCrypted = Utils.sodiumAsymEncrypt(Vars.sodiumSymmetricKey, expectedKey);
-						final String finalEncryptedString = Utils.stringify(sodiumAsymmCrypted, true);
+						final byte[] sodiumAsymEncrypted = Utils.sodiumAsymEncrypt(Vars.sodiumSymmetricKey, expectedKey, Vars.privateSodium);
+						final String finalEncryptedString = Utils.stringify(sodiumAsymEncrypted, true);
 
 						//send the sodium key
 						final String passthrough = Utils.currentTimeSeconds() + "|passthrough|" + involved + "|" + finalEncryptedString + "|" + Vars.sessionKey;
 						logd = logd + "passthrough of sodium key " + passthrough.replace(finalEncryptedString, Const.SODIUM_PLACEHOLDER) + "\n";
 						try
 						{
-							Vars.commandSocket.getOutputStream().write(passthrough.getBytes());
+							byte[] passthroughEnc = Utils.sodiumSymEncrypt(passthrough.getBytes(), Vars.tcpKey);
+							Vars.commandSocket.getOutputStream().write(passthroughEnc);
 						}
 						catch (IOException e)
 						{
@@ -225,7 +226,7 @@ public class CmdListener extends IntentService
 					while(!gotAck && retries > 0)
 					{
 						final String registration = String.valueOf(Utils.currentTimeSeconds());
-						final byte[] sodiumAsymmedRegistration = Utils.sodiumAsymEncrypt(registration.getBytes(), Vars.serverPublicSodium);
+						final byte[] sodiumAsymmedRegistration = Utils.sodiumAsymEncrypt(registration.getBytes(), Vars.serverPublicSodium, Vars.privateSodium);
 
 						//prepend user name so the server will know whose public key to use for authentication
 						final byte[] nameLengthDisassembled = Utils.disassembleInt(Vars.uname.length(), Const.JAVA_MAX_PRECISION_INT);
@@ -258,7 +259,7 @@ public class CmdListener extends IntentService
 						System.arraycopy(ack.getData(), 0, ackEncBytes, 0, ack.getLength());
 
 						//decrypt ack
-						final byte[] decAck = Utils.sodiumAsymDecrypt(ackEncBytes, Vars.serverPublicSodium);
+						final byte[] decAck = Utils.sodiumAsymDecrypt(ackEncBytes, Vars.serverPublicSodium, Vars.privateSodium);
 						if(decAck == null)
 						{
 							gotAck = false;
@@ -305,7 +306,7 @@ public class CmdListener extends IntentService
 					final byte[] setup = Utils.destringify(setupString, true);
 					Vars.sodiumSymmetricKey = null;
 					final byte[] callWithKey = Vars.publicSodiumTable.get(involved);
-					Vars.sodiumSymmetricKey = Utils.sodiumAsymDecrypt(setup, callWithKey);
+					Vars.sodiumSymmetricKey = Utils.sodiumAsymDecrypt(setup, callWithKey, Vars.privateSodium);
 
 					if(Vars.sodiumSymmetricKey != null)
 					{
@@ -419,7 +420,8 @@ public class CmdListener extends IntentService
 			Utils.logcat(Const.LOGD, tag, ready);
 			try
 			{
-				Vars.commandSocket.getOutputStream().write(ready.getBytes());
+				byte[] readyEnc = Utils.sodiumSymEncrypt(ready.getBytes(), Vars.tcpKey);
+				Vars.commandSocket.getOutputStream().write(readyEnc);
 			}
 			catch(Exception e)
 			{
