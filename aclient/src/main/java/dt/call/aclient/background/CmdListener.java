@@ -9,6 +9,7 @@ import android.os.PowerManager;
 import com.goterl.lazycode.lazysodium.LazySodium;
 import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
 import com.goterl.lazycode.lazysodium.SodiumAndroid;
+import com.goterl.lazycode.lazysodium.interfaces.Box;
 import com.goterl.lazycode.lazysodium.interfaces.SecretBox;
 
 import java.io.IOException;
@@ -225,19 +226,12 @@ public class CmdListener extends IntentService
 					boolean gotAck = false;
 					while(!gotAck && retries > 0)
 					{
-						final String registration = String.valueOf(Utils.currentTimeSeconds());
-						final byte[] sodiumAsymmedRegistration = Utils.sodiumAsymEncrypt(registration.getBytes(), Vars.serverPublicSodium, Vars.privateSodium);
-
-						//prepend user name so the server will know whose public key to use for authentication
-						final byte[] nameLengthDisassembled = Utils.disassembleInt(Vars.uname.length(), Const.JAVA_MAX_PRECISION_INT);
-						final byte[] unameBytes = Vars.uname.getBytes();
-						final byte[] payload = new byte[Const.JAVA_MAX_PRECISION_INT+unameBytes.length+sodiumAsymmedRegistration.length];
-						System.arraycopy(nameLengthDisassembled, 0, payload, 0, Const.JAVA_MAX_PRECISION_INT);
-						System.arraycopy(unameBytes, 0, payload, Const.JAVA_MAX_PRECISION_INT, unameBytes.length);
-						System.arraycopy(sodiumAsymmedRegistration, 0, payload, Const.JAVA_MAX_PRECISION_INT+unameBytes.length, sodiumAsymmedRegistration.length);
+						final String registration = String.valueOf(Utils.currentTimeSeconds()) + "|" + Vars.sessionKey;
+						final byte[] sodiumSealedRegistration = new byte[Box.SEALBYTES + registration.length()];
+						lazySodium.cryptoBoxSeal(sodiumSealedRegistration, registration.getBytes(), registration.length(), Vars.serverPublicSodium);
 
 						//send the registration
-						final DatagramPacket registrationPacket = new DatagramPacket(payload, payload.length, Vars.callServer, Vars.mediaPort);
+						final DatagramPacket registrationPacket = new DatagramPacket(sodiumSealedRegistration, sodiumSealedRegistration.length, Vars.callServer, Vars.mediaPort);
 						Vars.mediaUdp.send(registrationPacket);
 
 						//wait for media port registration ack
@@ -259,7 +253,7 @@ public class CmdListener extends IntentService
 						System.arraycopy(ack.getData(), 0, ackEncBytes, 0, ack.getLength());
 
 						//decrypt ack
-						final byte[] decAck = Utils.sodiumAsymDecrypt(ackEncBytes, Vars.serverPublicSodium, Vars.privateSodium);
+						final byte[] decAck = Utils.sodiumSymDecrypt(ackEncBytes, Vars.tcpKey);
 						if(decAck == null)
 						{
 							gotAck = false;
