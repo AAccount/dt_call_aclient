@@ -31,7 +31,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 	private static final String tag = "Initial Server";
 
 	private EditText addr, commandPort, mediaPort;
-	private Button cert, sodium;
+	private Button sodium;
 	private FloatingActionButton next;
 
     @Override
@@ -69,9 +69,6 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		addr = findViewById(R.id.initial_server_addr);
 		commandPort = findViewById(R.id.initial_server_command);
 		mediaPort = findViewById(R.id.initial_server_media);
-		cert = findViewById(R.id.initial_server_certificate);
-		cert.setOnClickListener(this);
-		cert.setAllCaps(false);
 		sodium = findViewById(R.id.initial_server_sodium);
 		sodium.setOnClickListener(this);
 		sodium.setAllCaps(false);
@@ -89,10 +86,6 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		if(Vars.mediaPort != 0)
 		{
 			mediaPort.setText(String.valueOf(Vars.mediaPort));
-		}
-		if(!Vars.certName.equals("") && !Vars.certDump.equals(""))
-		{
-			cert.setText(Vars.certName);
 		}
 		if(!Vars.serverPublicSodiumName.equals("") && !Vars.serverPublicSodiumDump.equals(""))
 		{
@@ -127,22 +120,6 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 	@Override
 	public void onClick(View v)
 	{
-		if(v == cert)
-		{
-			//https://stackoverflow.com/questions/7856959/android-file-chooser
-			// Open a file chooser dialog. Alert dialog if no file managers found
-			Intent fileDialog = new Intent(Intent.ACTION_GET_CONTENT);
-			fileDialog.setType("*/*");
-			fileDialog.addCategory(Intent.CATEGORY_OPENABLE);
-			try
-			{
-				startActivityForResult(Intent.createChooser(fileDialog, getString(R.string.file_picker_server_public)), Const.SELECT_SERVER_SSLCERT);
-			}
-			catch (ActivityNotFoundException a)
-			{
-				Utils.showOk(this, getString(R.string.alert_initial_server_no_caja));
-			}
-		}
 		if(v == sodium)
 		{
 			//https://stackoverflow.com/questions/7856959/android-file-chooser
@@ -168,7 +145,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			mediaString = mediaPort.getText().toString();
 
 			//check to make sure all the required information is filled in
-			boolean allFilled = !Vars.serverAddress.equals("") && !commandString.equals("") && !mediaString.equals("") && !Vars.certDump.equals("") && Vars.serverPublicSodium != null;
+			boolean allFilled = !Vars.serverAddress.equals("") && !commandString.equals("") && !mediaString.equals("") && Vars.serverPublicSodium != null;
 			if(!allFilled)
 			{
 				Utils.showOk(this, getString(R.string.alert_initial_server_incomplete_server));
@@ -201,8 +178,6 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			editor.putString(Const.PREF_ADDR, Vars.serverAddress);
 			editor.putString(Const.PREF_COMMANDPORT, commandString);
 			editor.putString(Const.PREF_MEDIAPORT, mediaString);
-			editor.putString(Const.PREF_CERTDUMP, Vars.certDump);
-			editor.putString(Const.PREF_CERTFNAME, Vars.certName);
 			editor.putString(Const.PREF_SODIUM_DUMP, Vars.serverPublicSodiumDump);
 			editor.putString(Const.PREF_SODIUM_DUMP_NAME, Vars.serverPublicSodiumName);
 			editor.apply();
@@ -220,18 +195,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		//Only attempt to get the certificate file path if Intent data has stuff in it.
 		//	It won't have stuff in it if the user just clicks back.
 		Uri uri = data.getData();
-		if(requestCode == Const.SELECT_SERVER_SSLCERT && data != null)
-		{
-			if(Utils.readServerPublicKey(uri, this))
-			{
-				cert.setText(Vars.certName);
-			}
-			else
-			{
-				Utils.showOk(this, getString(R.string.alert_corrupted_cert));
-			}
-		}
-		else if(requestCode == Const.SELECT_SERVER_PUBLIC_SODIUM && data != null)
+		if(requestCode == Const.SELECT_SERVER_PUBLIC_SODIUM && data != null)
 		{
 			if(Utils.readServerSodiumPublic(uri, this))
 			{

@@ -17,8 +17,6 @@ public class Const
 	public static final String PREF_ADDR = "server_address";
 	public static final String PREF_COMMANDPORT = "command_port";
 	public static final String PREF_MEDIAPORT = "media_port";
-	public static final String PREF_CERTDUMP = "certificate_getEncoded_string_base64";
-	public static final String PREF_CERTFNAME = "certificate_file_name";
 	public static final String PREF_SODIUM_DUMP = "server_sodium_public";
 	public static final String PREF_SODIUM_DUMP_NAME = "server_sodium_public_name";
 	public static final String PREF_UNAME = "username";
@@ -27,7 +25,6 @@ public class Const
 	public static final String PREF_LOG = "log";
 
 	//file selection codes
-	public static final int SELECT_SERVER_SSLCERT = 1;
 	public static final int SELECT_PRIVATE_SODIUM = 2;
 	public static final int SELECT_USER_PUBLIC_SODIUM = 3;
 	public static final int SELECT_SERVER_PUBLIC_SODIUM = 4;

@@ -53,18 +53,10 @@
         />
 
     <Button
-        android:id="@+id/initial_server_certificate"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/initial_server_media"
-        android:hint="@string/initial_server_pem_certificate"
-        />
-
-    <Button
         android:id="@+id/initial_server_sodium"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/initial_server_certificate"
+        android:layout_below="@+id/initial_server_media"
         android:hint="@string/initial_server_sodium_certificate"
         />
 

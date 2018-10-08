@@ -5,7 +5,6 @@
     <string name="initial_server_addr_hint">Server Address or Name</string>
     <string name="initial_server_addr_command">Command Port Number</string>
     <string name="initial_server_addr_media">Media Port Number</string>
-    <string name="initial_server_pem_certificate">Server TLS Certificate</string>
     <string name="initial_server_sodium_certificate">Server Sodium Public Key</string>
     <string name="initial_server_title">Server Information</string>
     <string name="initial_server_image_accessibility">Server picture from Fedora Linux</string>
@@ -14,7 +13,6 @@
     <string name="progress_login">Dialing in &#8230;</string>
 
     <!-- File picker messages -->
-    <string name="file_picker_server_public">Server\'s Expected Public Key</string>
     <string name="file_picker_server_sodium_public">Server\'s Expected Sodium Public Key</string>
     <string name="file_picker_user_public">\'s Expected Public Key</string>
     <string name="file_picker_user_private">Your Private Key</string>
@@ -24,7 +22,7 @@
     <string name="alert_login_failed">Login failed</string>
     <string name="alert_yes">Yes</string>
     <string name="alert_no">No</string>
-    <string name="alert_technical_difficulties">Currently experience technical difficulties. Check DB Logs if possible.</string>
+    <string name="alert_technical_difficulties">Currently experiencing technical difficulties. Check DB Logs if possible.</string>
     <string name="alert_corrupted_cert">Certificate file corrupted. Can\'t use.</string>
     <string name="alert_corrupted_key">Key file corrupted. Can\'t use.</string>
     <string name="alert_storage_perm">Storage permission is required to open your private for logging on, the server\'s public key to verify it, and anybody else\'s public key you want to manually enter.</string>
@@ -129,7 +127,6 @@
     <string name="settings_server_addr_summary">Call server\'s domain name or ip address</string>
     <string name="settings_server_cmd_summary">Port on the server for accepting call commands</string>
     <string name="settings_server_media_summary">Port on the server for accepting call media data</string>
-    <string name="settings_server_cert_summary">Server\'s public key file</string>
     <string name="settings_server_sodium_summary">Server\'s public sodium key file</string>
     <string name="settings_user_uname_summary">CASE SENSITIVE user account name</string>
     <string name="settings_user_private_key_summary">Your private key for logging in</string>

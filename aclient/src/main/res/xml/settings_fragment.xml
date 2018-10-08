@@ -37,11 +37,6 @@
             android:maxLength="5"
             />
         <Preference
-            android:key="certificate_file_name"
-            android:title="@string/initial_server_pem_certificate"
-            android:summary="@string/settings_server_cert_summary"
-            />
-        <Preference
             android:key="server_sodium_public"
             android:title="@string/initial_server_sodium_certificate"
             android:summary="@string/settings_server_sodium_summary"

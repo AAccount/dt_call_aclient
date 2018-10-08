@@ -49,8 +49,6 @@ public class DTSettings extends AppCompatActivity
 			addPreferencesFromResource(R.xml.settings_fragment);
 
 			//setup the file picker for the certificate preference
-			certPicker = findPreference(Const.PREF_CERTFNAME);
-			certPicker.setOnPreferenceClickListener(this);
 			sodiumPublicPicker = findPreference(Const.PREF_SODIUM_DUMP);
 			sodiumPublicPicker.setOnPreferenceClickListener(this);
 			privateKeyPicker = findPreference(Const.PREF_PRIVATE_KEY_DUMP);
@@ -72,12 +70,7 @@ public class DTSettings extends AppCompatActivity
 				//choose the appropriate selection key and popup title
 				int selectionKey;
 				String selectionTitle;
-				if(preference == certPicker)
-				{
-					selectionKey = Const.SELECT_SERVER_SSLCERT;
-					selectionTitle = getString(R.string.file_picker_server_public);
-				}
-				else if(preference == privateKeyPicker)
+				if(preference == privateKeyPicker)
 				{
 					selectionKey = Const.SELECT_PRIVATE_SODIUM;
 					selectionTitle = getString(R.string.file_picker_user_private);
@@ -110,20 +103,7 @@ public class DTSettings extends AppCompatActivity
 		{
 			//Only attempt to get the certificate file path if Intent data has stuff in it.
 			//	It won't have stuff in it if the user just clicks back.
-			if(requestCode == Const.SELECT_SERVER_SSLCERT && data != null)
-			{
-				Uri uri = data.getData();
-				if(Utils.readServerPublicKey(uri, getActivity()))
-				{
-					SharedPreferences sharedPreferences = getActivity().getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
-					SharedPreferences.Editor editor = sharedPreferences.edit();
-					editor.putString(Const.PREF_CERTDUMP, Vars.certDump);
-					editor.putString(Const.PREF_CERTFNAME, Vars.certName);
-					editor.apply();
-				}
-			}
-
-			else if(requestCode == Const.SELECT_PRIVATE_SODIUM && data != null)
+			if(requestCode == Const.SELECT_PRIVATE_SODIUM && data != null)
 			{
 				Uri uri = data.getData();
 				if(Utils.readUserSodiumPrivate(uri, getActivity()))

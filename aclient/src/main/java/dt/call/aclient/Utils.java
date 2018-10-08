@@ -19,7 +19,6 @@ import android.os.Build;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Base64;
 import android.util.Log;
 
 import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
@@ -27,15 +26,10 @@ import com.goterl.lazycode.lazysodium.SodiumAndroid;
 import com.goterl.lazycode.lazysodium.interfaces.Box;
 import com.goterl.lazycode.lazysodium.interfaces.SecretBox;
 
-import java.io.ByteArrayInputStream;
-import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
 
 import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.screens.CallIncoming;
@@ -337,8 +331,6 @@ public class Utils
 			//usually not fatal. first time running the app no saved values so will try to convert "" to #
 			dumpException(tag, n);
 		}
-		Vars.certName = sharedPreferences.getString(Const.PREF_CERTFNAME, "");
-		Vars.certDump = sharedPreferences.getString(Const.PREF_CERTDUMP, "");
 		Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, Vars.SHOUDLOG);
 
 		//load the private key dump and make it usable
@@ -346,20 +338,6 @@ public class Utils
 		if(!privateKeyDump.equals(""))
 		{
 			Vars.privateSodium = interpretSodiumPrivateKey(privateKeyDump);
-		}
-
-		if(Vars.certDump != null)
-		{
-			try
-			{
-				byte[] serverCertBytes = Base64.decode(Vars.certDump, Const.BASE64_Flags);
-				X509Certificate serverCert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(serverCertBytes));
-				Vars.serverTlsKey = serverCert.getPublicKey();
-			}
-			catch(Exception e)
-			{
-				dumpException(tag, e);
-			}
 		}
 
 		Vars.serverPublicSodiumDump = sharedPreferences.getString(Const.PREF_SODIUM_DUMP, "");
@@ -392,32 +370,6 @@ public class Utils
 
 		dump = dump.substring(Const.SODIUM_PRIVATE_HEADER.length());
 		return destringify(dump, false);
-	}
-
-	//for dtsettings and initial server: read the server's public key and set it up for use
-	public static boolean readServerPublicKey(Uri uri, Context context)
-	{
-		try
-		{
-			ContentResolver resolver = context.getContentResolver();
-			InputStream certInputStream = resolver.openInputStream(uri);
-			X509Certificate expectedCert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(certInputStream);
-			byte[] expectedDump = expectedCert.getEncoded();
-			Vars.certDump = Base64.encodeToString(expectedDump, Const.BASE64_Flags);
-			Vars.serverTlsKey = expectedCert.getPublicKey();
-
-			//store the certificate file name for esthetic purposes
-			String[] expanded = uri.getPath().split("[\\/:\\:]");
-			Vars.certName = expanded[expanded.length-1];
-			return true;
-		}
-		catch (FileNotFoundException | CertificateException e)
-		{
-			//file somehow disappeared between picking and trying to use in the app
-			//	there's nothing you can do about it
-			Utils.showOk(context, context.getString(R.string.alert_corrupted_cert));
-			return false;
-		}
 	}
 
 	public static byte[] readSodiumKeyFileBytes(Uri uri, Context context)

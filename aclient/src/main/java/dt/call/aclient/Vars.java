@@ -50,9 +50,6 @@ public class Vars
 	public static String serverAddress;
 	public static int commandPort;
 	public static int mediaPort;
-	public static String certDump;
-	public static String certName;
-	public static PublicKey serverTlsKey = null;
 	public static String serverPublicSodiumName;
 	public static String serverPublicSodiumDump;
 	public static byte[] serverPublicSodium = null;
