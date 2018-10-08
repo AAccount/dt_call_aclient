@@ -69,11 +69,16 @@ public class CmdListener extends IntentService
 			try
 			{//the async magic here... it will patiently wait until something comes in
 
-				final byte[] rawString = new byte[Const.SIZE_COMMAND];
-				final int length = Vars.commandSocket.getInputStream().read(rawString);
+				final byte[] encString = new byte[Const.SIZE_COMMAND];
+				final int length = Vars.commandSocket.getInputStream().read(encString);
 				if(length < 0)
 				{
 					throw new Exception("input stream read failed");
+				}
+				final byte[] rawString = Utils.sodiumSymDecrypt(Utils.trimArray(encString, length), Vars.tcpKey);
+				if(rawString == null)
+				{
+					continue;
 				}
 				final String fromServer = new String(rawString, 0, length);
 				final String[] respContents = fromServer.split("\\|");

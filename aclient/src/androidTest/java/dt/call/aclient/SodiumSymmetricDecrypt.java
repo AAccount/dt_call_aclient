@@ -33,7 +33,7 @@ public class SodiumSymmetricDecrypt
 	public void ensureEmptyInputNull()
 	{
 		final byte[] nothing = new byte[0];
-		final byte[] decrypted = Utils.sodiumSymDecrypt(nothing);
+		final byte[] decrypted = Utils.sodiumSymDecrypt(nothing, Vars.sodiumSymmetricKey);
 		assertNull(decrypted);
 	}
 
@@ -42,11 +42,11 @@ public class SodiumSymmetricDecrypt
 	{
 		final int nonceLength = SecretBox.NONCEBYTES;
 		final int headerLength = Const.JAVA_MAX_PRECISION_INT + nonceLength;
-		final byte[] wholeSetup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes());
+		final byte[] wholeSetup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes(), Vars.sodiumSymmetricKey);
 		byte[] lengthAndNonce = new byte[headerLength];
 		System.arraycopy(wholeSetup, 0, lengthAndNonce, 0, headerLength);
 
-		final byte[] decrypted = Utils.sodiumSymDecrypt(lengthAndNonce);
+		final byte[] decrypted = Utils.sodiumSymDecrypt(lengthAndNonce, Vars.sodiumSymmetricKey);
 		assertNull(decrypted);
 	}
 
@@ -61,7 +61,7 @@ public class SodiumSymmetricDecrypt
 		//length = 100
 		lengthAndNonce[nonceLength+(Const.JAVA_MAX_PRECISION_INT-1)] = 100;
 
-		final byte[] decrypted = Utils.sodiumSymDecrypt(lengthAndNonce);
+		final byte[] decrypted = Utils.sodiumSymDecrypt(lengthAndNonce, Vars.sodiumSymmetricKey);
 		assertNull(decrypted);
 	}
 
@@ -76,7 +76,7 @@ public class SodiumSymmetricDecrypt
 		//length = 100
 		lengthAndNonce[nonceLength+(Const.JAVA_MAX_PRECISION_INT-1)] = -100;
 
-		final byte[] decrypted = Utils.sodiumSymDecrypt(lengthAndNonce);
+		final byte[] decrypted = Utils.sodiumSymDecrypt(lengthAndNonce, Vars.sodiumSymmetricKey);
 		assertNull(decrypted);
 	}
 
@@ -93,7 +93,7 @@ public class SodiumSymmetricDecrypt
 			lengthAndNonce[nonceLength+i] = Byte.MAX_VALUE;
 		}
 
-		final byte[] decrypted = Utils.sodiumSymDecrypt(lengthAndNonce);
+		final byte[] decrypted = Utils.sodiumSymDecrypt(lengthAndNonce, Vars.sodiumSymmetricKey);
 		assertNull(decrypted);
 	}
 
@@ -111,41 +111,41 @@ public class SodiumSymmetricDecrypt
 		final byte[] fakeCiphertext = lazySodium.randomBytesBuf(fakeCiphertextLength);
 		System.arraycopy(fakeCiphertext, 0, setup, Const.JAVA_MAX_PRECISION_INT + nonceLength, fakeCiphertextLength);
 
-		final byte[] decrypted = Utils.sodiumSymDecrypt(setup);
+		final byte[] decrypted = Utils.sodiumSymDecrypt(setup, Vars.sodiumSymmetricKey);
 		assertNull(decrypted);
 	}
 
 	@Test
 	public void ensureTamperedNonceNull()
 	{
-		byte[] setup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes());
+		byte[] setup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes(), Vars.sodiumSymmetricKey);
 		setup[0]++;
 
-		final byte[] decrypted = Utils.sodiumSymDecrypt(setup);
+		final byte[] decrypted = Utils.sodiumSymDecrypt(setup, Vars.sodiumSymmetricKey);
 		assertNull(decrypted);
 	}
 
 	@Test
 	public void ensureTamperedCiphertextNull()
 	{
-		byte[] setup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes());
+		byte[] setup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes(), Vars.sodiumSymmetricKey);
 		final int nonceLength = SecretBox.NONCEBYTES;
 		setup[nonceLength + Const.JAVA_MAX_PRECISION_INT]++;
 
-		final byte[] decrypted = Utils.sodiumSymDecrypt(setup);
+		final byte[] decrypted = Utils.sodiumSymDecrypt(setup, Vars.sodiumSymmetricKey);
 		assertNull(decrypted);
 	}
 
 	@Test
 	public void ensureTrimmedLengthNoCrash()
 	{
-		byte[] setup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes());
+		byte[] setup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes(), Vars.sodiumSymmetricKey);
 		final int nonceLength = SecretBox.NONCEBYTES;
 		byte endLengthByte = setup[nonceLength + Const.JAVA_MAX_PRECISION_INT - 1];
 		endLengthByte = (byte)((int)endLengthByte / 2);
 		setup[nonceLength + Const.JAVA_MAX_PRECISION_INT - 1] = endLengthByte;
 
-		final byte[] decrypted = Utils.sodiumSymDecrypt(setup);
+		final byte[] decrypted = Utils.sodiumSymDecrypt(setup, Vars.sodiumSymmetricKey);
 		assertTrue(decrypted.length == endLengthByte);
 		//it has no way of knowing what the original length was, the best
 		//it can do is just trim the output to whatever length you say
@@ -154,9 +154,9 @@ public class SodiumSymmetricDecrypt
 	@Test
 	public void ensureSodiumSymmDecryptActuallyWorks()
 	{
-		final byte[] setup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes());
+		final byte[] setup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes(), Vars.sodiumSymmetricKey);
 
-		final byte[] decrypted = Utils.sodiumSymDecrypt(setup);
+		final byte[] decrypted = Utils.sodiumSymDecrypt(setup, Vars.sodiumSymmetricKey);
 		final String message = new String(decrypted);
 		assertTrue(message.equals(TEST_MESSAGE));
 	}
@@ -169,8 +169,8 @@ public class SodiumSymmetricDecrypt
 		{
 			final int PACKETSIZE = 1200;
 			final byte[] sampleVoice = lazySodium.randomBytesBuf(PACKETSIZE);
-			final byte[] setup = Utils.sodiumSymEncrypt(sampleVoice);
-			final byte[] decrypted = Utils.sodiumSymDecrypt(setup);
+			final byte[] setup = Utils.sodiumSymEncrypt(sampleVoice, Vars.sodiumSymmetricKey);
+			final byte[] decrypted = Utils.sodiumSymDecrypt(setup, Vars.sodiumSymmetricKey);
 			assertTrue(Arrays.equals(decrypted, sampleVoice));
 		}
 	}
@@ -182,17 +182,17 @@ public class SodiumSymmetricDecrypt
 		System.arraycopy(Vars.sodiumSymmetricKey, 0, originalSymmetricKey, 0, SecretBox.KEYBYTES);
 		Vars.sodiumSymmetricKey = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
 
-		final byte[] wrongSetup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes());
+		final byte[] wrongSetup = Utils.sodiumSymEncrypt(TEST_MESSAGE.getBytes(), Vars.sodiumSymmetricKey);
 
 		System.arraycopy(originalSymmetricKey, 0, Vars.sodiumSymmetricKey, 0, SecretBox.KEYBYTES);
-		final byte[] decrypted = Utils.sodiumSymDecrypt(wrongSetup);
+		final byte[] decrypted = Utils.sodiumSymDecrypt(wrongSetup, Vars.sodiumSymmetricKey);
 		assertNull(decrypted);
 	}
 
 	@Test
 	public void ensureCompleteGarbageNull()
 	{
-		final byte[] nothing = Utils.sodiumSymDecrypt(TEST_MESSAGE.getBytes());
+		final byte[] nothing = Utils.sodiumSymDecrypt(TEST_MESSAGE.getBytes(), Vars.sodiumSymmetricKey);
 		assertNull(nothing);
 	}
 }

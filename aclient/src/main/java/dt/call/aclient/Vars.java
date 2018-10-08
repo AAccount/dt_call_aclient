@@ -9,6 +9,7 @@ import android.support.v4.app.NotificationCompat;
 
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.security.PublicKey;
 import java.util.HashMap;
 
@@ -28,7 +29,8 @@ public class Vars
 	public static String sessionKey = "";
 
 	//2 sockets
-	public static SSLSocket commandSocket = null;
+	public static Socket commandSocket = null;
+	public static byte[] tcpKey = null;
 	public static DatagramSocket mediaUdp = null;
 	public static InetAddress callServer = null;
 

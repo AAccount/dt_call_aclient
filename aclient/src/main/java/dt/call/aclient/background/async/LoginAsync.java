@@ -6,6 +6,15 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.util.Base64;
 
+import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
+import com.goterl.lazycode.lazysodium.SodiumAndroid;
+import com.goterl.lazycode.lazysodium.interfaces.Box;
+import com.goterl.lazycode.lazysodium.interfaces.SecretBox;
+import com.goterl.lazycode.lazysodium.interfaces.Sign;
+import com.goterl.lazycode.lazysodium.utils.KeyPair;
+
+import java.io.IOException;
+import java.net.Socket;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -63,27 +72,57 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 				tryingLogin = true;
 			}
 
+			//setup tcp connection
+			Vars.commandSocket = new Socket(Vars.serverAddress, Vars.commandPort);
+			Vars.commandSocket.setTcpNoDelay(true);
+			LazySodiumAndroid lazySodium= new LazySodiumAndroid(new SodiumAndroid());
+			KeyPair tempKeys = lazySodium.cryptoBoxKeypair();
+			byte[] tempPublic = tempKeys.getPublicKey().getAsBytes();
+			byte[] tempPrivate = tempKeys.getSecretKey().getAsBytes();
+			Vars.commandSocket.getOutputStream().write(tempPublic);
+			byte[] tempKeyResponse = new byte[Box.SEALBYTES /*+ Sign.BYTES*/ + SecretBox.KEYBYTES];
+			int read = Vars.commandSocket.getInputStream().read(tempKeyResponse);
+			//on the off chance the socket crapped out right from the get go, now you'll know
+			if(read < 0)
+			{
+				abort("couldn't read tcp key");
+				return false;
+			}
+			byte[] tempKeyResponseDec = new byte[/*Sign.BYTES +*/ SecretBox.KEYBYTES];
+			boolean unsealOK = lazySodium.cryptoBoxSealOpen(tempKeyResponseDec, tempKeyResponse, tempKeyResponse.length, tempPublic, tempPrivate);
+			if(!unsealOK)
+			{
+				abort("decrypting tcp key failed");
+				return false;
+			}
+			Vars.tcpKey = tempKeyResponseDec; //new byte[SecretBox.KEYBYTES];
+//			long [] tcpkeylen = new long[1];
+//			boolean tcpKeySignOK = lazySodium.cryptoSignOpen(Vars.tcpKey, tcpkeylen, tempKeyResponseDec, tempKeyResponseDec.length, Vars.serverPublicSodium);
+//			if(!tcpKeySignOK)
+//			{
+//				abort("tcp key signature failed");
+//				return false;
+//			}
+
 			//request login challenge
-			Vars.commandSocket = mkSocket(Vars.serverAddress, Vars.commandPort, Vars.certDump);
 			String login = Utils.currentTimeSeconds() + "|login1|" + Vars.uname;
-			Vars.commandSocket.getOutputStream().write(login.getBytes());
+			byte[] loginEnc = Utils.sodiumSymEncrypt(login.getBytes(), Vars.tcpKey);
+			Vars.commandSocket.getOutputStream().write(loginEnc);
 
 			//read in login challenge
-			byte[] responseRaw = new byte[Const.SIZE_COMMAND];
-			int length = Vars.commandSocket.getInputStream().read(responseRaw);
+			byte[] responseRawEnc = new byte[Const.SIZE_COMMAND];
+			int length = Vars.commandSocket.getInputStream().read(responseRawEnc);
+			byte[] responseRaw = Utils.sodiumSymDecrypt(Utils.trimArray(responseRawEnc, length), Vars.tcpKey);
 
 			//on the off chance the socket crapped out right from the get go, now you'll know
 			if(length < 0)
 			{
-				Vars.commandSocket.close();
-				Vars.commandSocket = null;
-				Utils.logcat(Const.LOGE, tag, "Socket closed before a response could be read");
-				onPostExecute(false);
+				abort("failed reading login1 response");
 				return false;
 			}
 
 			//there's actual stuff to process, process it!
-			String loginChallenge = new String(responseRaw, 0, length);
+			String loginChallenge = new String(responseRaw, 0, responseRaw.length);
 
 			//process login challenge response
 			String[] loginChallengeContents = loginChallenge.split("\\|");
@@ -121,12 +160,14 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			}
 			String challengeDec = new String(decrypted, "UTF8");
 			String loginChallengeResponse = Utils.currentTimeSeconds() + "|login2|" + Vars.uname + "|" + challengeDec;
-			Vars.commandSocket.getOutputStream().write(loginChallengeResponse.getBytes());
+			byte [] loginChallengeResponseEnc = Utils.sodiumSymEncrypt(loginChallengeResponse.getBytes(), Vars.tcpKey);
+			Vars.commandSocket.getOutputStream().write(loginChallengeResponseEnc);
 
 			//see if the server liked the challenge response
-			byte[] answerResponseBuffer = new byte[Const.SIZE_COMMAND];
-			length = Vars.commandSocket.getInputStream().read(answerResponseBuffer);
-			String answerResponse = new String(answerResponseBuffer, 0, length);
+			byte[] answerResponseBufferEnc = new byte[Const.SIZE_COMMAND];
+			length = Vars.commandSocket.getInputStream().read(answerResponseBufferEnc);
+			byte[] answerResponseBuffer = Utils.sodiumSymDecrypt(Utils.trimArray(answerResponseBufferEnc, length), Vars.tcpKey);
+			String answerResponse = new String(answerResponseBuffer, 0, answerResponseBuffer.length);
 
 			//check reaction response
 			String[] answerResponseContents = answerResponse.split("\\|");
@@ -161,13 +202,6 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			onPostExecute(true);
 			return true;
-		}
-		catch (CertificateException c)
-		{
-			Utils.killSockets();
-			Utils.logcat(Const.LOGE, tag, "server certificate didn't match the expected");
-			onPostExecute(false);
-			return false;
 		}
 		catch (Exception i)
 		{
@@ -209,68 +243,18 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		}
 	}
 
-	private SSLSocket mkSocket(String host, int port, final String expected64) throws CertificateException
+	private void abort(String message)
 	{
-		SSLSocket socket = null;
-		TrustManager[] trustOnlyServerCert = new TrustManager[]
-				{new X509TrustManager()
-				{
-					@Override
-					public void checkClientTrusted(X509Certificate[] chain, String alg)
-					{
-						//this IS the client. it's not going to be getting clients itself. nothing to see here
-					}
-
-					@Override
-					public void checkServerTrusted(X509Certificate[] chain, String alg) throws CertificateException
-					{
-						//Get the certificate encoded as ascii text. Normally a certificate can be opened
-						//	by a text editor anyways.
-						byte[] serverCertDump = chain[0].getEncoded();
-						String server64 = Base64.encodeToString(serverCertDump, Const.BASE64_Flags);
-
-						//Trim the expected and presented server ceritificate ascii representations to prevent false
-						//	positive of not matching because of randomly appended new lines or tabs or both.
-						server64 = server64.trim();
-						String expected64Trimmed = expected64.trim();
-						if(!expected64Trimmed.equals(server64))
-						{
-							throw new CertificateException("Server certificate does not match expected one.");
-						}
-
-					}
-
-					@Override
-					public X509Certificate[] getAcceptedIssuers()
-					{
-						return null;
-					}
-
-				}
-				};
 		try
 		{
-			SSLContext context;
-			context = SSLContext.getInstance("TLSv1.2");
-			context.init(new KeyManager[0], trustOnlyServerCert, new SecureRandom());
-			SSLSocketFactory mkssl = context.getSocketFactory();
-			socket = (SSLSocket)mkssl.createSocket(host, port);
-			socket.setTcpNoDelay(true); //for heartbeat to get instant ack
-			socket.startHandshake();
-			return socket;
+			Vars.commandSocket.close();
 		}
-		catch (Exception e)
+		catch (IOException e)
 		{
-			try
-			{
-				socket.close();
-			}
-			catch (Exception e1)
-			{
-				Utils.dumpException(tag, e1); //although there's nothing that can really be done at this point
-			}
 			Utils.dumpException(tag, e);
-			return null;
 		}
+		Vars.commandSocket = null;
+		Utils.logcat(Const.LOGE, tag, message);
+		onPostExecute(false);
 	}
 }

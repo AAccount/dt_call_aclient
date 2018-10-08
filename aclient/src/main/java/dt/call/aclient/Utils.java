@@ -589,9 +589,9 @@ public class Utils
 		return sodiumEncrypt(message, true, receiver);
 	}
 
-	public static byte[] sodiumSymEncrypt(byte[] message)
+	public static byte[] sodiumSymEncrypt(byte[] message, byte[] symkey)
 	{
-		return sodiumEncrypt(message, false, null);
+		return sodiumEncrypt(message, false, symkey);
 	}
 
 	private static byte[] sodiumEncrypt(byte[] message, boolean asym, byte[] receiver)
@@ -622,7 +622,7 @@ public class Utils
 		{
 			cipherTextLength = SecretBox.MACBYTES + message.length;
 			cipherText = new byte[cipherTextLength];
-			libsodiumOK = lazySodium.cryptoSecretBoxEasy(cipherText, message, message.length, nonce, Vars.sodiumSymmetricKey);
+			libsodiumOK = lazySodium.cryptoSecretBoxEasy(cipherText, message, message.length, nonce, receiver);
 		}
 
 		//something went wrong with the encryption
@@ -647,9 +647,9 @@ public class Utils
 		return sodiumDecrypt(setup, true, from);
 	}
 
-	public static byte[] sodiumSymDecrypt(byte[] setup)
+	public static byte[] sodiumSymDecrypt(byte[] setup, byte[] symkey)
 	{
-		return sodiumDecrypt(setup, false, null);
+		return sodiumDecrypt(setup, false, symkey);
 	}
 
 	private static byte[] sodiumDecrypt(byte[] setup, boolean asym, byte[] from)
@@ -699,7 +699,7 @@ public class Utils
 		}
 		else
 		{
-			libsodiumOK = lazySodium.cryptoSecretBoxOpenEasy(messageStorage, cipherText, cipherLength, nonce, Vars.sodiumSymmetricKey);
+			libsodiumOK = lazySodium.cryptoSecretBoxOpenEasy(messageStorage, cipherText, cipherLength, nonce, from);
 		}
 
 		if(!libsodiumOK)
@@ -713,5 +713,12 @@ public class Utils
 		final byte[] message = new byte[messageLength];
 		System.arraycopy(messageStorage, 0, message, 0, messageLength);
 		return message;
+	}
+
+	public static byte[] trimArray(byte[] input, int trimmed)
+	{
+		byte[] result = new byte[trimmed];
+		System.arraycopy(input, 0, result, 0, trimmed);
+		return result;
 	}
 }

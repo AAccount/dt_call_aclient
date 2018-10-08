@@ -626,7 +626,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					System.arraycopy(seqBytes, 0, accumulatorTrimmed, 0, SEQ_LENGTH_ACCURACY);
 
 					System.arraycopy(compressedOutput, 0, accumulatorTrimmed, SEQ_LENGTH_ACCURACY, compressedDataLength);
-					final byte[] accumulatorEncrypted = Utils.sodiumSymEncrypt(accumulatorTrimmed);
+					final byte[] accumulatorEncrypted = Utils.sodiumSymEncrypt(accumulatorTrimmed, Vars.sodiumSymmetricKey);
 
 					DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length, Vars.callServer, Vars.mediaPort);
 					try
@@ -730,7 +730,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						rxCount++;
 						final byte[] accumulator = new byte[received.getLength()];
 						System.arraycopy(received.getData(), 0, accumulator, 0, received.getLength());
-						final byte[] accumulatorDec = Utils.sodiumSymDecrypt(accumulator); //contents [size1|aac chunk 1|size2|aac chunk 2|...|sizeN|aac chunk N]
+						final byte[] accumulatorDec = Utils.sodiumSymDecrypt(accumulator, Vars.sodiumSymmetricKey); //contents [size1|aac chunk 1|size2|aac chunk 2|...|sizeN|aac chunk N]
 						if(accumulatorDec == null)
 						{
 							Utils.logcat(Const.LOGD, tag, "Invalid decryption");
