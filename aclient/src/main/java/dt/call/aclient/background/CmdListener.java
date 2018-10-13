@@ -81,7 +81,7 @@ public class CmdListener extends IntentService
 				{
 					continue;
 				}
-				final String fromServer = new String(rawString, 0, length);
+				final String fromServer = new String(rawString);
 				final String[] respContents = fromServer.split("\\|");
 				logd = "Server response raw: " + fromServer + "\n";
 
