@@ -19,8 +19,7 @@ public class CommandAcceptAsync extends AsyncTask<String, String, Boolean>
 		{
 			String involved = Vars.callWith;
 			String acceptResp = Utils.currentTimeSeconds() + "|accept|" + involved + "|" + Vars.sessionKey;
-			byte[] acceptRespEnc = Utils.sodiumSymEncrypt(acceptResp.getBytes(), Vars.tcpKey);
-			Vars.commandSocket.getOutputStream().write(acceptRespEnc);
+			Vars.commandSocket.write(acceptResp);
 
 			//no need to set Vars.callwith or Vars.callState because this is just accepting
 			//you still need to wait for call start to switch to state = CallState.INCALL

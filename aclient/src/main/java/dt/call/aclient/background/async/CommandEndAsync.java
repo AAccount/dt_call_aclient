@@ -37,11 +37,10 @@ public class CommandEndAsync extends AsyncTask<String, String, Boolean>
 				return true;
 			}
 			String end = Utils.currentTimeSeconds() + "|end|" + Vars.callWith + "|" + Vars.sessionKey;
-			byte[] endEnc = Utils.sodiumSymEncrypt(end.getBytes(), Vars.tcpKey);
-			Vars.commandSocket.getOutputStream().write(endEnc);
+			Vars.commandSocket.write(end);
 			result = true;
 		}
-		catch (IOException i)
+		catch (Exception i)
 		{
 			Utils.dumpException(tag, i);
 			result = false;

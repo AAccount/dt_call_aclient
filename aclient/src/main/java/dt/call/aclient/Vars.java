@@ -15,6 +15,8 @@ import java.util.HashMap;
 
 import javax.net.ssl.SSLSocket;
 
+import dt.call.aclient.background.SodiumSocket;
+
 /**
  * Created by Daniel on 1/18/16.
  *
@@ -29,8 +31,7 @@ public class Vars
 	public static String sessionKey = "";
 
 	//2 sockets
-	public static Socket commandSocket = null;
-	public static byte[] tcpKey = null;
+	public static SodiumSocket commandSocket = null;
 	public static DatagramSocket mediaUdp = null;
 	public static InetAddress callServer = null;
 

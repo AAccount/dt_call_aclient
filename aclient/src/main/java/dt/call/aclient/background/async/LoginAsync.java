@@ -34,6 +34,7 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.CmdListener;
+import dt.call.aclient.background.SodiumSocket;
 
 /**
  * Created by Daniel on 1/21/16.
@@ -73,44 +74,14 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			}
 
 			//setup tcp connection
-			Vars.commandSocket = new Socket(Vars.serverAddress, Vars.commandPort);
-			Vars.commandSocket.setTcpNoDelay(true);
-			LazySodiumAndroid lazySodium= new LazySodiumAndroid(new SodiumAndroid());
-			KeyPair tempKeys = lazySodium.cryptoBoxKeypair();
-			byte[] tempPublic = tempKeys.getPublicKey().getAsBytes();
-			byte[] tempPrivate = tempKeys.getSecretKey().getAsBytes();
-			Vars.commandSocket.getOutputStream().write(tempPublic);
-
-			//establish tcp symmetric encryption key
-			byte[] tempKeyResponse = new byte[Const.SIZE_COMMAND];
-			int read = Vars.commandSocket.getInputStream().read(tempKeyResponse);
-			byte[] tempKeyResponseTrimmed = Utils.trimArray(tempKeyResponse, read);
-			byte[] tempKeyResponseDec = Utils.sodiumAsymDecrypt(tempKeyResponseTrimmed, Vars.serverPublicSodium, tempPrivate);
-			if(tempKeyResponseDec == null)
-			{
-				abort("decrypting tcp key failed");
-			}
-			Vars.tcpKey = tempKeyResponseDec;
+			Vars.commandSocket = new SodiumSocket(Vars.serverAddress, Vars.commandPort, Vars.serverPublicSodium);
 
 			//request login challenge
 			String login = Utils.currentTimeSeconds() + "|login1|" + Vars.uname;
-			byte[] loginEnc = Utils.sodiumSymEncrypt(login.getBytes(), Vars.tcpKey);
-			Vars.commandSocket.getOutputStream().write(loginEnc);
+			Vars.commandSocket.write(login);
 
 			//read in login challenge
-			byte[] responseRawEnc = new byte[Const.SIZE_COMMAND];
-			int length = Vars.commandSocket.getInputStream().read(responseRawEnc);
-			byte[] responseRaw = Utils.sodiumSymDecrypt(Utils.trimArray(responseRawEnc, length), Vars.tcpKey);
-
-			//on the off chance the socket crapped out right from the get go, now you'll know
-			if(length < 0)
-			{
-				abort("failed reading login1 response");
-				return false;
-			}
-
-			//there's actual stuff to process, process it!
-			String loginChallenge = new String(responseRaw, 0, responseRaw.length);
+			String loginChallenge = Vars.commandSocket.readString(Const.SIZE_COMMAND);
 
 			//process login challenge response
 			String[] loginChallengeContents = loginChallenge.split("\\|");
@@ -148,14 +119,10 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			}
 			String challengeDec = new String(decrypted, "UTF8");
 			String loginChallengeResponse = Utils.currentTimeSeconds() + "|login2|" + Vars.uname + "|" + challengeDec;
-			byte [] loginChallengeResponseEnc = Utils.sodiumSymEncrypt(loginChallengeResponse.getBytes(), Vars.tcpKey);
-			Vars.commandSocket.getOutputStream().write(loginChallengeResponseEnc);
+			Vars.commandSocket.write(loginChallengeResponse);
 
 			//see if the server liked the challenge response
-			byte[] answerResponseBufferEnc = new byte[Const.SIZE_COMMAND];
-			length = Vars.commandSocket.getInputStream().read(answerResponseBufferEnc);
-			byte[] answerResponseBuffer = Utils.sodiumSymDecrypt(Utils.trimArray(answerResponseBufferEnc, length), Vars.tcpKey);
-			String answerResponse = new String(answerResponseBuffer, 0, answerResponseBuffer.length);
+			String answerResponse = Vars.commandSocket.readString(Const.SIZE_COMMAND);
 
 			//check reaction response
 			String[] answerResponseContents = answerResponse.split("\\|");
@@ -229,20 +196,5 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		{
 			tryingLogin = false;
 		}
-	}
-
-	private void abort(String message)
-	{
-		try
-		{
-			Vars.commandSocket.close();
-		}
-		catch (IOException e)
-		{
-			Utils.dumpException(tag, e);
-		}
-		Vars.commandSocket = null;
-		Utils.logcat(Const.LOGE, tag, message);
-		onPostExecute(false);
 	}
 }

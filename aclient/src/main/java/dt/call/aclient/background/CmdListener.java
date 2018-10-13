@@ -70,18 +70,7 @@ public class CmdListener extends IntentService
 			try
 			{//the async magic here... it will patiently wait until something comes in
 
-				final byte[] encString = new byte[Const.SIZE_COMMAND];
-				final int length = Vars.commandSocket.getInputStream().read(encString);
-				if(length < 0)
-				{
-					throw new Exception("input stream read failed");
-				}
-				final byte[] rawString = Utils.sodiumSymDecrypt(Utils.trimArray(encString, length), Vars.tcpKey);
-				if(rawString == null)
-				{
-					continue;
-				}
-				final String fromServer = new String(rawString);
+				final String fromServer = Vars.commandSocket.readString(Const.SIZE_COMMAND);
 				final String[] respContents = fromServer.split("\\|");
 				logd = "Server response raw: " + fromServer + "\n";
 
@@ -205,10 +194,9 @@ public class CmdListener extends IntentService
 						logd = logd + "passthrough of sodium key " + passthrough.replace(finalEncryptedString, Const.SODIUM_PLACEHOLDER) + "\n";
 						try
 						{
-							byte[] passthroughEnc = Utils.sodiumSymEncrypt(passthrough.getBytes(), Vars.tcpKey);
-							Vars.commandSocket.getOutputStream().write(passthroughEnc);
+							Vars.commandSocket.write(passthrough);
 						}
-						catch (IOException e)
+						catch (Exception e)
 						{
 							Utils.dumpException(tag, e);
 							new CommandEndAsync().doInForeground(); //can't send aes key, nothing left to continue
@@ -253,7 +241,7 @@ public class CmdListener extends IntentService
 						System.arraycopy(ack.getData(), 0, ackEncBytes, 0, ack.getLength());
 
 						//decrypt ack
-						final byte[] decAck = Utils.sodiumSymDecrypt(ackEncBytes, Vars.tcpKey);
+						final byte[] decAck = Utils.sodiumSymDecrypt(ackEncBytes, Vars.commandSocket.getTcpKey());
 						if(decAck == null)
 						{
 							gotAck = false;
@@ -414,8 +402,7 @@ public class CmdListener extends IntentService
 			Utils.logcat(Const.LOGD, tag, ready);
 			try
 			{
-				byte[] readyEnc = Utils.sodiumSymEncrypt(ready.getBytes(), Vars.tcpKey);
-				Vars.commandSocket.getOutputStream().write(readyEnc);
+				Vars.commandSocket.write(ready);
 			}
 			catch(Exception e)
 			{
