@@ -3,10 +3,12 @@ package dt.call.aclient.background;
 import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
 import com.goterl.lazycode.lazysodium.SodiumAndroid;
 import com.goterl.lazycode.lazysodium.exceptions.SodiumException;
+import com.goterl.lazycode.lazysodium.interfaces.SecretBox;
 import com.goterl.lazycode.lazysodium.utils.KeyPair;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Arrays;
 
 import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
@@ -15,10 +17,10 @@ public class SodiumSocket
 {
 	private Socket socket;
 	private byte[] tcpKey;
+	LazySodiumAndroid lazySodium = new LazySodiumAndroid(new SodiumAndroid());
 
 	public SodiumSocket(String host, int port, byte[]hostPublicSodium) throws SodiumException, IOException
 	{
-		LazySodiumAndroid lazySodium = new LazySodiumAndroid(new SodiumAndroid());
 		final KeyPair tempKeys = lazySodium.cryptoBoxKeypair();
 		final byte[] tempPublic = tempKeys.getPublicKey().getAsBytes();
 		final byte[] tempPrivate = tempKeys.getSecretKey().getAsBytes();
@@ -55,6 +57,8 @@ public class SodiumSocket
 		{
 			e.printStackTrace();
 		}
+		byte[] filler =  lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
+		System.arraycopy(filler, 0, tcpKey, 0, SecretBox.KEYBYTES);
 	}
 
 	public String readString(int max) throws IOException, SodiumException
