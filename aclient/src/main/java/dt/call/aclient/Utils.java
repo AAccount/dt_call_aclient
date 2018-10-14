@@ -250,6 +250,10 @@ public class Utils
 		killSockets.setName("Utils.quit.killSockets");
 		killSockets.start();
 
+		//overwrite private key memory
+		byte[] filler = lazySodium.randomBytesBuf(Box.SECRETKEYBYTES);
+		System.arraycopy(filler, 0, Vars.privateSodium, 0, Box.SECRETKEYBYTES);
+
 		//properly kill the app
 		caller.finishAffinity();
 	}
@@ -405,6 +409,8 @@ public class Utils
 
 		//interpret the file contents as a public key
 		Vars.privateSodiumDump = new String(keyBytes);
+		byte[] filler = lazySodium.randomBytesBuf(keyBytes.length);
+		System.arraycopy(filler, 0, keyBytes, 0, keyBytes.length);
 		Vars.privateSodium = Utils.interpretSodiumPrivateKey(Vars.privateSodiumDump);
 		if(Vars.privateSodium == null)
 		{
