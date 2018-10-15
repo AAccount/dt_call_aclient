@@ -17,7 +17,7 @@ public class SodiumSocket
 {
 	private Socket socket;
 	private byte[] tcpKey;
-	LazySodiumAndroid lazySodium = new LazySodiumAndroid(new SodiumAndroid());
+	private LazySodiumAndroid lazySodium = new LazySodiumAndroid(new SodiumAndroid());
 
 	public SodiumSocket(String host, int port, byte[]hostPublicSodium) throws SodiumException, IOException
 	{
