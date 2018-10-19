@@ -250,7 +250,7 @@ public class Utils
 		killSockets.start();
 
 		//overwrite private key memory
-		Utils.applyFiller(Vars.privateSodium);
+		Utils.applyFiller(Vars.selfPrivateSodium);
 
 		//properly kill the app
 		caller.finishAffinity();
@@ -337,7 +337,7 @@ public class Utils
 
 		//load the private key dump and make it usable
 		Vars.serverPublicSodium = readDataDataFile(Const.INTERNAL_SERVER_PUBLICKEY_FILE, Box.PUBLICKEYBYTES, Vars.applicationContext);
-		Vars.privateSodium = readDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Box.SECRETKEYBYTES, Vars.applicationContext);
+		Vars.selfPrivateSodium = readDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Box.SECRETKEYBYTES, Vars.applicationContext);
 	}
 
 	public static void applyFiller(byte[] sensitiveStuff)

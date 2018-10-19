@@ -187,7 +187,7 @@ public class CmdListener extends IntentService
 						Vars.voiceSymmetricKey = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
 
 						//have sodium encrypt its key
-						final byte[] sodiumAsymEncrypted = SodiumUtils.asymmetricEncrypt(Vars.voiceSymmetricKey, expectedKey, Vars.privateSodium);
+						final byte[] sodiumAsymEncrypted = SodiumUtils.asymmetricEncrypt(Vars.voiceSymmetricKey, expectedKey, Vars.selfPrivateSodium);
 						final String finalEncryptedString = Utils.stringify(sodiumAsymEncrypted);
 
 						//send the sodium key
@@ -288,7 +288,7 @@ public class CmdListener extends IntentService
 					final String setupString = respContents[2];
 					final byte[] setup = Utils.destringify(setupString);
 					final byte[] callWithKey = Vars.publicSodiumTable.get(involved);
-					Vars.voiceSymmetricKey = SodiumUtils.asymmetricDecrypt(setup, callWithKey, Vars.privateSodium);
+					Vars.voiceSymmetricKey = SodiumUtils.asymmetricDecrypt(setup, callWithKey, Vars.selfPrivateSodium);
 
 					if(Vars.voiceSymmetricKey != null)
 					{

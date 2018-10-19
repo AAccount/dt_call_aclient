@@ -91,7 +91,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			byte[] challengeBytes = Utils.destringify(challenge);
 
 			//answer the challenge
-			byte[] decrypted = SodiumUtils.asymmetricDecrypt(challengeBytes, Vars.serverPublicSodium, Vars.privateSodium);
+			byte[] decrypted = SodiumUtils.asymmetricDecrypt(challengeBytes, Vars.serverPublicSodium, Vars.selfPrivateSodium);
 			if(decrypted == null)
 			{
 				Utils.logcat(Const.LOGW, tag, "sodium asymmetric decryption failed");

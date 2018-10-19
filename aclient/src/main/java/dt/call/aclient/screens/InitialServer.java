@@ -51,7 +51,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 
 		Utils.loadPrefs();
 
-		if(!Vars.uname.equals("") && !(Vars.privateSodium == null))
+		if(!Vars.uname.equals("") && !(Vars.selfPrivateSodium == null))
 		{
 			Utils.logcat(Const.LOGD, tag, "Skipping to the home screen");
 

@@ -50,7 +50,7 @@ public class Vars
 
 	//user information (to be filled in when available)
 	public static String uname = null;
-	public static byte[] privateSodium = null;
+	public static byte[] selfPrivateSodium = null;
 
 	//Ongoing notification with state information
 	public static NotificationCompat.Builder stateNotificationBuilder = null;

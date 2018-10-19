@@ -23,7 +23,7 @@ public class Const
 	public static final String INTERNAL_SERVER_PUBLICKEY_FILE = "server_publickey_binary";
 
 	//file selection codes
-	public static final int SELECT_PRIVATE_SODIUM = 2;
+	public static final int SELECT_SELF_PRIVATE_SODIUM = 2;
 	public static final int SELECT_USER_PUBLIC_SODIUM = 3;
 	public static final int SELECT_SERVER_PUBLIC_SODIUM = 4;
 

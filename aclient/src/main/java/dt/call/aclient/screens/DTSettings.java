@@ -74,7 +74,7 @@ public class DTSettings extends AppCompatActivity
 				String selectionTitle;
 				if(preference == privateKeyPicker)
 				{
-					selectionKey = Const.SELECT_PRIVATE_SODIUM;
+					selectionKey = Const.SELECT_SELF_PRIVATE_SODIUM;
 					selectionTitle = getString(R.string.file_picker_user_private);
 				}
 				else //if(preference == sodiumPublicPicker)
@@ -105,16 +105,16 @@ public class DTSettings extends AppCompatActivity
 		{
 			//Only attempt to get the certificate file path if Intent data has stuff in it.
 			//	It won't have stuff in it if the user just clicks back.
-			if(requestCode == Const.SELECT_PRIVATE_SODIUM && data != null)
+			if(requestCode == Const.SELECT_SELF_PRIVATE_SODIUM && data != null)
 			{
 				Uri uri = data.getData();
 				final byte[] keybytes = SodiumUtils.readKeyFileBytes(uri, getActivity());
 				final byte[] key = SodiumUtils.interpretKey(keybytes, true);
 				if(key != null)
 				{
-					Utils.applyFiller(Vars.privateSodium);
-					Vars.privateSodium = key;
-					final boolean writeok = Utils.writeDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Vars.privateSodium, getActivity());
+					Utils.applyFiller(Vars.selfPrivateSodium);
+					Vars.selfPrivateSodium = key;
+					final boolean writeok = Utils.writeDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Vars.selfPrivateSodium, getActivity());
 					if(!writeok)
 					{
 						Utils.showOk(getActivity(), getString(R.string.initial_user_write_user_private_exception));

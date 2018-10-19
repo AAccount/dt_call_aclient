@@ -56,8 +56,8 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 		//load the saved information if it's there and preset the edittexts
 		SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, MODE_PRIVATE);
 		Vars.uname = sharedPreferences.getString(Const.PREF_UNAME, "");
-		Vars.privateSodium = Utils.readDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Box.SECRETKEYBYTES, this);
-		if(Vars.privateSodium != null)
+		Vars.selfPrivateSodium = Utils.readDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Box.SECRETKEYBYTES, this);
+		if(Vars.selfPrivateSodium != null)
 		{
 			privateKeyButton.setText(getString(R.string.initial_user_got_user_private));
 			gotPrivateKey = true;
@@ -144,7 +144,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 			fileDialog.addCategory(Intent.CATEGORY_OPENABLE);
 			try
 			{
-				startActivityForResult(Intent.createChooser(fileDialog, getString(R.string.file_picker_user_private)), Const.SELECT_PRIVATE_SODIUM);
+				startActivityForResult(Intent.createChooser(fileDialog, getString(R.string.file_picker_user_private)), Const.SELECT_SELF_PRIVATE_SODIUM);
 			}
 			catch (ActivityNotFoundException a)
 			{
@@ -159,7 +159,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 	{
 		//Only attempt to get the private key file path if Intent data has stuff in it.
 		//	It won't have stuff in it if the user just clicks back.
-		if(requestCode == Const.SELECT_PRIVATE_SODIUM && data != null)
+		if(requestCode == Const.SELECT_SELF_PRIVATE_SODIUM && data != null)
 		{
 			Uri uri = data.getData();
 
@@ -189,7 +189,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 			editor.putString(Const.PREF_UNAME, enteredUname);
 			editor.apply();
 
-			final boolean writeok = Utils.writeDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Vars.privateSodium, this);
+			final boolean writeok = Utils.writeDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Vars.selfPrivateSodium, this);
 			if(!writeok)
 			{
 				Utils.showOk(this, getString(R.string.initial_user_write_user_private_exception));
