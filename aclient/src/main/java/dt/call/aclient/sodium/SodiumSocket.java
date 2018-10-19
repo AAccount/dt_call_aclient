@@ -1,9 +1,8 @@
-package dt.call.aclient.background;
+package dt.call.aclient.sodium;
 
 import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
 import com.goterl.lazycode.lazysodium.SodiumAndroid;
 import com.goterl.lazycode.lazysodium.exceptions.SodiumException;
-import com.goterl.lazycode.lazysodium.interfaces.SecretBox;
 import com.goterl.lazycode.lazysodium.utils.KeyPair;
 
 import java.io.IOException;
@@ -32,7 +31,7 @@ public class SodiumSocket
 		final byte[] tempKeyResponse = new byte[Const.SIZE_COMMAND];
 		final int read = socket.getInputStream().read(tempKeyResponse);
 		final byte[] tempKeyResponseTrimmed = Utils.trimArray(tempKeyResponse, read);
-		final byte[] tempKeyResponseDec = Utils.sodiumAsymDecrypt(tempKeyResponseTrimmed, hostPublicSodium, tempPrivate);
+		final byte[] tempKeyResponseDec = SodiumUtils.asymmetricDecrypt(tempKeyResponseTrimmed, hostPublicSodium, tempPrivate);
 		if(tempKeyResponseDec == null)
 		{
 			throw new SodiumException("sodium decryption of the TCP key failed");
@@ -40,7 +39,7 @@ public class SodiumSocket
 		tcpKey = tempKeyResponseDec;
 	}
 
-	byte[] getTcpKey()
+	public byte[] getTcpKey()
 	{
 		return tcpKey;
 	}
@@ -68,7 +67,7 @@ public class SodiumSocket
 	{
 		final byte[] rawEnc = new byte[max];
 		final int length = socket.getInputStream().read(rawEnc);
-		final byte[] response = Utils.sodiumSymDecrypt(Utils.trimArray(rawEnc, length), tcpKey);
+		final byte[] response = SodiumUtils.symmetricDecrypt(Utils.trimArray(rawEnc, length), tcpKey);
 
 		if(length < 0)
 		{
@@ -84,7 +83,7 @@ public class SodiumSocket
 
 	private void write(byte[] bytes) throws IOException, SodiumException
 	{
-		final byte[] bytesenc = Utils.sodiumSymEncrypt(bytes, tcpKey);
+		final byte[] bytesenc = SodiumUtils.symmetricEncrypt(bytes, tcpKey);
 		if(bytesenc == null)
 		{
 			throw new SodiumException("sodium socket write using symmetric encryption failed");

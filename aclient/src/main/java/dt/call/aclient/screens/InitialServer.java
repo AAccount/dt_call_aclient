@@ -27,6 +27,7 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.BackgroundManager;
+import dt.call.aclient.sodium.SodiumUtils;
 
 public class InitialServer extends AppCompatActivity implements View.OnClickListener
 {
@@ -205,8 +206,8 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		Uri uri = data.getData();
 		if(requestCode == Const.SELECT_SERVER_PUBLIC_SODIUM && data != null)
 		{
-			byte[] keybytes = Utils.readSodiumKeyFileBytes(uri, this);
-			Vars.serverPublicSodium = Utils.interpretSodiumKey(keybytes, false);
+			byte[] keybytes = SodiumUtils.readKeyFileBytes(uri, this);
+			Vars.serverPublicSodium = SodiumUtils.interpretKey(keybytes, false);
 			if(Vars.serverPublicSodium != null)
 			{
 				sodium.setText(getString(R.string.initial_server_got_server_public));

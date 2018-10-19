@@ -28,10 +28,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
-import com.goterl.lazycode.lazysodium.SodiumAndroid;
-import com.goterl.lazycode.lazysodium.interfaces.SecretBox;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.DatagramPacket;
@@ -51,6 +47,7 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.CommandEndAsync;
+import dt.call.aclient.sodium.SodiumUtils;
 
 public class CallMain extends AppCompatActivity implements View.OnClickListener, SensorEventListener
 {
@@ -631,7 +628,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					System.arraycopy(seqBytes, 0, accumulatorTrimmed, 0, SEQ_LENGTH_ACCURACY);
 
 					System.arraycopy(compressedOutput, 0, accumulatorTrimmed, SEQ_LENGTH_ACCURACY, compressedDataLength);
-					final byte[] accumulatorEncrypted = Utils.sodiumSymEncrypt(accumulatorTrimmed, Vars.voiceSymmetricKey);
+					final byte[] accumulatorEncrypted = SodiumUtils.symmetricEncrypt(accumulatorTrimmed, Vars.voiceSymmetricKey);
 
 					DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length, Vars.callServer, Vars.mediaPort);
 					try
@@ -735,7 +732,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						rxCount++;
 						final byte[] accumulator = new byte[received.getLength()];
 						System.arraycopy(received.getData(), 0, accumulator, 0, received.getLength());
-						final byte[] accumulatorDec = Utils.sodiumSymDecrypt(accumulator, Vars.voiceSymmetricKey); //contents [size1|aac chunk 1|size2|aac chunk 2|...|sizeN|aac chunk N]
+						final byte[] accumulatorDec = SodiumUtils.symmetricDecrypt(accumulator, Vars.voiceSymmetricKey); //contents [size1|aac chunk 1|size2|aac chunk 2|...|sizeN|aac chunk N]
 						if(accumulatorDec == null)
 						{
 							Utils.logcat(Const.LOGD, tag, "Invalid decryption");

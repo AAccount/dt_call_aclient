@@ -26,6 +26,7 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.CommandEndAsync;
 import dt.call.aclient.screens.CallIncoming;
+import dt.call.aclient.sodium.SodiumUtils;
 import dt.call.aclient.sqlite.SQLiteDb;
 
 /**
@@ -154,7 +155,7 @@ public class CmdListener extends IntentService
 				{
 					//prepare the server's presentation of the person's public key for use
 					final String receivedKeyDump = respContents[2];
-					final byte[] receivedKey = Utils.interpretSodiumKey(receivedKeyDump.getBytes(), false);
+					final byte[] receivedKey = SodiumUtils.interpretKey(receivedKeyDump.getBytes(), false);
 					byte[] expectedKey = Vars.publicSodiumTable.get(Vars.callWith);
 
 					//if this person's public key is known, sanity check the server to make sure it sent the right one
@@ -186,7 +187,7 @@ public class CmdListener extends IntentService
 						Vars.voiceSymmetricKey = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
 
 						//have sodium encrypt its key
-						final byte[] sodiumAsymEncrypted = Utils.sodiumAsymEncrypt(Vars.voiceSymmetricKey, expectedKey, Vars.privateSodium);
+						final byte[] sodiumAsymEncrypted = SodiumUtils.asymmetricEncrypt(Vars.voiceSymmetricKey, expectedKey, Vars.privateSodium);
 						final String finalEncryptedString = Utils.stringify(sodiumAsymEncrypted);
 
 						//send the sodium key
@@ -241,7 +242,7 @@ public class CmdListener extends IntentService
 						System.arraycopy(ack.getData(), 0, ackEncBytes, 0, ack.getLength());
 
 						//decrypt ack
-						final byte[] decAck = Utils.sodiumSymDecrypt(ackEncBytes, Vars.commandSocket.getTcpKey());
+						final byte[] decAck = SodiumUtils.symmetricDecrypt(ackEncBytes, Vars.commandSocket.getTcpKey());
 						if(decAck == null)
 						{
 							gotAck = false;
@@ -287,7 +288,7 @@ public class CmdListener extends IntentService
 					final String setupString = respContents[2];
 					final byte[] setup = Utils.destringify(setupString);
 					final byte[] callWithKey = Vars.publicSodiumTable.get(involved);
-					Vars.voiceSymmetricKey = Utils.sodiumAsymDecrypt(setup, callWithKey, Vars.privateSodium);
+					Vars.voiceSymmetricKey = SodiumUtils.asymmetricDecrypt(setup, callWithKey, Vars.privateSodium);
 
 					if(Vars.voiceSymmetricKey != null)
 					{

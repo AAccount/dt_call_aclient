@@ -11,7 +11,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.HashMap;
 
-import dt.call.aclient.background.SodiumSocket;
+import dt.call.aclient.sodium.SodiumSocket;
 
 /**
  * Created by Daniel on 1/18/16.

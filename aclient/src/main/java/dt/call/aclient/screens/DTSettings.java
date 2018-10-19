@@ -12,6 +12,8 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
+import dt.call.aclient.sodium.SodiumUtils;
+
 /**
  * Created by Daniel on 07/08/2016
  */
@@ -106,8 +108,8 @@ public class DTSettings extends AppCompatActivity
 			if(requestCode == Const.SELECT_PRIVATE_SODIUM && data != null)
 			{
 				Uri uri = data.getData();
-				final byte[] keybytes = Utils.readSodiumKeyFileBytes(uri, getActivity());
-				final byte[] key = Utils.interpretSodiumKey(keybytes, true);
+				final byte[] keybytes = SodiumUtils.readKeyFileBytes(uri, getActivity());
+				final byte[] key = SodiumUtils.interpretKey(keybytes, true);
 				if(key != null)
 				{
 					Utils.applyFiller(Vars.privateSodium);
@@ -123,8 +125,8 @@ public class DTSettings extends AppCompatActivity
 			else if(requestCode == Const.SELECT_SERVER_PUBLIC_SODIUM && data != null)
 			{
 				Uri uri = data.getData();
-				final byte[] keybytes = Utils.readSodiumKeyFileBytes(uri, getActivity());
-				final byte[] key = Utils.interpretSodiumKey(keybytes, false);
+				final byte[] keybytes = SodiumUtils.readKeyFileBytes(uri, getActivity());
+				final byte[] key = SodiumUtils.interpretKey(keybytes, false);
 				if(key != null)
 				{
 					Vars.serverPublicSodium = key;

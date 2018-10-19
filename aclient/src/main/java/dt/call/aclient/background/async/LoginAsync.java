@@ -4,37 +4,18 @@ import android.app.AlarmManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
-import android.util.Base64;
 
-import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
-import com.goterl.lazycode.lazysodium.SodiumAndroid;
-import com.goterl.lazycode.lazysodium.interfaces.Box;
-import com.goterl.lazycode.lazysodium.interfaces.SecretBox;
-import com.goterl.lazycode.lazysodium.interfaces.Sign;
-import com.goterl.lazycode.lazysodium.utils.KeyPair;
-
-import java.io.IOException;
-import java.net.Socket;
-import java.security.SecureRandom;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.CmdListener;
-import dt.call.aclient.background.SodiumSocket;
+import dt.call.aclient.sodium.SodiumSocket;
+import dt.call.aclient.sodium.SodiumUtils;
 
 /**
  * Created by Daniel on 1/21/16.
@@ -110,7 +91,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			byte[] challengeBytes = Utils.destringify(challenge);
 
 			//answer the challenge
-			byte[] decrypted = Utils.sodiumAsymDecrypt(challengeBytes, Vars.serverPublicSodium, Vars.privateSodium);
+			byte[] decrypted = SodiumUtils.asymmetricDecrypt(challengeBytes, Vars.serverPublicSodium, Vars.privateSodium);
 			if(decrypted == null)
 			{
 				Utils.logcat(Const.LOGW, tag, "sodium asymmetric decryption failed");

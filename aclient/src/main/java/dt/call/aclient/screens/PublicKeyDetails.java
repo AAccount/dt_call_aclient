@@ -19,6 +19,7 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
+import dt.call.aclient.sodium.SodiumUtils;
 import dt.call.aclient.sqlite.SQLiteDb;
 
 public class PublicKeyDetails extends AppCompatActivity
@@ -168,8 +169,8 @@ public class PublicKeyDetails extends AppCompatActivity
 		if(requestCode == Const.SELECT_USER_PUBLIC_SODIUM && data != null)
 		{
 			final Uri uri = data.getData();
-			final byte[] keybytes = Utils.readSodiumKeyFileBytes(uri, this);
-			newPublicKey = Utils.interpretSodiumKey(keybytes, false);
+			final byte[] keybytes = SodiumUtils.readKeyFileBytes(uri, this);
+			newPublicKey = SodiumUtils.interpretKey(keybytes, false);
 			if(newPublicKey == null)
 			{
 				Utils.showOk(this, getString(R.string.alert_corrupted_key));

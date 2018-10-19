@@ -27,6 +27,7 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.LoginAsync;
+import dt.call.aclient.sodium.SodiumUtils;
 
 public class InitialUserInfo extends AppCompatActivity implements View.OnClickListener
 {
@@ -162,8 +163,8 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 		{
 			Uri uri = data.getData();
 
-			final byte[] keybytes = Utils.readSodiumKeyFileBytes(uri, this);
-			final byte[] userPrivateKey = Utils.interpretSodiumKey(keybytes, true);
+			final byte[] keybytes = SodiumUtils.readKeyFileBytes(uri, this);
+			final byte[] userPrivateKey = SodiumUtils.interpretKey(keybytes, true);
 			if(userPrivateKey != null)
 			{
 				privateKeyButton.setText(getString(R.string.initial_user_got_user_private));
