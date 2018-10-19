@@ -56,7 +56,8 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 		//load the saved information if it's there and preset the edittexts
 		SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, MODE_PRIVATE);
 		Vars.uname = sharedPreferences.getString(Const.PREF_UNAME, "");
-		Vars.selfPrivateSodium = Utils.readDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Box.SECRETKEYBYTES, this);
+		final byte[] filebytes  = Utils.readDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Box.SECRETKEYBYTES, this);
+		Vars.selfPrivateSodium = SodiumUtils.interpretKey(filebytes, true);
 		if(Vars.selfPrivateSodium != null)
 		{
 			privateKeyButton.setText(getString(R.string.initial_user_got_user_private));

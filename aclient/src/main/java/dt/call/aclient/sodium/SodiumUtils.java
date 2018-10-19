@@ -197,6 +197,7 @@ public class SodiumUtils
 			result[i/Const.STRINGIFY_EXPANSION] = (byte)(actual & Const.UNSIGNED_CHAR_MAX);
 			hundreds = tens = ones = 0;
 		}
+		Utils.applyFiller(keyStringified);
 		return result;
 	}
 

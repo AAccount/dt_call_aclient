@@ -91,7 +91,8 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		{
 			mediaPort.setText(String.valueOf(Vars.mediaPort));
 		}
-		Vars.serverPublicSodium = Utils.readDataDataFile(Const.INTERNAL_SERVER_PUBLICKEY_FILE, Box.PUBLICKEYBYTES, this);
+		final byte[] filebytes = Utils.readDataDataFile(Const.INTERNAL_SERVER_PUBLICKEY_FILE, Box.PUBLICKEYBYTES, this);
+		Vars.serverPublicSodium = SodiumUtils.interpretKey(filebytes, false);
 		if(Vars.serverPublicSodium != null)
 		{
 			sodium.setText(getString(R.string.initial_server_got_server_public));

@@ -34,6 +34,7 @@ import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.screens.CallIncoming;
 import dt.call.aclient.screens.CallMain;
 import dt.call.aclient.screens.UserHome;
+import dt.call.aclient.sodium.SodiumUtils;
 import dt.call.aclient.sqlite.DBLog;
 import dt.call.aclient.sqlite.SQLiteDb;
 
@@ -336,8 +337,10 @@ public class Utils
 		Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, Vars.SHOUDLOG);
 
 		//load the private key dump and make it usable
-		Vars.serverPublicSodium = readDataDataFile(Const.INTERNAL_SERVER_PUBLICKEY_FILE, Box.PUBLICKEYBYTES, Vars.applicationContext);
-		Vars.selfPrivateSodium = readDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Box.SECRETKEYBYTES, Vars.applicationContext);
+		final byte[] serverPublicKeyBytes = readDataDataFile(Const.INTERNAL_SERVER_PUBLICKEY_FILE, Box.PUBLICKEYBYTES, Vars.applicationContext);
+		Vars.serverPublicSodium = SodiumUtils.interpretKey(serverPublicKeyBytes, false);
+		final byte[] selfPrivateKeyBytes = readDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Box.SECRETKEYBYTES, Vars.applicationContext);
+		Vars.selfPrivateSodium = SodiumUtils.interpretKey(selfPrivateKeyBytes, true);
 	}
 
 	public static void applyFiller(byte[] sensitiveStuff)
