@@ -20,6 +20,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
+import com.goterl.lazycode.lazysodium.interfaces.Box;
+
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
@@ -34,6 +36,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 	private Button privateKeyButton;
 	private FloatingActionButton next;
 	private BroadcastReceiver broadcastReceiver;
+	private boolean gotPrivateKey = false;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -52,25 +55,17 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 		//load the saved information if it's there and preset the edittexts
 		SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, MODE_PRIVATE);
 		Vars.uname = sharedPreferences.getString(Const.PREF_UNAME, "");
-		Vars.privateSodiumDump = sharedPreferences.getString(Const.PREF_PRIVATE_KEY_DUMP, "");
-		Vars.privateSodiumName = sharedPreferences.getString(Const.PREF_PRIVATE_KEY_NAME, "");
+		Vars.privateSodium = Utils.readDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Box.SECRETKEYBYTES, this);
+		if(Vars.privateSodium != null)
+		{
+			privateKeyButton.setText(getString(R.string.initial_user_got_user_private));
+			gotPrivateKey = true;
+		}
 
 		if(!Vars.uname.equals(""))
 		{
 			uname.setText(Vars.uname);
 		}
-
-		//check if the private key dump is any good first. if it isn't, reset the saved private key info
-		//	because what is stored is unusable. need to get the private key again.
-		if(!Vars.privateSodiumDump.equals(""))
-		{
-			Vars.privateSodium = Utils.interpretSodiumPrivateKey(Vars.privateSodiumDump);
-		}
-		if(!Vars.privateSodiumName.equals(""))
-		{
-			privateKeyButton.setText(Vars.privateSodiumName);
-		}
-
 
 		//login can take up to ??30?? seconds. NEVER let the ui thread stall even if you can't do anything while waiting
 		broadcastReceiver = new BroadcastReceiver()
@@ -130,7 +125,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 			Vars.uname = uname.getText().toString();
 
 			//don't continue if the user name and password are missing
-			if(Vars.uname.equals("") || Vars.privateSodium == null)
+			if(Vars.uname.equals("") || !gotPrivateKey)
 			{
 				Utils.showOk(this, getString(R.string.alert_initial_user_missing_uinfo));
 				return;
@@ -167,9 +162,12 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 		{
 			Uri uri = data.getData();
 
-			if(Utils.readUserSodiumPrivate(uri, InitialUserInfo.this))
+			final byte[] keybytes = Utils.readSodiumKeyFileBytes(uri, this);
+			final byte[] userPrivateKey = Utils.interpretSodiumKey(keybytes, true);
+			if(userPrivateKey != null)
 			{
-				privateKeyButton.setText(Vars.privateSodiumName);
+				privateKeyButton.setText(getString(R.string.initial_user_got_user_private));
+				gotPrivateKey = true;
 			}
 			else
 			{
@@ -188,9 +186,14 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 			SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, MODE_PRIVATE);
 			SharedPreferences.Editor editor = sharedPreferences.edit();
 			editor.putString(Const.PREF_UNAME, enteredUname);
-			editor.putString(Const.PREF_PRIVATE_KEY_DUMP, Vars.privateSodiumDump);
-			editor.putString(Const.PREF_PRIVATE_KEY_NAME, Vars.privateSodiumName);
 			editor.apply();
+
+			final boolean writeok = Utils.writeDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Vars.privateSodium, this);
+			if(!writeok)
+			{
+				Utils.showOk(this, getString(R.string.initial_user_write_user_private_exception));
+				//the app will still work but you'll have to reenter your private key when you start the app again
+			}
 
 			//go to the user information screen
 			Intent go2Home = new Intent(InitialUserInfo.this, UserHome.class);

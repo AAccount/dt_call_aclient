@@ -413,9 +413,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			}
 
 			//overwrite the voice sodium symmetric key memory contents
-			LazySodiumAndroid lazySodium = new LazySodiumAndroid(new SodiumAndroid());
-			byte[] filler = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
-			System.arraycopy(filler, 0, Vars.voiceSymmetricKey, 0, SecretBox.KEYBYTES);
+			Utils.applyFiller(Vars.voiceSymmetricKey);
 
 			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
 			{

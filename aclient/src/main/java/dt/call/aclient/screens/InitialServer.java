@@ -20,6 +20,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
+import com.goterl.lazycode.lazysodium.interfaces.Box;
+
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
@@ -33,6 +35,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 	private EditText addr, commandPort, mediaPort;
 	private Button sodium;
 	private FloatingActionButton next;
+	private boolean gotPublicKey = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -87,9 +90,11 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		{
 			mediaPort.setText(String.valueOf(Vars.mediaPort));
 		}
-		if(!Vars.serverPublicSodiumName.equals("") && !Vars.serverPublicSodiumDump.equals(""))
+		Vars.serverPublicSodium = Utils.readDataDataFile(Const.INTERNAL_SERVER_PUBLICKEY_FILE, Box.PUBLICKEYBYTES, this);
+		if(Vars.serverPublicSodium != null)
 		{
-			sodium.setText(Vars.serverPublicSodiumName);
+			sodium.setText(getString(R.string.initial_server_got_server_public));
+			gotPublicKey = true;
 		}
 	}
 
@@ -145,7 +150,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			mediaString = mediaPort.getText().toString();
 
 			//check to make sure all the required information is filled in
-			boolean allFilled = !Vars.serverAddress.equals("") && !commandString.equals("") && !mediaString.equals("") && Vars.serverPublicSodium != null;
+			final boolean allFilled = !Vars.serverAddress.equals("") && !commandString.equals("") && !mediaString.equals("") && Vars.serverPublicSodium != null && gotPublicKey;
 			if(!allFilled)
 			{
 				Utils.showOk(this, getString(R.string.alert_initial_server_incomplete_server));
@@ -178,8 +183,11 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			editor.putString(Const.PREF_ADDR, Vars.serverAddress);
 			editor.putString(Const.PREF_COMMANDPORT, commandString);
 			editor.putString(Const.PREF_MEDIAPORT, mediaString);
-			editor.putString(Const.PREF_SODIUM_DUMP, Vars.serverPublicSodiumDump);
-			editor.putString(Const.PREF_SODIUM_DUMP_NAME, Vars.serverPublicSodiumName);
+			final boolean writeok = Utils.writeDataDataFile(Const.INTERNAL_SERVER_PUBLICKEY_FILE, Vars.serverPublicSodium, this);
+			if(!writeok)
+			{
+				Utils.showOk(this, getString(R.string.initial_server_write_server_public_exception));
+			}
 			editor.apply();
 
 			//go to the user information screen
@@ -197,9 +205,12 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		Uri uri = data.getData();
 		if(requestCode == Const.SELECT_SERVER_PUBLIC_SODIUM && data != null)
 		{
-			if(Utils.readServerSodiumPublic(uri, this))
+			byte[] keybytes = Utils.readSodiumKeyFileBytes(uri, this);
+			Vars.serverPublicSodium = Utils.interpretSodiumKey(keybytes, false);
+			if(Vars.serverPublicSodium != null)
 			{
-				sodium.setText(Vars.serverPublicSodiumName);
+				sodium.setText(getString(R.string.initial_server_got_server_public));
+				gotPublicKey = true;
 			}
 			else
 			{

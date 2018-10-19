@@ -8,6 +8,16 @@
     <string name="initial_server_sodium_certificate">Server Sodium Public Key</string>
     <string name="initial_server_title">Server Information</string>
     <string name="initial_server_image_accessibility">Server picture from Fedora Linux</string>
+    <string name="initial_server_got_server_public">Public key OK</string>
+    <string name="initial_server_write_server_public_exception">Cannot write public key. Check ADB.</string>
+
+    <!-- Initial user setup -->
+    <string name="initial_user_title">User Information</string>
+    <string name="initial_user_uname_hint">Name (CASE SENSITIVE)</string>
+    <string name="initial_user_private_key_hint">Private Sodium Key</string>
+    <string name="initial_user_image_accessibility">Faceless user picture from Fedora Linux</string>
+    <string name="initial_user_got_user_private">Private key OK</string>
+    <string name="initial_user_write_user_private_exception">Cannot write private key. Check ADB.</string>
 
     <!-- Progress dialog messages -->
     <string name="progress_login">Dialing in &#8230;</string>
@@ -51,12 +61,6 @@
     <string name="state_popup_init">Dialing Out</string>
     <string name="state_popup_incall">In Call</string>
     <string name="state_popup_offline">Offline</string>
-
-    <!-- Initial user setup -->
-    <string name="initial_user_title">User Information</string>
-    <string name="initial_user_uname_hint">Name (CASE SENSITIVE)</string>
-    <string name="initial_user_private_key_hint">Private Sodium Key</string>
-    <string name="initial_user_image_accessibility">Faceless user picture from Fedora Linux</string>
 
     <!-- User home screen -->
     <string name="user_home_actionbox_hint">Choose someone to call</string>

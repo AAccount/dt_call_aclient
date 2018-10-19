@@ -9,11 +9,7 @@ import android.support.v4.app.NotificationCompat;
 
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.Socket;
-import java.security.PublicKey;
 import java.util.HashMap;
-
-import javax.net.ssl.SSLSocket;
 
 import dt.call.aclient.background.SodiumSocket;
 
@@ -45,21 +41,16 @@ public class Vars
 	//contacts hash table to avoid having to lookup the db for incoming calls
 	public static HashMap<String, String> contactTable = null;
 	public static HashMap<String, byte[]> publicSodiumTable = null;
-	public static HashMap<String, String> publicSodiumDumps = null;
 
 	//server information
 	public static String serverAddress;
 	public static int commandPort;
 	public static int mediaPort;
-	public static String serverPublicSodiumName;
-	public static String serverPublicSodiumDump;
 	public static byte[] serverPublicSodium = null;
 
 	//user information (to be filled in when available)
 	public static String uname = null;
 	public static byte[] privateSodium = null;
-	public static String privateSodiumDump = null;
-	public static String privateSodiumName = null;
 
 	//Ongoing notification with state information
 	public static NotificationCompat.Builder stateNotificationBuilder = null;

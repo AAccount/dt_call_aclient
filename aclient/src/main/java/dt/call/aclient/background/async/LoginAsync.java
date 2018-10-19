@@ -107,7 +107,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			//get the challenge
 			String challenge = loginChallengeContents[2];
-			byte[] challengeBytes = Utils.destringify(challenge, false);
+			byte[] challengeBytes = Utils.destringify(challenge);
 
 			//answer the challenge
 			byte[] decrypted = Utils.sodiumAsymDecrypt(challengeBytes, Vars.serverPublicSodium, Vars.privateSodium);

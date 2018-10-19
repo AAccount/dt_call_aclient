@@ -17,18 +17,15 @@ public class Const
 	public static final String PREF_ADDR = "server_address";
 	public static final String PREF_COMMANDPORT = "command_port";
 	public static final String PREF_MEDIAPORT = "media_port";
-	public static final String PREF_SODIUM_DUMP = "server_sodium_public";
-	public static final String PREF_SODIUM_DUMP_NAME = "server_sodium_public_name";
 	public static final String PREF_UNAME = "username";
-	public static final String PREF_PRIVATE_KEY_DUMP = "private_key";
-	public static final String PREF_PRIVATE_KEY_NAME = "private_key_name";
 	public static final String PREF_LOG = "log";
+	public static final String INTERNAL_PRIVATEKEY_FILE = "user_privatekey_binary";
+	public static final String INTERNAL_SERVER_PUBLICKEY_FILE = "server_publickey_binary";
 
 	//file selection codes
 	public static final int SELECT_PRIVATE_SODIUM = 2;
 	public static final int SELECT_USER_PUBLIC_SODIUM = 3;
 	public static final int SELECT_SERVER_PUBLIC_SODIUM = 4;
-	public static final int BASE64_Flags = Base64.NO_PADDING & Base64.NO_WRAP;
 
 	//android permission request codes
 	public static final int PERM_STORAGE = 1;
@@ -104,6 +101,7 @@ public class Const
 	//maximum disassembly accuracy for taking apart an int into signed chars
 	public static final int JAVA_MAX_PRECISION_INT = 5;
 	public static final int SIZEOF_USEABLE_JBYTE = 7; //8th bit for the sign
+	public static final int STRINGIFY_EXPANSION = 3;
 
 
 	public static final String SODIUM_PUBLIC_HEADER = "SODIUM PUBLIC KEY\n";

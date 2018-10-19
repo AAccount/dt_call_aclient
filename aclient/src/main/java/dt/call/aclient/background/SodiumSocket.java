@@ -8,7 +8,6 @@ import com.goterl.lazycode.lazysodium.utils.KeyPair;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.util.Arrays;
 
 import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
@@ -39,7 +38,6 @@ public class SodiumSocket
 			throw new SodiumException("sodium decryption of the TCP key failed");
 		}
 		tcpKey = tempKeyResponseDec;
-
 	}
 
 	byte[] getTcpKey()
@@ -57,8 +55,7 @@ public class SodiumSocket
 		{
 			e.printStackTrace();
 		}
-		byte[] filler =  lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
-		System.arraycopy(filler, 0, tcpKey, 0, SecretBox.KEYBYTES);
+		Utils.applyFiller(tcpKey);
 	}
 
 	public String readString(int max) throws IOException, SodiumException
@@ -73,7 +70,6 @@ public class SodiumSocket
 		final int length = socket.getInputStream().read(rawEnc);
 		final byte[] response = Utils.sodiumSymDecrypt(Utils.trimArray(rawEnc, length), tcpKey);
 
-		//on the off chance the socket crapped out right from the get go, now you'll know
 		if(length < 0)
 		{
 			throw new SodiumException("sodium socket read using symmetric decryption failed");

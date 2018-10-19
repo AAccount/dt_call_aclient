@@ -17,6 +17,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
+import java.util.Arrays;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
@@ -42,7 +43,6 @@ public class CmdListener extends IntentService
 	private boolean haveAesKey = false;
 	private boolean preparationsComplete = false;
 	private boolean isCallInitiator = false;
-	private LazySodium lazySodium = null;
 
 	public CmdListener()
 	{
@@ -53,7 +53,7 @@ public class CmdListener extends IntentService
 	protected void onHandleIntent(Intent workIntent)
 	{
 		Utils.logcat(Const.LOGD, tag, "command listener INTENT SERVICE started");
-		lazySodium = new LazySodiumAndroid(new SodiumAndroid());
+		final LazySodium lazySodium = new LazySodiumAndroid(new SodiumAndroid());
 
 		while(inputValid)
 		{
@@ -154,17 +154,17 @@ public class CmdListener extends IntentService
 				{
 					//prepare the server's presentation of the person's public key for use
 					final String receivedKeyDump = respContents[2];
-					final String expectedKeyDump = Vars.publicSodiumDumps.get(Vars.callWith);
+					final byte[] receivedKey = Utils.interpretSodiumKey(receivedKeyDump.getBytes(), false);
 					byte[] expectedKey = Vars.publicSodiumTable.get(Vars.callWith);
 
 					//if this person's public key is known, sanity check the server to make sure it sent the right one
-					if(expectedKeyDump != null)
+					if(Vars.publicSodiumTable.containsKey(Vars.callWith))
 					{
-						if(!receivedKeyDump.equals(expectedKeyDump))
+						if(Arrays.equals(receivedKey, expectedKey))
 						{
 							//if the server presented a mismatched key stop the process.
 							//either you didn't know about the key change or something is very wrong
-							Utils.logcat(Const.LOGE, tag, "Server sent a MISMATCHED public key for " + Vars.callWith + " . It was:\n" + receivedKeyDump + "\nBut expected: " + expectedKeyDump);
+							Utils.logcat(Const.LOGE, tag, "Server sent a MISMATCHED public key for " + Vars.callWith + " . It was:\n" + receivedKeyDump + "\nBut expected: " + Utils.stringify(expectedKey));
 							giveUp();
 							continue;
 						}
@@ -172,11 +172,11 @@ public class CmdListener extends IntentService
 					else
 					{
 						//with nothing else to go on, assume this really is the person's key
-						byte[] receivedUserKey = Utils.interpretSodiumPublicKey(receivedKeyDump);
-						Vars.publicSodiumTable.put(Vars.callWith, receivedUserKey);
-						Vars.publicSodiumDumps.put(Vars.callWith, receivedKeyDump);
-						SQLiteDb.getInstance(getApplication()).insertPublicKey(Vars.callWith, receivedKeyDump);
-						expectedKey = receivedUserKey;
+//						byte[] receivedUserKey = Utils.interpretSodiumPublicKey(receivedKeyDump);
+						Vars.publicSodiumTable.put(Vars.callWith, receivedKey);
+//						Vars.publicSodiumDumps.put(Vars.callWith, receivedKeyDump);
+						SQLiteDb.getInstance(getApplication()).insertPublicKey(Vars.callWith, receivedKey);
+						expectedKey = receivedKey;
 					}
 
 					//first person gets to choose the key for the call
@@ -187,7 +187,7 @@ public class CmdListener extends IntentService
 
 						//have sodium encrypt its key
 						final byte[] sodiumAsymEncrypted = Utils.sodiumAsymEncrypt(Vars.voiceSymmetricKey, expectedKey, Vars.privateSodium);
-						final String finalEncryptedString = Utils.stringify(sodiumAsymEncrypted, true);
+						final String finalEncryptedString = Utils.stringify(sodiumAsymEncrypted);
 
 						//send the sodium key
 						final String passthrough = Utils.currentTimeSeconds() + "|passthrough|" + involved + "|" + finalEncryptedString + "|" + Vars.sessionKey;
@@ -285,8 +285,7 @@ public class CmdListener extends IntentService
 				{
 					//decrypt the sodium symmetric key
 					final String setupString = respContents[2];
-					final byte[] setup = Utils.destringify(setupString, true);
-					Vars.voiceSymmetricKey = null;
+					final byte[] setup = Utils.destringify(setupString);
 					final byte[] callWithKey = Vars.publicSodiumTable.get(involved);
 					Vars.voiceSymmetricKey = Utils.sodiumAsymDecrypt(setup, callWithKey, Vars.privateSodium);
 

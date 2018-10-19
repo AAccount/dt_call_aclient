@@ -43,7 +43,7 @@ public class SQLiteDb extends SQLiteOpenHelper
 	private final String mkPublicKeys = "create table " + tablePublicKeys + " " +
 			"(" +
 			colName +" text primary key," +
-			colPublicKey +" text" +
+			colPublicKey +" blob" +
 			")";
 	//https://stackoverflow.com/questions/25562508/autoincrement-is-only-allowed-on-an-integer-primary-key-android
 	private final String mklogs = "create table " + tableLogs + " " +
@@ -138,7 +138,7 @@ public class SQLiteDb extends SQLiteOpenHelper
 		cursor.close();
 	}
 
-	public void insertPublicKey(String userName, String keydump)
+	public void insertPublicKey(String userName, byte[] key)
 	{
 		String[] columnToReturn = {colName};
 		String selection = colName + "=?";
@@ -148,7 +148,7 @@ public class SQLiteDb extends SQLiteOpenHelper
 		{
 			//public key exists, update it
 			ContentValues chKey = new ContentValues();
-			chKey.put(colPublicKey, keydump);
+			chKey.put(colPublicKey, key);
 			appdb.update(tablePublicKeys, chKey, colName+"=?", new String[]{userName});
 		}
 		else
@@ -156,7 +156,7 @@ public class SQLiteDb extends SQLiteOpenHelper
 			//first time entry for this user, create a new record
 			ContentValues newPublicKeyRecord = new ContentValues();
 			newPublicKeyRecord.put(colName, userName);
-			newPublicKeyRecord.put(colPublicKey, keydump);
+			newPublicKeyRecord.put(colPublicKey, key);
 			appdb.insert(tablePublicKeys, null, newPublicKeyRecord);
 		}
 		cursor.close();
@@ -171,16 +171,13 @@ public class SQLiteDb extends SQLiteOpenHelper
 	{
 		//create once at the beginning to avoid wasting time creating this every time in the while loop
 		Vars.publicSodiumTable = new HashMap<String, byte[]>();
-		Vars.publicSodiumDumps = new HashMap<String, String>();
 		Cursor cursor = appdb.rawQuery("select * from " + tablePublicKeys, null);
 		cursor.moveToFirst();
 		while(!cursor.isAfterLast())
 		{
 			String fromRowName = cursor.getString(cursor.getColumnIndex(colName));
-			String fromPublicKey = cursor.getString(cursor.getColumnIndex(colPublicKey));
-			byte[] userKey = Utils.interpretSodiumPublicKey(fromPublicKey);
-			Vars.publicSodiumTable.put(fromRowName, userKey);
-			Vars.publicSodiumDumps.put(fromRowName, fromPublicKey);
+			byte[] fromPublicKey = cursor.getBlob(cursor.getColumnIndex(colPublicKey));
+			Vars.publicSodiumTable.put(fromRowName, fromPublicKey);
 			cursor.moveToNext();
 		}
 		cursor.close();

@@ -1,9 +1,7 @@
 package dt.call.aclient.screens;
 
 import android.content.ActivityNotFoundException;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.Preference;
@@ -19,6 +17,9 @@ import dt.call.aclient.Vars;
  */
 public class DTSettings extends AppCompatActivity
 {
+	//Not actual preferences but used to be able to change the server public and user private key here
+	private static final String FAKEPREF_SERVER_PUBLICKEY = "server_sodium_public";
+	private static final String FAKEPREF_USER_PRIVATEKEY = "private_key";
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -32,7 +33,6 @@ public class DTSettings extends AppCompatActivity
 	public static class SettingsFragment extends PreferenceFragment implements Preference.OnPreferenceClickListener, Preference.OnPreferenceChangeListener
 	{
 		private static final String tag = "SettingsFragment";
-		private Preference certPicker;
 		private Preference sodiumPublicPicker;
 		private Preference privateKeyPicker;
 		private Preference cmdPortPicker;
@@ -49,9 +49,9 @@ public class DTSettings extends AppCompatActivity
 			addPreferencesFromResource(R.xml.settings_fragment);
 
 			//setup the file picker for the certificate preference
-			sodiumPublicPicker = findPreference(Const.PREF_SODIUM_DUMP);
+			sodiumPublicPicker = findPreference(FAKEPREF_SERVER_PUBLICKEY);
 			sodiumPublicPicker.setOnPreferenceClickListener(this);
-			privateKeyPicker = findPreference(Const.PREF_PRIVATE_KEY_DUMP);
+			privateKeyPicker = findPreference(FAKEPREF_USER_PRIVATEKEY);
 			privateKeyPicker.setOnPreferenceClickListener(this);
 
 			//setup the command and media ports to make sure the port number is between 1 and 65536
@@ -65,7 +65,7 @@ public class DTSettings extends AppCompatActivity
 		public boolean onPreferenceClick(Preference preference)
 		{
 			//mostly copied and pasted from InitlalServer
-			if(preference == certPicker || preference == privateKeyPicker || preference == sodiumPublicPicker)
+			if(preference == privateKeyPicker || preference == sodiumPublicPicker)
 			{
 				//choose the appropriate selection key and popup title
 				int selectionKey;
@@ -106,26 +106,33 @@ public class DTSettings extends AppCompatActivity
 			if(requestCode == Const.SELECT_PRIVATE_SODIUM && data != null)
 			{
 				Uri uri = data.getData();
-				if(Utils.readUserSodiumPrivate(uri, getActivity()))
+				final byte[] keybytes = Utils.readSodiumKeyFileBytes(uri, getActivity());
+				final byte[] key = Utils.interpretSodiumKey(keybytes, true);
+				if(key != null)
 				{
-					SharedPreferences sharedPreferences = getActivity().getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
-					SharedPreferences.Editor editor = sharedPreferences.edit();
-					editor.putString(Const.PREF_PRIVATE_KEY_DUMP, Vars.privateSodiumDump);
-					editor.putString(Const.PREF_PRIVATE_KEY_NAME, Vars.privateSodiumName);
-					editor.apply();
+					Utils.applyFiller(Vars.privateSodium);
+					Vars.privateSodium = key;
+					final boolean writeok = Utils.writeDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Vars.privateSodium, getActivity());
+					if(!writeok)
+					{
+						Utils.showOk(getActivity(), getString(R.string.initial_user_write_user_private_exception));
+					}
 				}
 			}
 
 			else if(requestCode == Const.SELECT_SERVER_PUBLIC_SODIUM && data != null)
 			{
 				Uri uri = data.getData();
-				if(Utils.readServerSodiumPublic(uri, getActivity()))
+				final byte[] keybytes = Utils.readSodiumKeyFileBytes(uri, getActivity());
+				final byte[] key = Utils.interpretSodiumKey(keybytes, false);
+				if(key != null)
 				{
-					SharedPreferences sharedPreferences = getActivity().getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
-					SharedPreferences.Editor editor = sharedPreferences.edit();
-					editor.putString(Const.PREF_SODIUM_DUMP, Vars.privateSodiumDump);
-					editor.putString(Const.PREF_SODIUM_DUMP_NAME, Vars.privateSodiumName);
-					editor.apply();
+					Vars.serverPublicSodium = key;
+					final boolean writeok = Utils.writeDataDataFile(Const.INTERNAL_SERVER_PUBLICKEY_FILE, Vars.serverPublicSodium, getActivity());
+					if(!writeok)
+					{
+						Utils.showOk(getActivity(), getString(R.string.initial_server_write_server_public_exception));
+					}
 				}
 			}
 		}

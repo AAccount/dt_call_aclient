@@ -38,13 +38,21 @@ public class PublicKeyDetails extends AppCompatActivity
 
 		dumpArea = findViewById(R.id.public_key_details_dump);
 		correspondingUser = getIntent().getStringExtra(Const.EXTRA_UNAME);
-		String publickeyDump = Vars.publicSodiumDumps.get(correspondingUser);
-		if(publickeyDump == null)
-		{
-			publickeyDump = getResources().getString(R.string.public_key_details_none);
-		}
-		dumpArea.setText(publickeyDump);
 
+		//get the public key (if one is known) and regenerate the text dump
+		byte[] publickey = Vars.publicSodiumTable.get(correspondingUser);
+		if(publickey == null)
+		{
+			dumpArea.setText(getString(R.string.public_key_details_none));
+		}
+		else
+		{
+			final String publicKeyString = Const.SODIUM_PUBLIC_HEADER + Utils.stringify(publickey);
+			dumpArea.setText(publicKeyString);
+		}
+
+		//get the contact nick name if it exists
+		userDisplayName = Vars.contactTable.get(correspondingUser);
 		if(userDisplayName == null)
 		{
 			userDisplayName = correspondingUser;
@@ -111,16 +119,15 @@ public class PublicKeyDetails extends AppCompatActivity
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item)
 	{
-		String placeholder = getResources().getString(R.string.public_key_details_none);
+		String placeholder = getString(R.string.public_key_details_none);
 		String dumpText = dumpArea.getText().toString();
 
 		switch (item.getItemId())
 		{
 			case R.id.menu_edit_done:
-				if(!dumpText.equals(placeholder))
+				if(newPublicKey == null)
 				{
-					SQLiteDb.getInstance(this).insertPublicKey(correspondingUser, dumpText);
-					Vars.publicSodiumDumps.put(correspondingUser, dumpText);
+					SQLiteDb.getInstance(this).insertPublicKey(correspondingUser, newPublicKey);
 					Vars.publicSodiumTable.put(correspondingUser, newPublicKey);
 					String disp = Vars.contactTable.get(correspondingUser);
 					Utils.showOk(this, getString(R.string.public_key_details_saved) + " " + disp);
@@ -144,7 +151,6 @@ public class PublicKeyDetails extends AppCompatActivity
 				if(!dumpText.equals(placeholder))
 				{
 					SQLiteDb.getInstance(this).deletePublicKey(correspondingUser);
-					Vars.publicSodiumDumps.remove(correspondingUser);
 					Vars.publicSodiumTable.remove(correspondingUser);
 					dumpArea.setText(placeholder);
 				}
@@ -161,19 +167,9 @@ public class PublicKeyDetails extends AppCompatActivity
 		//	It won't have stuff in it if the user just clicks back.
 		if(requestCode == Const.SELECT_USER_PUBLIC_SODIUM && data != null)
 		{
-			Uri uri = data.getData();
-
-			//read the key from file
-			byte[] keyBytes = Utils.readSodiumKeyFileBytes(uri, getApplicationContext());
-			if(keyBytes == null)
-			{
-				Utils.showOk(this, getString(R.string.alert_corrupted_key));
-				return;
-			}
-
-			//interpret the file contents as a public key
-			String keyString = new String(keyBytes);
-			newPublicKey = Utils.interpretSodiumPublicKey(keyString);
+			final Uri uri = data.getData();
+			final byte[] keybytes = Utils.readSodiumKeyFileBytes(uri, this);
+			newPublicKey = Utils.interpretSodiumKey(keybytes, false);
 			if(newPublicKey == null)
 			{
 				Utils.showOk(this, getString(R.string.alert_corrupted_key));
@@ -181,7 +177,8 @@ public class PublicKeyDetails extends AppCompatActivity
 			}
 
 			//only update the viewing area when everything's ok
-			dumpArea.setText(keyString);
+			final String publicKeyString = Const.SODIUM_PUBLIC_HEADER + Utils.stringify(newPublicKey);
+			dumpArea.setText(publicKeyString);
 		}
 	}
 }

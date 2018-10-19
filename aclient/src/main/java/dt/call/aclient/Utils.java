@@ -26,10 +26,14 @@ import com.goterl.lazycode.lazysodium.SodiumAndroid;
 import com.goterl.lazycode.lazysodium.interfaces.Box;
 import com.goterl.lazycode.lazysodium.interfaces.SecretBox;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 
 import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.screens.CallIncoming;
@@ -45,6 +49,7 @@ import dt.call.aclient.sqlite.SQLiteDb;
  */
 public class Utils
 {
+	private static int UNSIGNED_CHAR_MAX = 0xff;
 	private static final String tag = "Utils";
 	private static LazySodiumAndroid lazySodium = new LazySodiumAndroid(new SodiumAndroid());;
 
@@ -251,8 +256,7 @@ public class Utils
 		killSockets.start();
 
 		//overwrite private key memory
-		byte[] filler = lazySodium.randomBytesBuf(Box.SECRETKEYBYTES);
-		System.arraycopy(filler, 0, Vars.privateSodium, 0, Box.SECRETKEYBYTES);
+		Utils.applyFiller(Vars.privateSodium);
 
 		//properly kill the app
 		caller.finishAffinity();
@@ -338,42 +342,55 @@ public class Utils
 		Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, Vars.SHOUDLOG);
 
 		//load the private key dump and make it usable
-		String privateKeyDump = sharedPreferences.getString(Const.PREF_PRIVATE_KEY_DUMP, "");
-		if(!privateKeyDump.equals(""))
-		{
-			Vars.privateSodium = interpretSodiumPrivateKey(privateKeyDump);
-		}
-
-		Vars.serverPublicSodiumDump = sharedPreferences.getString(Const.PREF_SODIUM_DUMP, "");
-		if(!Vars.serverPublicSodiumDump.equals(""))
-		{
-			Vars.serverPublicSodium = interpretSodiumPublicKey(Vars.serverPublicSodiumDump);
-		}
-		Vars.serverPublicSodiumName = sharedPreferences.getString(Const.PREF_SODIUM_DUMP_NAME, "");
+		Vars.serverPublicSodium = readDataDataFile(Const.INTERNAL_SERVER_PUBLICKEY_FILE, Box.PUBLICKEYBYTES, Vars.applicationContext);
+		Vars.privateSodium = readDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Box.SECRETKEYBYTES, Vars.applicationContext);
 	}
 
-	public static byte[] interpretSodiumPublicKey(String dump)
+	public static byte[] interpretSodiumKey(byte[] dump, boolean isPrivate)
 	{
-		int expectedLength = Const.SODIUM_PUBLIC_HEADER.length() + Box.PUBLICKEYBYTES*3;
-		if(dump.length() != expectedLength)
+		//dump the file contents
+		final int headerLength = isPrivate ? Const.SODIUM_PRIVATE_HEADER.length() : Const.SODIUM_PUBLIC_HEADER.length();
+		final int expectedLength = headerLength + Box.PUBLICKEYBYTES*Const.STRINGIFY_EXPANSION;
+		if(dump == null || dump.length != expectedLength)
+		{
+			applyFiller(dump);
+			return null;
+		}
+
+		//see if the file has the correct header
+		final byte[] dumpHeader = new byte[headerLength];
+		System.arraycopy(dump, 0, dumpHeader, 0, dumpHeader.length);
+		final byte[] headerBytes = isPrivate ? Const.SODIUM_PRIVATE_HEADER.getBytes() : Const.SODIUM_PUBLIC_HEADER.getBytes();
+		if(!Arrays.equals(dumpHeader, headerBytes))
 		{
 			return null;
 		}
 
-		dump = dump.substring(Const.SODIUM_PUBLIC_HEADER.length());
-		return destringify(dump, false);
-	}
 
-	public static byte[] interpretSodiumPrivateKey(String dump)
-	{
-		int expectedLength = Const.SODIUM_PRIVATE_HEADER.length() + Box.SECRETKEYBYTES*3;
-		if(dump.length() != expectedLength)
+		final byte[] keyStringified = new byte[Box.PUBLICKEYBYTES*Const.STRINGIFY_EXPANSION];
+		System.arraycopy(dump, headerLength, keyStringified, 0, keyStringified.length);
+		applyFiller(dump);
+
+		//check if the stringified key length makes sense
+		if((keyStringified.length % Const.STRINGIFY_EXPANSION) != 0)
 		{
+			applyFiller(keyStringified);
 			return null;
 		}
 
-		dump = dump.substring(Const.SODIUM_PRIVATE_HEADER.length());
-		return destringify(dump, false);
+		//turn the stringified binary into actual binary
+		final int ASCII_OFFSET = 48;
+		byte[] result = new byte[keyStringified.length/Const.STRINGIFY_EXPANSION];
+		for(int i=0; i<keyStringified.length; i=i+Const.STRINGIFY_EXPANSION)
+		{
+			int hundreds = (keyStringified[i]-ASCII_OFFSET)*100;
+			int tens = (keyStringified[i+1]-ASCII_OFFSET)*10;
+			int ones = (keyStringified[i+2]-ASCII_OFFSET);
+			int actual = hundreds + tens + ones;
+			result[i/Const.STRINGIFY_EXPANSION] = (byte)(actual & UNSIGNED_CHAR_MAX);
+			hundreds = tens = ones = 0;
+		}
+		return result;
 	}
 
 	public static byte[] readSodiumKeyFileBytes(Uri uri, Context context)
@@ -381,14 +398,18 @@ public class Utils
 		try
 		{
 			//read the public key and convert to a string
-			ContentResolver resolver = context.getContentResolver();
-			InputStream inputStream = resolver.openInputStream(uri);
-			int longerHeader = Math.max(Const.SODIUM_PRIVATE_HEADER.length(), Const.SODIUM_PUBLIC_HEADER.length());
-			byte[] fileBytes = new byte[longerHeader + Box.PUBLICKEYBYTES*3];
-			int amountRead = inputStream.read(fileBytes);
+			final ContentResolver resolver = context.getContentResolver();
+			final InputStream inputStream = resolver.openInputStream(uri);
+			final int longerHeader = Math.max(Const.SODIUM_PRIVATE_HEADER.length(), Const.SODIUM_PUBLIC_HEADER.length());
+			final int maximumRead = longerHeader + Box.PUBLICKEYBYTES*Const.STRINGIFY_EXPANSION;
+			final byte[] fileBytes = new byte[maximumRead];
+			final int amountRead = inputStream.read(fileBytes);
 			inputStream.close();
-			byte[] result = new byte[amountRead];
+
+			final byte[] result = new byte[amountRead];
 			System.arraycopy(fileBytes, 0, result, 0, amountRead);
+			Utils.applyFiller(fileBytes);
+
 			return result;
 		}
 		catch(Exception e)
@@ -398,115 +419,96 @@ public class Utils
 		}
 	}
 
-	//for dtsettings and initial user: read the user's private key and set it up for use
-	public static boolean readUserSodiumPrivate(Uri uri, Context context)
+	public static void applyFiller(byte[] sensitiveStuff)
 	{
-		byte[] keyBytes = readSodiumKeyFileBytes(uri, context);
-		if(keyBytes == null)
+		if(sensitiveStuff == null)
 		{
-			return false;
+			return;
 		}
-
-		//interpret the file contents as a public key
-		Vars.privateSodiumDump = new String(keyBytes);
-		byte[] filler = lazySodium.randomBytesBuf(keyBytes.length);
-		System.arraycopy(filler, 0, keyBytes, 0, keyBytes.length);
-		Vars.privateSodium = Utils.interpretSodiumPrivateKey(Vars.privateSodiumDump);
-		if(Vars.privateSodium == null)
-		{
-			return false;
-		}
-
-		String[] expanded = uri.getPath().split("[\\/:\\:]");
-		Vars.privateSodiumName = expanded[expanded.length-1];
-		return true;
+		final byte[] filler = lazySodium.randomBytesBuf(sensitiveStuff.length);
+		System.arraycopy(filler, 0, sensitiveStuff, 0, sensitiveStuff.length);
 	}
 
-	//for dtsettings and initial server: read the server's public sodium key and set it up for use
-	public static boolean readServerSodiumPublic(Uri uri, Context context)
+	public static byte[] readDataDataFile(String fileName, int length, Context context) //so named because files are in /data/data/dt.call.aclient
 	{
-		byte[] keyBytes = readSodiumKeyFileBytes(uri, context);
-		if(keyBytes == null)
+		File file = new File(context.getFilesDir(), fileName);
+		if(file.exists())
 		{
-			return false;
+			byte[] contents = new byte[length];
+			try
+			{
+				FileInputStream fileInputStream = new FileInputStream(file);
+				int read = fileInputStream.read(contents);
+				if(read != length)
+				{
+					Utils.applyFiller(contents);
+					return null;
+				}
+				return contents;
+			}
+			catch (Exception e)
+			{
+				Utils.dumpException(tag, e);
+				applyFiller(contents);
+				return null;
+			}
 		}
+		return null;
+	}
 
-		//interpret the file contents as a public key
+	public static boolean writeDataDataFile(String fileName, byte[] fileContents, Context context)
+	{
+		File privateKeyFile = new File(context.getFilesDir(), fileName);
 		try
 		{
-			Vars.serverPublicSodiumDump = new String(keyBytes, "UTF8");
+			FileOutputStream fileOutputStream = new FileOutputStream(privateKeyFile, false);
+			fileOutputStream.write(fileContents);
+			fileOutputStream.close();
+			applyFiller(fileContents);
+			return true;
 		}
-		catch (UnsupportedEncodingException e)
+		catch (IOException e)
 		{
-			dumpException(tag, e);
+			Utils.dumpException(tag, e);
+			applyFiller(fileContents);
 			return false;
 		}
-		Vars.serverPublicSodium = Utils.interpretSodiumPublicKey(Vars.serverPublicSodiumDump);
-		if(Vars.serverPublicSodium == null)
-		{
-			return false;
-		}
-
-		String[] expanded = uri.getPath().split("[\\/:\\:]");
-		Vars.serverPublicSodiumName = expanded[expanded.length-1];
-		return true;
 	}
 
 	//turn a string of #s into actual #s assuming the string is a bunch of
 	//	3 digit #s glued to each other. also turned unsigned #s into signed #s
-	public static byte[] destringify(String numbers, boolean signed)
+	public static byte[] destringify(String numbers)
 	{
-		int increment;
-		if(signed)
-		{
-			increment = 4;
-		}
-		else
-		{
-			increment = 3;
-		}
-
+		final int increment = Const.STRINGIFY_EXPANSION;
 		byte[] result = new byte[numbers.length()/increment];
 		for(int i=0; i<numbers.length(); i=i+increment)
 		{
 			String digit = numbers.substring(i, i+increment);
-			result[i/increment] = (byte)(0xff & Integer.valueOf(digit));
+			result[i/increment] = (byte)(UNSIGNED_CHAR_MAX & Integer.valueOf(digit));
 		}
 		return result;
 	}
 
-	public static String stringify(byte[] bytes, boolean signed)
+	public static String stringify(byte[] bytes)
 	{
-		String result = "";
-		for(int i=0; i<bytes.length; i++)
+		StringBuilder resultBuilder = new StringBuilder(bytes.length*Const.STRINGIFY_EXPANSION);
+		for (byte aByte : bytes)
 		{
-			String number = String.valueOf(Math.abs(bytes[i]));
+			int unsignedchar = aByte & UNSIGNED_CHAR_MAX;
+			String number = String.valueOf(unsignedchar);
 
 			//prepend the required zeros
-			if(Math.abs(bytes[i]) < 10)
+			if (unsignedchar < 10)
 			{//for 1,2,3 to keep everything as 3 digit #s make it 001, 002 etc
 				number = "00" + number;
 			}
-			else if (Math.abs(bytes[i]) < 100)
+			else if (unsignedchar < 100)
 			{//for 10,11,12 make it 010,011,012
 				number = "0" + number;
 			}
-
-			if(signed)
-			{
-				//add the sign
-				if (bytes[i] >= 0)
-				{
-					number = "+" + number;
-				}
-				else
-				{
-					number = "-" + number;
-				}
-			}
-			result = result + number;
+			resultBuilder.append(number);
 		}
-		return result;
+		return resultBuilder.toString();
 	}
 
 	public static String getCallerID(String userName)
