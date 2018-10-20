@@ -337,10 +337,8 @@ public class Utils
 		Vars.SHOUDLOG = sharedPreferences.getBoolean(Const.PREF_LOG, Vars.SHOUDLOG);
 
 		//load the private key dump and make it usable
-		final byte[] serverPublicKeyBytes = readDataDataFile(Const.INTERNAL_SERVER_PUBLICKEY_FILE, Box.PUBLICKEYBYTES, Vars.applicationContext);
-		Vars.serverPublicSodium = SodiumUtils.interpretKey(serverPublicKeyBytes, false);
-		final byte[] selfPrivateKeyBytes = readDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Box.SECRETKEYBYTES, Vars.applicationContext);
-		Vars.selfPrivateSodium = SodiumUtils.interpretKey(selfPrivateKeyBytes, true);
+		Vars.serverPublicSodium = readDataDataFile(Const.INTERNAL_SERVER_PUBLICKEY_FILE, Box.PUBLICKEYBYTES, Vars.applicationContext);
+		Vars.selfPrivateSodium = readDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Box.SECRETKEYBYTES, Vars.applicationContext);
 	}
 
 	public static void applyFiller(byte[] sensitiveStuff)
@@ -388,13 +386,12 @@ public class Utils
 			FileOutputStream fileOutputStream = new FileOutputStream(privateKeyFile, false);
 			fileOutputStream.write(fileContents);
 			fileOutputStream.close();
-			applyFiller(fileContents);
+			//don't apply filler now. the fileContents may still be needed
 			return true;
 		}
 		catch (IOException e)
 		{
 			Utils.dumpException(tag, e);
-			applyFiller(fileContents);
 			return false;
 		}
 	}

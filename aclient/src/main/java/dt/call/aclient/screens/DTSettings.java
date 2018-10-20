@@ -85,7 +85,7 @@ public class DTSettings extends AppCompatActivity
 
 				//https://stackoverflow.com/questions/7856959/android-file-chooser
 				// Open a file chooser dialog. Alert dialog if no file managers found
-				Intent fileDialog = new Intent(Intent.ACTION_GET_CONTENT);
+				final Intent fileDialog = new Intent(Intent.ACTION_GET_CONTENT);
 				fileDialog.setType("*/*");
 				fileDialog.addCategory(Intent.CATEGORY_OPENABLE);
 				try
@@ -107,12 +107,12 @@ public class DTSettings extends AppCompatActivity
 			//	It won't have stuff in it if the user just clicks back.
 			if(requestCode == Const.SELECT_SELF_PRIVATE_SODIUM && data != null)
 			{
-				Uri uri = data.getData();
+				final Uri uri = data.getData();
 				final byte[] keybytes = SodiumUtils.readKeyFileBytes(uri, getActivity());
 				final byte[] key = SodiumUtils.interpretKey(keybytes, true);
 				if(key != null)
 				{
-					Utils.applyFiller(Vars.selfPrivateSodium);
+					Utils.applyFiller(Vars.selfPrivateSodium); //clear out the old one now that a new one has key has been chosen
 					Vars.selfPrivateSodium = key;
 					final boolean writeok = Utils.writeDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Vars.selfPrivateSodium, getActivity());
 					if(!writeok)
@@ -124,7 +124,7 @@ public class DTSettings extends AppCompatActivity
 
 			else if(requestCode == Const.SELECT_SERVER_PUBLIC_SODIUM && data != null)
 			{
-				Uri uri = data.getData();
+				final Uri uri = data.getData();
 				final byte[] keybytes = SodiumUtils.readKeyFileBytes(uri, getActivity());
 				final byte[] key = SodiumUtils.interpretKey(keybytes, false);
 				if(key != null)
@@ -147,7 +147,7 @@ public class DTSettings extends AppCompatActivity
 			{
 				try
 				{
-					int newPort = Integer.valueOf((String) newValue);
+					final int newPort = Integer.valueOf((String) newValue);
 					if(newPort > 1 && newPort < 65536)
 					{
 						return true;

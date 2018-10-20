@@ -170,6 +170,7 @@ public class SodiumUtils
 		final byte[] headerBytes = isPrivate ? Const.SODIUM_PRIVATE_HEADER.getBytes() : Const.SODIUM_PUBLIC_HEADER.getBytes();
 		if(!Arrays.equals(dumpHeader, headerBytes))
 		{
+			Utils.applyFiller(dump);
 			return null;
 		}
 
@@ -187,7 +188,7 @@ public class SodiumUtils
 
 		//turn the stringified binary into actual binary
 		final int ASCII_OFFSET = 48;
-		byte[] result = new byte[keyStringified.length/Const.STRINGIFY_EXPANSION];
+		final byte[] result = new byte[keyStringified.length/Const.STRINGIFY_EXPANSION];
 		for(int i=0; i<keyStringified.length; i=i+Const.STRINGIFY_EXPANSION)
 		{
 			int hundreds = (keyStringified[i]-ASCII_OFFSET)*100;

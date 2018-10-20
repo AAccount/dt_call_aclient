@@ -36,7 +36,6 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 	private EditText addr, commandPort, mediaPort;
 	private Button sodium;
 	private FloatingActionButton next;
-	private boolean gotPublicKey = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -46,26 +45,26 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		Vars.applicationContext = getApplicationContext();
 
 		//turn on BackgroundManager just in case it was turned off by the logout button
-		ComponentName backgroundManager = new ComponentName(this, BackgroundManager.class);
+		final ComponentName backgroundManager = new ComponentName(this, BackgroundManager.class);
 		getPackageManager().setComponentEnabledSetting(backgroundManager, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
 
 		Utils.loadPrefs();
 
-		if(!Vars.uname.equals("") && !(Vars.selfPrivateSodium == null))
+		if(!Vars.uname.equals("") && Vars.selfPrivateSodium != null)
 		{
 			Utils.logcat(Const.LOGD, tag, "Skipping to the home screen");
 
 			//don't need to start the command listener or do the login async. that will be started on the home screen
 
 			//jump to the home screen
-			Intent skip2Home = new Intent(this, UserHome.class);
+			final Intent skip2Home = new Intent(this, UserHome.class);
 			startActivity(skip2Home);
 			return;
 		}
 
 		//Because this is the launcher activity, the name in AndroidManifest is what shows
 		//	up in the start menu. Don't want "Server Settings" as the app name
-		ActionBar ab = getSupportActionBar();
+		final ActionBar ab = getSupportActionBar();
 		ab.setTitle(getString(R.string.initial_server_title));
 
 		//setup server information activity if the information hasn't already been saved
@@ -85,18 +84,16 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		}
 		if(Vars.commandPort != 0)
 		{
-			commandPort.setText(String.valueOf(Vars.commandPort)); //have to do valueof or it treats the port as a literal R. resource id
+			commandPort.setText(String.valueOf(Vars.commandPort));
 		}
 		if(Vars.mediaPort != 0)
 		{
 			mediaPort.setText(String.valueOf(Vars.mediaPort));
 		}
-		final byte[] filebytes = Utils.readDataDataFile(Const.INTERNAL_SERVER_PUBLICKEY_FILE, Box.PUBLICKEYBYTES, this);
-		Vars.serverPublicSodium = SodiumUtils.interpretKey(filebytes, false);
+		Vars.serverPublicSodium = Utils.readDataDataFile(Const.INTERNAL_SERVER_PUBLICKEY_FILE, Box.PUBLICKEYBYTES, this);
 		if(Vars.serverPublicSodium != null)
 		{
 			sodium.setText(getString(R.string.initial_server_got_server_public));
-			gotPublicKey = true;
 		}
 	}
 
@@ -107,7 +104,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		//check for storage access permission. no point of a tls1.2 connection if the server is someone else
 		if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
 		{
-			AlertDialog.Builder mkdialog = new AlertDialog.Builder(this);
+			final AlertDialog.Builder mkdialog = new AlertDialog.Builder(this);
 			mkdialog.setMessage(getString(R.string.alert_storage_perm))
 					.setPositiveButton(R.string.alert_ok, new DialogInterface.OnClickListener()
 					{
@@ -119,7 +116,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 							dialog.cancel();
 						}
 					});
-			AlertDialog showOkAlert = mkdialog.create();
+			final AlertDialog showOkAlert = mkdialog.create();
 			showOkAlert.show();
 		}
 	}
@@ -131,7 +128,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		{
 			//https://stackoverflow.com/questions/7856959/android-file-chooser
 			// Open a file chooser dialog. Alert dialog if no file managers found
-			Intent fileDialog = new Intent(Intent.ACTION_GET_CONTENT);
+			final Intent fileDialog = new Intent(Intent.ACTION_GET_CONTENT);
 			fileDialog.setType("*/*");
 			fileDialog.addCategory(Intent.CATEGORY_OPENABLE);
 			try
@@ -146,13 +143,12 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 		else if(v == next)
 		{
 			//extract UI info
-			String commandString, mediaString;
 			Vars.serverAddress = addr.getText().toString();
-			commandString = commandPort.getText().toString();
-			mediaString = mediaPort.getText().toString();
+			final String commandString = commandPort.getText().toString();
+			final String mediaString = mediaPort.getText().toString();
 
 			//check to make sure all the required information is filled in
-			final boolean allFilled = !Vars.serverAddress.equals("") && !commandString.equals("") && !mediaString.equals("") && Vars.serverPublicSodium != null && gotPublicKey;
+			final boolean allFilled = !Vars.serverAddress.equals("") && !commandString.equals("") && !mediaString.equals("") && Vars.serverPublicSodium != null;
 			if(!allFilled)
 			{
 				Utils.showOk(this, getString(R.string.alert_initial_server_incomplete_server));
@@ -180,8 +176,8 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			}
 
 			//Store all server information in shared preferences.
-			SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
-			SharedPreferences.Editor editor = sharedPreferences.edit();
+			final SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
+			final SharedPreferences.Editor editor = sharedPreferences.edit();
 			editor.putString(Const.PREF_ADDR, Vars.serverAddress);
 			editor.putString(Const.PREF_COMMANDPORT, commandString);
 			editor.putString(Const.PREF_MEDIAPORT, mediaString);
@@ -193,7 +189,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			editor.apply();
 
 			//go to the user information screen
-			Intent initUser = new Intent(this, InitialUserInfo.class);
+			final Intent initUser = new Intent(this, InitialUserInfo.class);
 			startActivity(initUser);
 		}
 	}
@@ -212,7 +208,6 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
 			if(Vars.serverPublicSodium != null)
 			{
 				sodium.setText(getString(R.string.initial_server_got_server_public));
-				gotPublicKey = true;
 			}
 			else
 			{

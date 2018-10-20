@@ -37,7 +37,6 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 	private Button privateKeyButton;
 	private FloatingActionButton next;
 	private BroadcastReceiver broadcastReceiver;
-	private boolean gotPrivateKey = false;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -56,12 +55,10 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 		//load the saved information if it's there and preset the edittexts
 		SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, MODE_PRIVATE);
 		Vars.uname = sharedPreferences.getString(Const.PREF_UNAME, "");
-		final byte[] filebytes  = Utils.readDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Box.SECRETKEYBYTES, this);
-		Vars.selfPrivateSodium = SodiumUtils.interpretKey(filebytes, true);
+		Vars.selfPrivateSodium = Utils.readDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Box.SECRETKEYBYTES, this);
 		if(Vars.selfPrivateSodium != null)
 		{
 			privateKeyButton.setText(getString(R.string.initial_user_got_user_private));
-			gotPrivateKey = true;
 		}
 
 		if(!Vars.uname.equals(""))
@@ -88,14 +85,14 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 	public void onResume()
 	{
 		super.onResume();
-		IntentFilter initialUserFilter = new IntentFilter();
+		final IntentFilter initialUserFilter = new IntentFilter();
 		initialUserFilter.addAction(Const.BROADCAST_LOGIN);
 		registerReceiver(broadcastReceiver, initialUserFilter);
 
 		//check for storage permission to get your private key
 		if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
 		{
-			AlertDialog.Builder mkdialog = new AlertDialog.Builder(this);
+			final AlertDialog.Builder mkdialog = new AlertDialog.Builder(this);
 			mkdialog.setMessage(getString(R.string.alert_storage_perm))
 					.setPositiveButton(R.string.alert_ok, new DialogInterface.OnClickListener()
 					{
@@ -107,7 +104,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 							dialog.cancel();
 						}
 					});
-			AlertDialog showOkAlert = mkdialog.create();
+			final AlertDialog showOkAlert = mkdialog.create();
 			showOkAlert.show();
 		}
 	}
@@ -127,7 +124,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 			Vars.uname = uname.getText().toString();
 
 			//don't continue if the user name and password are missing
-			if(Vars.uname.equals("") || !gotPrivateKey)
+			if(Vars.uname.equals("") || Vars.selfPrivateSodium == null)
 			{
 				Utils.showOk(this, getString(R.string.alert_initial_user_missing_uinfo));
 				return;
@@ -140,7 +137,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 		{
 			//https://stackoverflow.com/questions/7856959/android-file-chooser
 			// Open a file chooser dialog. Alert dialog if no file managers found
-			Intent fileDialog = new Intent(Intent.ACTION_GET_CONTENT);
+			final Intent fileDialog = new Intent(Intent.ACTION_GET_CONTENT);
 			fileDialog.setType("*/*");
 			fileDialog.addCategory(Intent.CATEGORY_OPENABLE);
 			try
@@ -162,14 +159,13 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 		//	It won't have stuff in it if the user just clicks back.
 		if(requestCode == Const.SELECT_SELF_PRIVATE_SODIUM && data != null)
 		{
-			Uri uri = data.getData();
-
+			Utils.applyFiller(Vars.selfPrivateSodium); //clear out the old one now that you have a new private key
+			final Uri uri = data.getData();
 			final byte[] keybytes = SodiumUtils.readKeyFileBytes(uri, this);
-			final byte[] userPrivateKey = SodiumUtils.interpretKey(keybytes, true);
-			if(userPrivateKey != null)
+			Vars.selfPrivateSodium = SodiumUtils.interpretKey(keybytes, true);
+			if(Vars.selfPrivateSodium != null)
 			{
 				privateKeyButton.setText(getString(R.string.initial_user_got_user_private));
-				gotPrivateKey = true;
 			}
 			else
 			{
@@ -182,12 +178,10 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 	{
 		if(ok)
 		{
-			String enteredUname = uname.getText().toString();
-
 			//because the login was successful, save the info
 			SharedPreferences sharedPreferences = getSharedPreferences(Const.PREFSFILE, MODE_PRIVATE);
 			SharedPreferences.Editor editor = sharedPreferences.edit();
-			editor.putString(Const.PREF_UNAME, enteredUname);
+			editor.putString(Const.PREF_UNAME, Vars.uname);
 			editor.apply();
 
 			final boolean writeok = Utils.writeDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Vars.selfPrivateSodium, this);
@@ -198,7 +192,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 			}
 
 			//go to the user information screen
-			Intent go2Home = new Intent(InitialUserInfo.this, UserHome.class);
+			final Intent go2Home = new Intent(InitialUserInfo.this, UserHome.class);
 			startActivity(go2Home);
 		}
 		else
