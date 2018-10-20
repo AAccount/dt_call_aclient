@@ -76,13 +76,6 @@ public class BackgroundManager extends BroadcastReceiver
 		else if (!Const.NEEDS_MANUAL_INTERNET_DETECTION && action.equals(ConnectivityManager.CONNECTIVITY_ACTION))
 		{
 			final boolean extra = intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false);
-			Bundle b = intent.getExtras();
-			String dump = "";
-			for(String k : b.keySet())
-			{
-				dump = dump + k + ": " + b.get(k) + "\n";
-			}
-			Utils.logcat(Const.LOGD, tag, dump);
 			if(extra)
 			{
 				Utils.logcat(Const.LOGD, tag, "skipping due to legacy extra info");
