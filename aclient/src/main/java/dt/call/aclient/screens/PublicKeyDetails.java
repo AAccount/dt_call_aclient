@@ -120,13 +120,10 @@ public class PublicKeyDetails extends AppCompatActivity
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item)
 	{
-		String placeholder = getString(R.string.public_key_details_none);
-		String dumpText = dumpArea.getText().toString();
-
 		switch (item.getItemId())
 		{
 			case R.id.menu_edit_done:
-				if(newPublicKey == null)
+				if(newPublicKey != null)
 				{
 					SQLiteDb.getInstance(this).insertPublicKey(correspondingUser, newPublicKey);
 					Vars.publicSodiumTable.put(correspondingUser, newPublicKey);
@@ -149,12 +146,30 @@ public class PublicKeyDetails extends AppCompatActivity
 				}
 				break;
 			case R.id.menu_edit_rm:
-				if(!dumpText.equals(placeholder))
-				{
-					SQLiteDb.getInstance(this).deletePublicKey(correspondingUser);
-					Vars.publicSodiumTable.remove(correspondingUser);
-					dumpArea.setText(placeholder);
-				}
+				final String DISPLAYNAME = "DISPLAYNAME";
+				final String message = getString(R.string.public_key_details_confirm_delete).replace(DISPLAYNAME, userDisplayName);
+				final AlertDialog.Builder mkdialog = new AlertDialog.Builder(this);
+				mkdialog.setMessage(message)
+						.setPositiveButton(R.string.alert_yes, new DialogInterface.OnClickListener()
+						{
+							@Override
+							public void onClick(DialogInterface dialog, int which)
+							{
+								SQLiteDb.getInstance(PublicKeyDetails.this).deletePublicKey(correspondingUser);
+								Vars.publicSodiumTable.remove(correspondingUser);
+								dumpArea.setText(getString(R.string.public_key_details_none));
+							}
+						})
+						.setNegativeButton(R.string.alert_no, new DialogInterface.OnClickListener()
+						{
+							@Override
+							public void onClick(DialogInterface dialog, int which)
+							{
+								dialog.cancel();
+							}
+						});
+				final AlertDialog showOkAlert = mkdialog.create();
+				showOkAlert.show();
 				break;
 		}
 		return true;

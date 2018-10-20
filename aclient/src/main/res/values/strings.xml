@@ -144,5 +144,6 @@
     <string name="public_key_details_saved">New key saved for </string>
     <string name="public_key_details_noperm_fsread">No storage permission. Entering read-only.</string>
     <string name="public_key_details_choose_cert">\'s public key</string>
+    <string name="public_key_details_confirm_delete">Do you really want to permanently remove DISPLAYNAME\'s public key from the program?</string>
 
 </resources>
