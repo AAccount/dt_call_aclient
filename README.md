@@ -27,6 +27,10 @@ End note: there are no plans to make an iOS client because there are no good res
 ![In Call Screen](https://github.com/AAccount/dt_call_aclient/blob/master/screenshots/Main%20Call.png)
 
 ## Changelog
+**V 1.8:** use mutable arrays ONLY when handling sodium keys so they can be easily cleared from memory
+
+**V 1.7:** switch to lazy sodium for libsodium, use libsodium for the command port to removing openssl
+
 **V 1.6:** libsodium cryptography instead of hand rolled TLS knock-off, keep track of other users's public keys, back to uncompressed 8KHz audio for now (all native libraries mysteriously crash the UI thread)
 
 **V 1.5:** keep track of voice UDP packet sequence numbers to avoid playing duplicates
