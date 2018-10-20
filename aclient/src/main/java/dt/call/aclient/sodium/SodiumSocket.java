@@ -3,7 +3,7 @@ package dt.call.aclient.sodium;
 import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
 import com.goterl.lazycode.lazysodium.SodiumAndroid;
 import com.goterl.lazycode.lazysodium.exceptions.SodiumException;
-import com.goterl.lazycode.lazysodium.utils.KeyPair;
+import com.goterl.lazycode.lazysodium.interfaces.Box;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -19,9 +19,9 @@ public class SodiumSocket
 
 	public SodiumSocket(String host, int port, byte[]hostPublicSodium) throws SodiumException, IOException
 	{
-		final KeyPair tempKeys = lazySodium.cryptoBoxKeypair();
-		final byte[] tempPublic = tempKeys.getPublicKey().getAsBytes();
-		final byte[] tempPrivate = tempKeys.getSecretKey().getAsBytes();
+		final byte[] tempPublic = new byte[Box.PUBLICKEYBYTES];
+		final byte[] tempPrivate = new byte[Box.SECRETKEYBYTES];
+		lazySodium.cryptoBoxKeypair(tempPublic, tempPrivate);
 
 		//setup tcp connection
 		socket = new Socket(host, port);
@@ -32,6 +32,7 @@ public class SodiumSocket
 		final int read = socket.getInputStream().read(tempKeyResponse);
 		final byte[] tempKeyResponseTrimmed = Utils.trimArray(tempKeyResponse, read);
 		final byte[] tempKeyResponseDec = SodiumUtils.asymmetricDecrypt(tempKeyResponseTrimmed, hostPublicSodium, tempPrivate);
+		Utils.applyFiller(tempPrivate);
 		if(tempKeyResponseDec == null)
 		{
 			throw new SodiumException("sodium decryption of the TCP key failed");
