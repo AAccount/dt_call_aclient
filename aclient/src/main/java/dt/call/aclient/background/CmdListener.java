@@ -161,11 +161,14 @@ public class CmdListener extends IntentService
 					//if this person's public key is known, sanity check the server to make sure it sent the right one
 					if(Vars.publicSodiumTable.containsKey(Vars.callWith))
 					{
-						if(Arrays.equals(receivedKey, expectedKey))
+						if(!Arrays.equals(receivedKey, expectedKey))
 						{
 							//if the server presented a mismatched key stop the process.
 							//either you didn't know about the key change or something is very wrong
-							Utils.logcat(Const.LOGE, tag, "Server sent a MISMATCHED public key for " + Vars.callWith + " . It was:\n" + receivedKeyDump + "\nBut expected: " + Utils.stringify(expectedKey));
+							Utils.logcat(Const.LOGE, tag,
+									"Server sent a MISMATCHED public key for " + Vars.callWith +
+											" . It was:\n" + receivedKeyDump +
+											"\nBut expected: " + Const.SODIUM_PUBLIC_HEADER+Utils.stringify(expectedKey));
 							giveUp();
 							continue;
 						}
