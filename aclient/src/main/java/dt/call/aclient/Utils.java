@@ -31,10 +31,10 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 import dt.call.aclient.background.BackgroundManager;
+import dt.call.aclient.background.BackgroundManager2;
 import dt.call.aclient.screens.CallIncoming;
 import dt.call.aclient.screens.CallMain;
 import dt.call.aclient.screens.UserHome;
-import dt.call.aclient.sodium.SodiumUtils;
 import dt.call.aclient.sqlite.DBLog;
 import dt.call.aclient.sqlite.SQLiteDb;
 
@@ -183,23 +183,23 @@ public class Utils
 		}
 	}
 
-	public static void initAlarmVars()
-	{
-		//setup the alarm intents and pending intents
-		if(Vars.retries == null || Vars.pendingRetries == null || Vars.heartbeat == null || Vars.pendingHeartbeat == null
-				||Vars.pendingHeartbeat2ndary == null || Vars.pendingRetries2ndary == null)
-		{
-			Vars.retries = new Intent(Vars.applicationContext, BackgroundManager.class);
-			Vars.retries.setAction(Const.BROADCAST_RELOGIN);
-			Vars.pendingRetries = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_RETRY_ID, Vars.retries, PendingIntent.FLAG_UPDATE_CURRENT);
-			Vars.pendingRetries2ndary = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_RETRY_ID, Vars.retries, PendingIntent.FLAG_UPDATE_CURRENT);
-
-			Vars.heartbeat = new Intent(Vars.applicationContext, BackgroundManager.class);
-			Vars.heartbeat.setAction(Const.ALARM_ACTION_HEARTBEAT);
-			Vars.pendingHeartbeat = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_HEARTBEAT_ID, Vars.heartbeat, PendingIntent.FLAG_UPDATE_CURRENT);
-			Vars.pendingHeartbeat2ndary = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_HEARTBEAT_ID, Vars.heartbeat, PendingIntent.FLAG_UPDATE_CURRENT);
-		}
-	}
+//	public static void initAlarmVars()
+//	{
+//		//setup the alarm intents and pending intents
+//		if(Vars.retries == null || Vars.pendingRetries == null || Vars.heartbeat == null || Vars.pendingHeartbeat == null
+//				||Vars.pendingHeartbeat2ndary == null || Vars.pendingRetries2ndary == null)
+//		{
+//			Vars.retries = new Intent(Vars.applicationContext, BackgroundManager.class);
+//			Vars.retries.setAction(Const.BROADCAST_RELOGIN);
+//			Vars.pendingRetries = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_RETRY_ID, Vars.retries, PendingIntent.FLAG_UPDATE_CURRENT);
+//			Vars.pendingRetries2ndary = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_RETRY_ID, Vars.retries, PendingIntent.FLAG_UPDATE_CURRENT);
+//
+//			Vars.heartbeat = new Intent(Vars.applicationContext, BackgroundManager.class);
+//			Vars.heartbeat.setAction(Const.ALARM_ACTION_HEARTBEAT);
+//			Vars.pendingHeartbeat = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_HEARTBEAT_ID, Vars.heartbeat, PendingIntent.FLAG_UPDATE_CURRENT);
+//			Vars.pendingHeartbeat2ndary = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_HEARTBEAT_ID, Vars.heartbeat, PendingIntent.FLAG_UPDATE_CURRENT);
+//		}
+//	}
 
 	public static void quit(AppCompatActivity caller)
 	{
@@ -221,18 +221,19 @@ public class Utils
 		Vars.notificationManager = null;
 
 		//Kill alarms
-		if(Vars.pendingHeartbeat != null && Vars.pendingRetries != null)
-		{
-			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
-			manager.cancel(Vars.pendingHeartbeat);
-			manager.cancel(Vars.pendingHeartbeat2ndary);
-			manager.cancel(Vars.pendingRetries);
-			manager.cancel(Vars.pendingRetries2ndary);
-		}
-		Vars.pendingHeartbeat = null;
-		Vars.pendingHeartbeat2ndary = null;
-		Vars.pendingRetries = null;
-		Vars.pendingRetries2ndary = null;
+//		if(Vars.pendingHeartbeat != null && Vars.pendingRetries != null)
+//		{
+//			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+//			manager.cancel(Vars.pendingHeartbeat);
+//			manager.cancel(Vars.pendingHeartbeat2ndary);
+//			manager.cancel(Vars.pendingRetries);
+//			manager.cancel(Vars.pendingRetries2ndary);
+//		}
+//		Vars.pendingHeartbeat = null;
+//		Vars.pendingHeartbeat2ndary = null;
+//		Vars.pendingRetries = null;
+//		Vars.pendingRetries2ndary = null;
+		BackgroundManager2.stop();
 
 		//prevent background manager from restarting command listener when sockets kill async is called
 		ComponentName backgroundManager = new ComponentName(Vars.applicationContext, BackgroundManager.class);

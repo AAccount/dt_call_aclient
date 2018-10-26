@@ -1,7 +1,5 @@
 package dt.call.aclient.background.async;
 
-import android.app.AlarmManager;
-import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 
@@ -14,6 +12,7 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.CmdListener;
+import dt.call.aclient.background.BackgroundManager2;
 import dt.call.aclient.sodium.SodiumSocket;
 import dt.call.aclient.sodium.SodiumUtils;
 
@@ -38,10 +37,10 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 	{
 		try
 		{
-			Utils.initAlarmVars(); //double check it's not null before usage
-			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
-			manager.cancel(Vars.pendingRetries);
-			manager.cancel(Vars.pendingRetries2ndary);
+//			Utils.initAlarmVars(); //double check it's not null before usage
+//			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+//			manager.cancel(Vars.pendingRetries);
+//			manager.cancel(Vars.pendingRetries2ndary);
 
 			//only handle 1 login request at a time
 			synchronized(loginLock)
@@ -132,10 +131,11 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			Intent cmdListenerIntent = new Intent(Vars.applicationContext, CmdListener.class);
 			Vars.applicationContext.startService(cmdListenerIntent);
 
-			manager.cancel(Vars.pendingHeartbeat);
-			manager.cancel(Vars.pendingHeartbeat2ndary);
-			Utils.setExactWakeup(Vars.pendingHeartbeat, Vars.pendingHeartbeat2ndary);
-
+//			manager.cancel(Vars.pendingHeartbeat);
+//			manager.cancel(Vars.pendingHeartbeat2ndary);
+//			Utils.setExactWakeup(Vars.pendingHeartbeat, Vars.pendingHeartbeat2ndary);
+			BackgroundManager2.getInstance().clearWaiting();
+			BackgroundManager2.getInstance().addDelayedEvent(Const.ALARM_ACTION_HEARTBEAT, Const.STD_TIMEOUT/1000);
 			onPostExecute(true);
 			return true;
 		}
@@ -167,7 +167,8 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		else if(!noNotificationOnFail) //don't show the notification for initial login fails
 		{
 			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
-			Utils.setExactWakeup(Vars.pendingRetries, Vars.pendingRetries2ndary);
+//			Utils.setExactWakeup(Vars.pendingRetries, Vars.pendingRetries2ndary);
+			BackgroundManager2.getInstance().addDelayedEvent(Const.BROADCAST_RELOGIN, Const.STD_TIMEOUT/1000);
 			//background manager will check if there is internet or not when the retry kicks in and will act accordingly
 
 			noNotificationOnFail = false; //reset

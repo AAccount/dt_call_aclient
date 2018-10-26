@@ -1,6 +1,5 @@
 package dt.call.aclient.background;
 
-import android.app.AlarmManager;
 import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
@@ -353,22 +352,24 @@ public class CmdListener extends IntentService
 
 		//cleanup the pending intents now that the sockets are unsable. also must do asap to prevent
 		//timing problems where socket close and pending intent happen at the same time.
-		final AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+//		final AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
 		try
 		{
-			manager.cancel(Vars.pendingHeartbeat);
-			manager.cancel(Vars.pendingHeartbeat2ndary);
-			manager.cancel(Vars.pendingRetries);
-			manager.cancel(Vars.pendingHeartbeat2ndary);
+			BackgroundManager2.getInstance().clearWaiting();
+//			manager.cancel(Vars.pendingHeartbeat);
+//			manager.cancel(Vars.pendingHeartbeat2ndary);
+//			manager.cancel(Vars.pendingRetries);
+//			manager.cancel(Vars.pendingHeartbeat2ndary);
 		}
 		catch(NullPointerException n)
 		{
 			//can happen on quit if quit cancels the pendings first. nothing you can do.
 			//	just part of the normal shutdown procedure. no reason to panic
 		}
-		final Intent deadBroadcast = new Intent(Const.BROADCAST_RELOGIN);
-		deadBroadcast.setClass(Vars.applicationContext, BackgroundManager.class);
-		sendBroadcast(deadBroadcast);
+//		final Intent deadBroadcast = new Intent(Const.BROADCAST_RELOGIN);
+//		deadBroadcast.setClass(Vars.applicationContext, BackgroundManager.class);
+//		sendBroadcast(deadBroadcast);
+		BackgroundManager2.getInstance().addEvent(Const.BROADCAST_RELOGIN);
 	}
 
 	/**

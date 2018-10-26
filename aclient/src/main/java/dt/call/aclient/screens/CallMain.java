@@ -409,8 +409,12 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				}
 			}
 
-			//overwrite the voice sodium symmetric key memory contents
-			Utils.applyFiller(Vars.voiceSymmetricKey);
+			if(Vars.mediaUdp != null && Vars.mediaUdp.isClosed())
+			{
+				Vars.mediaUdp.close();
+				Vars.mediaUdp = null;
+			}
+			Utils.applyFiller(Vars.voiceSymmetricKey); //overwrite the voice sodium symmetric key memory contents
 
 			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && Vars.incallA9Workaround != null)
 			{

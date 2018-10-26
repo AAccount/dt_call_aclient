@@ -65,10 +65,10 @@ public class Vars
 	//alarm manager pending intents
 	//https://stackoverflow.com/questions/18649728/android-cannot-pass-intent-extras-though-alarmmanager
 	//http://javatechig.com/android/repeat-alarm-example-in-android
-	public static Intent retries = null;
-	public static PendingIntent pendingRetries = null;
-	public static PendingIntent pendingRetries2ndary = null;
-	public static Intent heartbeat = null;
-	public static PendingIntent pendingHeartbeat = null;
-	public static PendingIntent pendingHeartbeat2ndary = null;
+//	public static Intent retries = null;
+//	public static PendingIntent pendingRetries = null;
+//	public static PendingIntent pendingRetries2ndary = null;
+//	public static Intent heartbeat = null;
+//	public static PendingIntent pendingHeartbeat = null;
+//	public static PendingIntent pendingHeartbeat2ndary = null;
 }
