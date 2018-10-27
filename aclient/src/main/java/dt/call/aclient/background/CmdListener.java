@@ -352,23 +352,15 @@ public class CmdListener extends IntentService
 
 		//cleanup the pending intents now that the sockets are unsable. also must do asap to prevent
 		//timing problems where socket close and pending intent happen at the same time.
-//		final AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
 		try
 		{
 			BackgroundManager2.getInstance().clearWaiting();
-//			manager.cancel(Vars.pendingHeartbeat);
-//			manager.cancel(Vars.pendingHeartbeat2ndary);
-//			manager.cancel(Vars.pendingRetries);
-//			manager.cancel(Vars.pendingHeartbeat2ndary);
 		}
 		catch(NullPointerException n)
 		{
 			//can happen on quit if quit cancels the pendings first. nothing you can do.
 			//	just part of the normal shutdown procedure. no reason to panic
 		}
-//		final Intent deadBroadcast = new Intent(Const.EVENT_RELOGIN);
-//		deadBroadcast.setClass(Vars.applicationContext, BackgroundManager.class);
-//		sendBroadcast(deadBroadcast);
 		BackgroundManager2.getInstance().addEvent(Const.EVENT_RELOGIN);
 	}
 

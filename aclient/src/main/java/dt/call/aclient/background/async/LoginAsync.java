@@ -166,7 +166,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			failedLogins++;
 			final int MULTIPLIER = 10;
-			final int delay = (failedLogins*MULTIPLIER > Const.STD_TIMEOUT) ? Const.STD_TIMEOUT : (failedLogins*MULTIPLIER);
+			final int delay = Math.min(Const.STD_TIMEOUT, (failedLogins*MULTIPLIER));
 			BackgroundManager2.getInstance().addDelayedEvent(Const.EVENT_RELOGIN, delay);
 			//background manager will check if there is internet or not when the retry kicks in and will act accordingly
 
