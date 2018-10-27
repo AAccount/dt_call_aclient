@@ -366,10 +366,10 @@ public class CmdListener extends IntentService
 			//can happen on quit if quit cancels the pendings first. nothing you can do.
 			//	just part of the normal shutdown procedure. no reason to panic
 		}
-//		final Intent deadBroadcast = new Intent(Const.BROADCAST_RELOGIN);
+//		final Intent deadBroadcast = new Intent(Const.EVENT_RELOGIN);
 //		deadBroadcast.setClass(Vars.applicationContext, BackgroundManager.class);
 //		sendBroadcast(deadBroadcast);
-		BackgroundManager2.getInstance().addEvent(Const.BROADCAST_RELOGIN);
+		BackgroundManager2.getInstance().addEvent(Const.EVENT_RELOGIN);
 	}
 
 	/**

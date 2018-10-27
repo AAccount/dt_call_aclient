@@ -38,10 +38,6 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 	{
 		try
 		{
-//			Utils.initAlarmVars(); //double check it's not null before usage
-//			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
-//			manager.cancel(Vars.pendingRetries);
-//			manager.cancel(Vars.pendingRetries2ndary);
 			BackgroundManager2.getInstance().clearWaiting();
 
 			//only handle 1 login request at a time
@@ -133,11 +129,8 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			Intent cmdListenerIntent = new Intent(Vars.applicationContext, CmdListener.class);
 			Vars.applicationContext.startService(cmdListenerIntent);
 
-//			manager.cancel(Vars.pendingHeartbeat);
-//			manager.cancel(Vars.pendingHeartbeat2ndary);
-//			Utils.setExactWakeup(Vars.pendingHeartbeat, Vars.pendingHeartbeat2ndary);
 			BackgroundManager2.getInstance().clearWaiting();
-			BackgroundManager2.getInstance().addDelayedEvent(Const.ALARM_ACTION_HEARTBEAT, Const.STD_TIMEOUT);
+			BackgroundManager2.getInstance().addDelayedEvent(Const.EVENT_HEARTBEAT, Const.STD_TIMEOUT);
 			onPostExecute(true);
 			return true;
 		}
@@ -170,12 +163,11 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		else if(!noNotificationOnFail) //don't show the notification for initial login fails
 		{
 			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
-//			Utils.setExactWakeup(Vars.pendingRetries, Vars.pendingRetries2ndary);
 
 			failedLogins++;
 			final int MULTIPLIER = 10;
 			final int delay = (failedLogins*MULTIPLIER > Const.STD_TIMEOUT) ? Const.STD_TIMEOUT : (failedLogins*MULTIPLIER);
-			BackgroundManager2.getInstance().addDelayedEvent(Const.BROADCAST_RELOGIN, delay);
+			BackgroundManager2.getInstance().addDelayedEvent(Const.EVENT_RELOGIN, delay);
 			//background manager will check if there is internet or not when the retry kicks in and will act accordingly
 
 			noNotificationOnFail = false; //reset

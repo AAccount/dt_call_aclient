@@ -16,16 +16,12 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 	@Override
 	protected Boolean doInBackground(String... params)
 	{
-//		AlarmManager manager = (AlarmManager)Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
-//		manager.cancel(Vars.pendingHeartbeat); //login will reestablish this
-//		manager.cancel(Vars.pendingHeartbeat2ndary);
 		BackgroundManager2.getInstance().clearWaiting();
 
 		try
 		{
 			Vars.commandSocket.write(Const.JBYTE);
-//			Utils.setExactWakeup(Vars.pendingHeartbeat, Vars.pendingHeartbeat2ndary);
-			BackgroundManager2.getInstance().addDelayedEvent(Const.ALARM_ACTION_HEARTBEAT, Const.STD_TIMEOUT);
+			BackgroundManager2.getInstance().addDelayedEvent(Const.EVENT_HEARTBEAT, Const.STD_TIMEOUT);
 			Utils.logcat(Const.LOGD, tag, "heart beat sent and ok");
 			return true;
 		}
@@ -38,10 +34,7 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 
 			//if idling for a long time, killing sockets will not trigger command listener to broadcast a (formerly) command listener dead
 			// (now called relogin). do it here too.
-//			Intent relogin = new Intent(Const.BROADCAST_RELOGIN);
-//			relogin.setClass(Vars.applicationContext, BackgroundManager.class);
-//			Vars.applicationContext.sendBroadcast(relogin);
-			BackgroundManager2.getInstance().addEvent(Const.BROADCAST_RELOGIN);
+			BackgroundManager2.getInstance().addEvent(Const.EVENT_RELOGIN);
 			return false;
 		}
 	}

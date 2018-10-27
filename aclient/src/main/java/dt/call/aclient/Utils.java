@@ -183,24 +183,6 @@ public class Utils
 		}
 	}
 
-//	public static void initAlarmVars()
-//	{
-//		//setup the alarm intents and pending intents
-//		if(Vars.retries == null || Vars.pendingRetries == null || Vars.heartbeat == null || Vars.pendingHeartbeat == null
-//				||Vars.pendingHeartbeat2ndary == null || Vars.pendingRetries2ndary == null)
-//		{
-//			Vars.retries = new Intent(Vars.applicationContext, BackgroundManager.class);
-//			Vars.retries.setAction(Const.BROADCAST_RELOGIN);
-//			Vars.pendingRetries = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_RETRY_ID, Vars.retries, PendingIntent.FLAG_UPDATE_CURRENT);
-//			Vars.pendingRetries2ndary = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_RETRY_ID, Vars.retries, PendingIntent.FLAG_UPDATE_CURRENT);
-//
-//			Vars.heartbeat = new Intent(Vars.applicationContext, BackgroundManager.class);
-//			Vars.heartbeat.setAction(Const.ALARM_ACTION_HEARTBEAT);
-//			Vars.pendingHeartbeat = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_HEARTBEAT_ID, Vars.heartbeat, PendingIntent.FLAG_UPDATE_CURRENT);
-//			Vars.pendingHeartbeat2ndary = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_HEARTBEAT_ID, Vars.heartbeat, PendingIntent.FLAG_UPDATE_CURRENT);
-//		}
-//	}
-
 	public static void quit(AppCompatActivity caller)
 	{
 		//get rid of the status notification if it's running
@@ -220,19 +202,6 @@ public class Utils
 		Vars.stateNotificationBuilder = null;
 		Vars.notificationManager = null;
 
-		//Kill alarms
-//		if(Vars.pendingHeartbeat != null && Vars.pendingRetries != null)
-//		{
-//			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
-//			manager.cancel(Vars.pendingHeartbeat);
-//			manager.cancel(Vars.pendingHeartbeat2ndary);
-//			manager.cancel(Vars.pendingRetries);
-//			manager.cancel(Vars.pendingRetries2ndary);
-//		}
-//		Vars.pendingHeartbeat = null;
-//		Vars.pendingHeartbeat2ndary = null;
-//		Vars.pendingRetries = null;
-//		Vars.pendingRetries2ndary = null;
 		BackgroundManager2.stop();
 
 		//prevent background manager from restarting command listener when sockets kill async is called
@@ -279,26 +248,6 @@ public class Utils
 		}
 		return result;
 	}
-
-	//some cell phones are too aggressive with power saving and shut down the wifi when it looks like nothing is using it.
-	//this will kill the connection (sometimes silently) and cause calls not to come in but still make it look like you're signed on
-	//force the use of exact wakeup alarms to really check the connection regularly... and really schedule the next login when it says.
-//	public static void setExactWakeup(PendingIntent operation, PendingIntent secondary)
-//	{
-//		AlarmManager alarmManager = (AlarmManager)Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
-//		if (Build.VERSION.SDK_INT >= 19)
-//		{
-//			alarmManager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + Const.STD_TIMEOUT, operation);
-//			if(secondary != null)
-//			{
-//				alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + Const.STD_TIMEOUT, secondary);
-//			}
-//		}
-//		else
-//		{
-//			alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + Const.STD_TIMEOUT, operation);
-//		}
-//	}
 
 	public static void killSockets()
 	{

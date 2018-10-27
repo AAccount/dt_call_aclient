@@ -46,7 +46,7 @@ public class Const
 	public static final int LOG_LIMIT = 350;
 
 	//when cmd listener dies
-	public static final String BROADCAST_RELOGIN = "dt.call.aclient.relogin";
+	public static final String EVENT_RELOGIN = "dt.call.aclient.relogin";
 
 	//broadcast intent shared by call main and incoming call screen
 	//both need the call end signal
@@ -63,7 +63,7 @@ public class Const
 	public static final String BROADCAST_LOGIN_RESULT = "login_result";
 
 	//whether or not to use the jobservice method of internet detection
-	public static final String BROADCAST_HAS_INTERNET = "dt.call.aclient.HAS_INTERNET";
+	public static final String EVENT_HAS_INTERNET = "dt.call.aclient.HAS_INTERNET";
 	public static final boolean NEEDS_MANUAL_INTERNET_DETECTION = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N;
 
 	//log related strings
@@ -74,11 +74,8 @@ public class Const
 	public static final String STATE_NOTIFICATION_CHANNEL = "dt.call.aclient.state";
 	public static final String STATE_NOTIFICATION_NAME = "AClient_State";
 
-	//related to alarm receiver and alarm stuff
-	public static final int ALARM_RETRY_ID = 1234;
-	public static final int ALARM_HEARTBEAT_ID = 999;
-	//alarm broadcast fore retry shared with broadcast for dead command listener BROADCAST_RELOGIN
-	public static final String ALARM_ACTION_HEARTBEAT = "do_heartbeat";
+	//alarm broadcast fore retry shared with broadcast for dead command listener EVENT_RELOGIN
+	public static final String EVENT_HEARTBEAT = "do_heartbeat";
 	public static final int STD_TIMEOUT = 5*60;
 
 	//timeout (IN SECONDS) before giving up on calling someone

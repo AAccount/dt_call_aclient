@@ -30,11 +30,8 @@ public class JobServiceReceiver extends JobService
 			Utils.logcat(Const.LOGW, tag, "Reinitializing Vars from prefs file");
 			Utils.loadPrefs();
 		}
-//		Vars.applicationContext = getApplicationContext();
-//		final Intent hasInternet = new Intent(Const.BROADCAST_HAS_INTERNET);
-//		hasInternet.setClass(Vars.applicationContext, BackgroundManager.class);
-//		sendBroadcast(hasInternet);
-		BackgroundManager2.getInstance().addEvent(Const.BROADCAST_HAS_INTERNET);
+
+		BackgroundManager2.getInstance().addEvent(Const.EVENT_HAS_INTERNET);
 		return false;
 	}
 

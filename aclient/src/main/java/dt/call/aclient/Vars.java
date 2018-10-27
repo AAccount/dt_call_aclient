@@ -48,7 +48,7 @@ public class Vars
 	public static int mediaPort;
 	public static byte[] serverPublicSodium = null;
 
-	//user information (to be filled in when available)
+	//user information
 	public static String uname = null;
 	public static byte[] selfPrivateSodium = null;
 
@@ -61,14 +61,4 @@ public class Vars
 
 	//for every little annoying thing that needs a context... here's one
 	public static Context applicationContext = null;
-
-	//alarm manager pending intents
-	//https://stackoverflow.com/questions/18649728/android-cannot-pass-intent-extras-though-alarmmanager
-	//http://javatechig.com/android/repeat-alarm-example-in-android
-//	public static Intent retries = null;
-//	public static PendingIntent pendingRetries = null;
-//	public static PendingIntent pendingRetries2ndary = null;
-//	public static Intent heartbeat = null;
-//	public static PendingIntent pendingHeartbeat = null;
-//	public static PendingIntent pendingHeartbeat2ndary = null;
 }

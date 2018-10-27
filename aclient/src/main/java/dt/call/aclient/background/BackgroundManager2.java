@@ -12,7 +12,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
@@ -60,26 +59,19 @@ public class BackgroundManager2
 					while(alive) //copied straight from BackgroundManager
 					{
 						String action = eventQ.take();
-						if(action.equals(Const.BROADCAST_HAS_INTERNET))
+						if(action.equals(Const.EVENT_HAS_INTERNET))
 						{
-							new Thread(new Runnable()
-							{
-								@Override
-								public void run()
-								{
-									Utils.killSockets();
-								}
-							}).start();
+							Utils.killSockets();
 							clearWaiting();
 							Utils.logcat(Const.LOGD, tag, "internet was reconnected by manual detection");
 							new LoginAsync().execute();
 						}
-						else if (action.equals(Const.BROADCAST_RELOGIN))
+						else if (action.equals(Const.EVENT_RELOGIN))
 						{
 							//set persistent notification as offline for now while reconnect is trying
 							Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
 
-							//pending intents cancelled by command listener to prevent a timing problem where sockets are closed at the same
+							//delayed events cancelled by command listener to prevent a timing problem where sockets are closed at the same
 							//time a heart beat pending intent is fired.
 
 							//if the network is dead then don't bother
@@ -92,36 +84,17 @@ public class BackgroundManager2
 
 							new LoginAsync().execute();
 						}
-						else if(action.equals(Const.ALARM_ACTION_HEARTBEAT))
+						else if(action.equals(Const.EVENT_HEARTBEAT))
 						{
-							if (/*Vars.state == CallState.NONE &&*/ Utils.hasInternet())
+							if (Utils.hasInternet())
 							{
-								//only send if there is internet and not in a call. heartbeat during a call will inject a random byte into
-								//	the amr stream and cause a "frameshift mutation" of the amr data ==> turn amr into alien morse code
 								Utils.logcat(Const.LOGD, tag, "sending heart beat");
 								new HeartBeatAsync().execute();
 							}
-//							else if(Vars.state != CallState.NONE)
-//							{
-//								//if there is a call (automatically means there is internet), don't let the heartbeat die out.
-//								//	keep scheduling and keep ignoring until it's all done
-//								addDelayedEvent(Const.ALARM_ACTION_HEARTBEAT, Const.STD_TIMEOUT/1000);
-//							}
 							else //if (!Utils.hasInternet())
 							{
 								Utils.logcat(Const.LOGW, tag, "no internet to send heart beat on");
-
-								//heart beat is the ONLY action where the sockets could be live. get rid of them if there is no internet
-								// command listener dead (dead by definition), login retry (login failed, no sockets)
-								// login bg (failure will issue a retry, success means everything is ok) has_internet(coming from previously dead)
-								new Thread(new Runnable()
-								{
-									@Override
-									public void run()
-									{
-										Utils.killSockets();
-									}
-								}).start();
+								Utils.killSockets();
 								handleNoInternet();
 							}
 						}
