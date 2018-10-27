@@ -25,7 +25,7 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 		{
 			Vars.commandSocket.write(Const.JBYTE);
 //			Utils.setExactWakeup(Vars.pendingHeartbeat, Vars.pendingHeartbeat2ndary);
-			BackgroundManager2.getInstance().addDelayedEvent(Const.ALARM_ACTION_HEARTBEAT, Const.STD_TIMEOUT/1000);
+			BackgroundManager2.getInstance().addDelayedEvent(Const.ALARM_ACTION_HEARTBEAT, Const.STD_TIMEOUT);
 			Utils.logcat(Const.LOGD, tag, "heart beat sent and ok");
 			return true;
 		}

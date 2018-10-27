@@ -30,7 +30,7 @@ public class BackgroundManager extends BroadcastReceiver
 		//double check to make sure these things are setup
 		Vars.applicationContext = context.getApplicationContext();
 //		Utils.initAlarmVars();
-		final AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+//		final AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 
 		if(Vars.uname == null || Vars.selfPrivateSodium == null || Vars.serverAddress == null)
 		{

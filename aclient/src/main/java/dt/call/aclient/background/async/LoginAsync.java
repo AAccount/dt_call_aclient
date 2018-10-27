@@ -31,6 +31,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 	private static final Object loginLock = new Object();
 	public static boolean noNotificationOnFail = false;
 	private static boolean tryingLogin;
+	private static int failedLogins = 0;
 
 	@Override
 	protected Boolean doInBackground(Boolean... params)
@@ -41,6 +42,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 //			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
 //			manager.cancel(Vars.pendingRetries);
 //			manager.cancel(Vars.pendingRetries2ndary);
+			BackgroundManager2.getInstance().clearWaiting();
 
 			//only handle 1 login request at a time
 			synchronized(loginLock)
@@ -135,7 +137,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 //			manager.cancel(Vars.pendingHeartbeat2ndary);
 //			Utils.setExactWakeup(Vars.pendingHeartbeat, Vars.pendingHeartbeat2ndary);
 			BackgroundManager2.getInstance().clearWaiting();
-			BackgroundManager2.getInstance().addDelayedEvent(Const.ALARM_ACTION_HEARTBEAT, Const.STD_TIMEOUT/1000);
+			BackgroundManager2.getInstance().addDelayedEvent(Const.ALARM_ACTION_HEARTBEAT, Const.STD_TIMEOUT);
 			onPostExecute(true);
 			return true;
 		}
@@ -148,19 +150,20 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		}
 	}
 
-	protected void onPostExecute(boolean result)
+	protected void onPostExecute(boolean ok)
 	{
 		//broadcast to background manager first. that way it always knows what the current state of your login and if
 		//it needs to try again. background will rebroadcast to the ui. if no ui is listening no harm.
 		Intent loginResult = new Intent(Const.BROADCAST_LOGIN);
-		loginResult.putExtra(Const.BROADCAST_LOGIN_RESULT, result);
+		loginResult.putExtra(Const.BROADCAST_LOGIN_RESULT, ok);
 		Vars.applicationContext.sendBroadcast(loginResult);
 
 		//update the persistent notification with the login results
 		SimpleDateFormat ts = new SimpleDateFormat("HH:mm:ss.SSSS",Locale.US);
-		Utils.logcat(Const.LOGD, tag, "Result of login: " + result + " @" + ts.format(new Date()));
-		if(result)
+		Utils.logcat(Const.LOGD, tag, "Result of login: " + ok + " @" + ts.format(new Date()));
+		if(ok)
 		{
+			failedLogins = 0;
 			noNotificationOnFail = false;
 			Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
 		}
@@ -168,7 +171,11 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		{
 			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
 //			Utils.setExactWakeup(Vars.pendingRetries, Vars.pendingRetries2ndary);
-			BackgroundManager2.getInstance().addDelayedEvent(Const.BROADCAST_RELOGIN, Const.STD_TIMEOUT/1000);
+
+			failedLogins++;
+			final int MULTIPLIER = 10;
+			final int delay = (failedLogins*MULTIPLIER > Const.STD_TIMEOUT) ? Const.STD_TIMEOUT : (failedLogins*MULTIPLIER);
+			BackgroundManager2.getInstance().addDelayedEvent(Const.BROADCAST_RELOGIN, delay);
 			//background manager will check if there is internet or not when the retry kicks in and will act accordingly
 
 			noNotificationOnFail = false; //reset

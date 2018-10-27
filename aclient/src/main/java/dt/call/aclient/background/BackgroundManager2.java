@@ -5,6 +5,7 @@ import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
 
+import java.util.HashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -22,18 +23,18 @@ import dt.call.aclient.background.async.LoginAsync;
 public class BackgroundManager2
 {
 	private LinkedBlockingQueue<String> eventQ;
-	private LinkedBlockingQueue<ScheduledFuture> dealyedQ;
+	private HashMap<Integer, ScheduledFuture> delayedEvents = new HashMap<>();
 	private Thread backgroundThread;
-	private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+	private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);;
+	private int serialCounter = 0;
 
 	private static BackgroundManager2 instance = null;
 	private static boolean alive = false;
-	private static String tag = "EventManager";
+	private static String tag = "BG2";
 
 	private BackgroundManager2()
 	{
 		eventQ = new LinkedBlockingQueue<String>();
-		dealyedQ = new LinkedBlockingQueue<>();
 	}
 
 	public synchronized static BackgroundManager2 getInstance()
@@ -86,27 +87,27 @@ public class BackgroundManager2
 							{
 								Utils.logcat(Const.LOGD, tag, "No internet detected from relogin");
 								handleNoInternet();
-								return;
+								continue; //NEVER "return;" in the thread. it stops the thread
 							}
 
 							new LoginAsync().execute();
 						}
 						else if(action.equals(Const.ALARM_ACTION_HEARTBEAT))
 						{
-							if (Vars.state == CallState.NONE && Utils.hasInternet())
+							if (/*Vars.state == CallState.NONE &&*/ Utils.hasInternet())
 							{
 								//only send if there is internet and not in a call. heartbeat during a call will inject a random byte into
 								//	the amr stream and cause a "frameshift mutation" of the amr data ==> turn amr into alien morse code
 								Utils.logcat(Const.LOGD, tag, "sending heart beat");
 								new HeartBeatAsync().execute();
 							}
-							else if(Vars.state != CallState.NONE)
-							{
-								//if there is a call (automatically means there is internet), don't let the heartbeat die out.
-								//	keep scheduling and keep ignoring until it's all done
-								addDelayedEvent(Const.ALARM_ACTION_HEARTBEAT, Const.STD_TIMEOUT/1000);
-							}
-							else if (!Utils.hasInternet())
+//							else if(Vars.state != CallState.NONE)
+//							{
+//								//if there is a call (automatically means there is internet), don't let the heartbeat die out.
+//								//	keep scheduling and keep ignoring until it's all done
+//								addDelayedEvent(Const.ALARM_ACTION_HEARTBEAT, Const.STD_TIMEOUT/1000);
+//							}
+							else //if (!Utils.hasInternet())
 							{
 								Utils.logcat(Const.LOGW, tag, "no internet to send heart beat on");
 
@@ -133,6 +134,8 @@ public class BackgroundManager2
 				clearWaiting();
 			}
 		});
+		backgroundThread.setName("BG2-Listener");
+		backgroundThread.start();
 	}
 
 	private void handleNoInternet()
@@ -154,34 +157,44 @@ public class BackgroundManager2
 	{
 		alive = false;
 		instance.backgroundThread.interrupt();
+		instance.clearWaiting();
 		instance = null;
 	}
 
-	public void clearWaiting()
+	public synchronized void clearWaiting()
 	{
 		eventQ.clear();
-		for(ScheduledFuture dealyedEvent : dealyedQ)
+		for(Integer delayedEventSerial : delayedEvents.keySet())
 		{
-			dealyedEvent.cancel(true);
+			delayedEvents.get(delayedEventSerial).cancel(true);
 		}
-		dealyedQ.clear();
+		delayedEvents.clear();
 	}
 
-	public void addEvent(String event)
+	public synchronized void addEvent(String event)
 	{
-		eventQ.add(event);
+		try
+		{
+			eventQ.put(event);
+		}
+		catch (InterruptedException e)
+		{
+			Utils.dumpException(tag, e);
+		}
 	}
 
-	public void addDelayedEvent(final String event, int seconds)
+	public synchronized void addDelayedEvent(final String event, int seconds)
 	{
+		serialCounter++; //create a serial number for this delayed event
 		ScheduledFuture dealyedEvent = scheduler.schedule(new Runnable()
 		{
 			@Override
 			public void run()
 			{
+				delayedEvents.remove(serialCounter); //when ran, remove it from the delayed events table
 				addEvent(event);
 			}
 		}, seconds, TimeUnit.SECONDS);
-		dealyedQ.add(dealyedEvent);
+		delayedEvents.put(serialCounter, dealyedEvent);
 	}
 }

@@ -409,7 +409,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				}
 			}
 
-			if(Vars.mediaUdp != null && Vars.mediaUdp.isClosed())
+			if(Vars.mediaUdp != null && !Vars.mediaUdp.isClosed())
 			{
 				Vars.mediaUdp.close();
 				Vars.mediaUdp = null;

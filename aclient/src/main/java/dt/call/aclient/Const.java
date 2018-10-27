@@ -79,7 +79,7 @@ public class Const
 	public static final int ALARM_HEARTBEAT_ID = 999;
 	//alarm broadcast fore retry shared with broadcast for dead command listener BROADCAST_RELOGIN
 	public static final String ALARM_ACTION_HEARTBEAT = "do_heartbeat";
-	public static final int STD_TIMEOUT = 5*60*1000;
+	public static final int STD_TIMEOUT = 5*60;
 
 	//timeout (IN SECONDS) before giving up on calling someone
 	public static final int CALL_TIMEOUT = 20;
