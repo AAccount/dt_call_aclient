@@ -11,6 +11,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.HashMap;
 
+import dt.call.aclient.background.BackgroundManager2;
 import dt.call.aclient.sodium.SodiumSocket;
 
 /**
@@ -61,4 +62,6 @@ public class Vars
 
 	//for every little annoying thing that needs a context... here's one
 	public static Context applicationContext = null;
+
+	public static BackgroundManager2 bg2 = null;
 }

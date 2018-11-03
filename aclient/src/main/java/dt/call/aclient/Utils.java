@@ -32,6 +32,7 @@ import java.io.StringWriter;
 
 import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.background.BackgroundManager2;
+import dt.call.aclient.background.CmdListener;
 import dt.call.aclient.screens.CallIncoming;
 import dt.call.aclient.screens.CallMain;
 import dt.call.aclient.screens.UserHome;
@@ -202,7 +203,7 @@ public class Utils
 		Vars.stateNotificationBuilder = null;
 		Vars.notificationManager = null;
 
-		BackgroundManager2.stop();
+		Vars.bg2.stop();
 
 		//prevent background manager from restarting command listener when sockets kill async is called
 		ComponentName backgroundManager = new ComponentName(Vars.applicationContext, BackgroundManager.class);
@@ -420,5 +421,14 @@ public class Utils
 		byte[] result = new byte[trimmed];
 		System.arraycopy(input, 0, result, 0, trimmed);
 		return result;
+	}
+
+	public static void startBG2()
+	{
+		if(Vars.bg2 == null)
+		{
+			Intent bg2Intent = new Intent(Vars.applicationContext, BackgroundManager2.class);
+			Vars.applicationContext.startService(bg2Intent);
+		}
 	}
 }

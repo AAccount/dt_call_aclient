@@ -61,7 +61,7 @@ public class BackgroundManager extends BroadcastReceiver
 					 * Command listenter reliably dies when there is no internet. Null command socket should be a good indicator if this
 					 * is really the case of no internet --> internet.
 					 */
-					BackgroundManager2.getInstance().clearWaiting();
+					Vars.bg2.clearWaiting();
 
 					Utils.logcat(Const.LOGD, tag, "internet was reconnected by legacy android automatic detection");
 					new LoginAsync().execute();

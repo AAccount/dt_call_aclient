@@ -39,6 +39,10 @@
             android:name=".background.CmdListener"
             android:exported="false"/>
 
+        <service
+            android:name=".background.BackgroundManager2"
+            android:exported="false"/>
+
         <!-- Manual workaround for CONNECTIVITY_CHANGE disappearing in android 7.0+ -->
         <service
             android:name=".background.JobServiceReceiver"

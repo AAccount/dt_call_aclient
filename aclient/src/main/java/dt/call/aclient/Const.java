@@ -76,7 +76,7 @@ public class Const
 
 	//alarm broadcast fore retry shared with broadcast for dead command listener EVENT_RELOGIN
 	public static final String EVENT_HEARTBEAT = "do_heartbeat";
-	public static final int STD_TIMEOUT = 5*60;
+	public static final int STD_TIMEOUT = 60;
 
 	//timeout (IN SECONDS) before giving up on calling someone
 	public static final int CALL_TIMEOUT = 20;

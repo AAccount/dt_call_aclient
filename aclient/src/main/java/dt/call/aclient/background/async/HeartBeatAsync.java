@@ -16,12 +16,12 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 	@Override
 	protected Boolean doInBackground(String... params)
 	{
-		BackgroundManager2.getInstance().clearWaiting();
+		Vars.bg2.clearWaiting();
 
 		try
 		{
 			Vars.commandSocket.write(Const.JBYTE);
-			BackgroundManager2.getInstance().addDelayedEvent(Const.EVENT_HEARTBEAT, Const.STD_TIMEOUT);
+			Vars.bg2.addDelayedEvent(Const.EVENT_HEARTBEAT, Const.STD_TIMEOUT);
 			Utils.logcat(Const.LOGD, tag, "heart beat sent and ok");
 			return true;
 		}
@@ -34,7 +34,7 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 
 			//if idling for a long time, killing sockets will not trigger command listener to broadcast a (formerly) command listener dead
 			// (now called relogin). do it here too.
-			BackgroundManager2.getInstance().addEvent(Const.EVENT_RELOGIN);
+			Vars.bg2.addEvent(Const.EVENT_RELOGIN);
 			return false;
 		}
 	}

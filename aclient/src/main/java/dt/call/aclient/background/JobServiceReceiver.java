@@ -31,7 +31,7 @@ public class JobServiceReceiver extends JobService
 			Utils.loadPrefs();
 		}
 
-		BackgroundManager2.getInstance().addEvent(Const.EVENT_HAS_INTERNET);
+		Vars.bg2.addEvent(Const.EVENT_HAS_INTERNET);
 		return false;
 	}
 

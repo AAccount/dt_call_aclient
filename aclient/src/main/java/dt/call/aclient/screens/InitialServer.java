@@ -43,6 +43,7 @@ public class InitialServer extends AppCompatActivity implements View.OnClickList
         super.onCreate(savedInstanceState);
 
 		Vars.applicationContext = getApplicationContext();
+		Utils.startBG2();
 
 		//turn on BackgroundManager just in case it was turned off by the logout button
 		final ComponentName backgroundManager = new ComponentName(this, BackgroundManager.class);

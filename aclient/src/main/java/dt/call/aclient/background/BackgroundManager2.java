@@ -1,9 +1,12 @@
 package dt.call.aclient.background;
 
+import android.app.IntentService;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
+import android.support.annotation.Nullable;
 
 import java.util.HashMap;
 import java.util.concurrent.Executors;
@@ -19,7 +22,7 @@ import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.HeartBeatAsync;
 import dt.call.aclient.background.async.LoginAsync;
 
-public class BackgroundManager2
+public class BackgroundManager2 extends IntentService
 {
 	private LinkedBlockingQueue<String> eventQ;
 	private HashMap<Integer, ScheduledFuture> delayedEvents = new HashMap<>();
@@ -27,33 +30,26 @@ public class BackgroundManager2
 	private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);;
 	private int serialCounter = 0;
 
-	private static BackgroundManager2 instance = null;
 	private static boolean alive = false;
 	private static String tag = "BG2";
 
-	private BackgroundManager2()
+	public BackgroundManager2()
 	{
+		super(tag);
 		eventQ = new LinkedBlockingQueue<String>();
+		alive = true;
+		Utils.logcat(Const.LOGD, tag, "created bg2");
 	}
 
-	public synchronized static BackgroundManager2 getInstance()
+	protected void onHandleIntent(@Nullable Intent intent)
 	{
-		if(instance == null)
-		{
-			instance = new BackgroundManager2();
-			alive = true;
-			instance.listen();
-		}
-		return instance;
-	}
-
-	private void listen()
-	{
+		Vars.bg2 = this;
 		backgroundThread = new Thread(new Runnable()
 		{
 			@Override
 			public void run()
 			{
+				Utils.logcat(Const.LOGD, tag, "start bg2 thread");
 				try
 				{
 					while(alive) //copied straight from BackgroundManager
@@ -108,7 +104,7 @@ public class BackgroundManager2
 				clearWaiting();
 			}
 		});
-		backgroundThread.setName("BG2-Listener");
+		backgroundThread.setName(tag+"-Listener");
 		backgroundThread.start();
 	}
 
@@ -127,12 +123,11 @@ public class BackgroundManager2
 		}
 	}
 
-	public static void stop()
+	public void stop()
 	{
 		alive = false;
-		instance.backgroundThread.interrupt();
-		instance.clearWaiting();
-		instance = null;
+		backgroundThread.interrupt();
+		clearWaiting();
 	}
 
 	public synchronized void clearWaiting()

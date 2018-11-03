@@ -354,14 +354,14 @@ public class CmdListener extends IntentService
 		//timing problems where socket close and pending intent happen at the same time.
 		try
 		{
-			BackgroundManager2.getInstance().clearWaiting();
+			Vars.bg2.clearWaiting();
 		}
 		catch(NullPointerException n)
 		{
 			//can happen on quit if quit cancels the pendings first. nothing you can do.
 			//	just part of the normal shutdown procedure. no reason to panic
 		}
-		BackgroundManager2.getInstance().addEvent(Const.EVENT_RELOGIN);
+		Vars.bg2.addEvent(Const.EVENT_RELOGIN);
 	}
 
 	/**

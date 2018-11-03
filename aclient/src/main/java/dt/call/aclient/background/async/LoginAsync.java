@@ -38,7 +38,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 	{
 		try
 		{
-			BackgroundManager2.getInstance().clearWaiting();
+			Vars.bg2.clearWaiting();
 
 			//only handle 1 login request at a time
 			synchronized(loginLock)
@@ -129,8 +129,8 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			Intent cmdListenerIntent = new Intent(Vars.applicationContext, CmdListener.class);
 			Vars.applicationContext.startService(cmdListenerIntent);
 
-			BackgroundManager2.getInstance().clearWaiting();
-			BackgroundManager2.getInstance().addDelayedEvent(Const.EVENT_HEARTBEAT, Const.STD_TIMEOUT);
+			Vars.bg2.clearWaiting();
+			Vars.bg2.addDelayedEvent(Const.EVENT_HEARTBEAT, Const.STD_TIMEOUT);
 			onPostExecute(true);
 			return true;
 		}
@@ -167,7 +167,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			failedLogins++;
 			final int MULTIPLIER = 10;
 			final int delay = Math.min(Const.STD_TIMEOUT, (failedLogins*MULTIPLIER));
-			BackgroundManager2.getInstance().addDelayedEvent(Const.EVENT_RELOGIN, delay);
+			Vars.bg2.addDelayedEvent(Const.EVENT_RELOGIN, delay);
 			//background manager will check if there is internet or not when the retry kicks in and will act accordingly
 
 			noNotificationOnFail = false; //reset
