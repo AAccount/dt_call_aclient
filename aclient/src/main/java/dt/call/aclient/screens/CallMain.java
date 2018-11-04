@@ -78,7 +78,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private int min=0, sec=0;
 	private Timer counter = new Timer();
 	private BroadcastReceiver myReceiver;
-	private int garbage=0, txData=0, rxData=0, rxCount=0, rxSeq=0, txSeq=0, skipped=0;
+	private int garbage=0, txData=0, rxData=0, rxSeq=0, txSeq=0, skipped=0;
 	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel;
 	private boolean showStats = false;
 
@@ -754,7 +754,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 						//decrypt
 						rxData = rxData + received.getLength() + HEADERS;
-						rxCount++;
 						final byte[] accumulator = new byte[received.getLength()];
 						System.arraycopy(received.getData(), 0, accumulator, 0, received.getLength());
 						final byte[] accumulatorDec = SodiumUtils.symmetricDecrypt(accumulator, Vars.voiceSymmetricKey); //contents [size1|opus chunk 1|size2|opus chunk 2|...|sizeN|opus chunk N]

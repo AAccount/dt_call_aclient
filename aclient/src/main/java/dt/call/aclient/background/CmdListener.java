@@ -58,7 +58,7 @@ public class CmdListener extends IntentService
 		//	be denied to start even though the login was ok.
 		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
 		{
-			startForeground(1, Vars.stateNotification);
+			startForeground(Const.STATE_NOTIFICATION_ID, Vars.stateNotification);
 		}
 
 		Utils.logcat(Const.LOGD, tag, "command listener INTENT SERVICE started");
