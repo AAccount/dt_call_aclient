@@ -4,6 +4,7 @@ import android.app.AlarmManager;
 import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.PowerManager;
 
 import com.goterl.lazycode.lazysodium.LazySodium;
@@ -53,6 +54,13 @@ public class CmdListener extends IntentService
 	@Override
 	protected void onHandleIntent(Intent workIntent)
 	{
+		//Post 8.0 needs a "foreground" service otherwise command listener will
+		//	be denied to start even though the login was ok.
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+		{
+			startForeground(1, Vars.stateNotification);
+		}
+
 		Utils.logcat(Const.LOGD, tag, "command listener INTENT SERVICE started");
 		final LazySodium lazySodium = new LazySodiumAndroid(new SodiumAndroid());
 

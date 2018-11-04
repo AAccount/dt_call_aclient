@@ -4,6 +4,7 @@ import android.app.AlarmManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
+import android.os.Build;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -129,8 +130,19 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			Vars.sessionKey = answerResponseContents[2];
 
+			//must set the notification right away because the stupid foreground service workaround needs it ASAP
+			noNotificationOnFail = false;
+			Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
+
 			Intent cmdListenerIntent = new Intent(Vars.applicationContext, CmdListener.class);
-			Vars.applicationContext.startService(cmdListenerIntent);
+			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+			{
+				Vars.applicationContext.startForegroundService(cmdListenerIntent);
+			}
+			else
+			{
+				Vars.applicationContext.startService(cmdListenerIntent);
+			}
 
 			manager.cancel(Vars.pendingHeartbeat);
 			manager.cancel(Vars.pendingHeartbeat2ndary);
@@ -159,12 +171,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		//update the persistent notification with the login results
 		SimpleDateFormat ts = new SimpleDateFormat("HH:mm:ss.SSSS",Locale.US);
 		Utils.logcat(Const.LOGD, tag, "Result of login: " + result + " @" + ts.format(new Date()));
-		if(result)
-		{
-			noNotificationOnFail = false;
-			Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
-		}
-		else if(!noNotificationOnFail) //don't show the notification for initial login fails
+		if(!result && !noNotificationOnFail) //don't show the notification for initial login fails
 		{
 			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
 			Utils.setExactWakeup(Vars.pendingRetries, Vars.pendingRetries2ndary);

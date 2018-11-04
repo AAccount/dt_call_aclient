@@ -153,8 +153,8 @@ public class Utils
 				stateNotificationChannel.setShowBadge(false);
 				Vars.notificationManager.createNotificationChannel(stateNotificationChannel);
 			}
-
-			Vars.notificationManager.notify(Const.STATE_NOTIFICATION_ID, Vars.stateNotificationBuilder.build());
+			Vars.stateNotification = Vars.stateNotificationBuilder.build();
+			Vars.notificationManager.notify(Const.STATE_NOTIFICATION_ID, Vars.stateNotification);
 		}
 		else
 		{
@@ -165,7 +165,8 @@ public class Utils
 					.setColorized(true)
 					.setChannelId(Const.STATE_NOTIFICATION_CHANNEL)
 					.setContentIntent(go2);
-			Vars.notificationManager.notify(Const.STATE_NOTIFICATION_ID, Vars.stateNotificationBuilder.build());
+			Vars.stateNotification = Vars.stateNotificationBuilder.build();
+			Vars.notificationManager.notify(Const.STATE_NOTIFICATION_ID, Vars.stateNotification);
 		}
 	}
 
@@ -311,7 +312,6 @@ public class Utils
 		}
 		catch (Exception e)
 		{
-			dumpException(tag, e);
 		}
 		Vars.commandSocket = null;
 	}

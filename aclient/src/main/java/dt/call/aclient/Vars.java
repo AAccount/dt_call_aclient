@@ -1,5 +1,6 @@
 package dt.call.aclient;
 
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -55,6 +56,7 @@ public class Vars
 	//Ongoing notification with state information
 	public static NotificationCompat.Builder stateNotificationBuilder = null;
 	public static NotificationManager notificationManager = null;
+	public static Notification stateNotification = null;
 	public static PendingIntent go2HomePending = null;
 	public static PendingIntent go2CallMainPending = null;
 	public static PendingIntent go2CallIncomingPending = null;
