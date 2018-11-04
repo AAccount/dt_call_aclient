@@ -27,6 +27,8 @@ End note: there are no plans to make an iOS client because there are no good res
 ![In Call Screen](https://github.com/AAccount/dt_call_aclient/blob/master/screenshots/Main%20Call.png)
 
 ## Changelog
+**V 1.9:** use Opus codec for encoding/decoding voice.
+
 **V 1.8:** use mutable arrays ONLY when handling sodium keys so they can be easily cleared from memory
 
 **V 1.7:** switch to lazy sodium for libsodium, use libsodium for the command port to remove openssl dependancy
