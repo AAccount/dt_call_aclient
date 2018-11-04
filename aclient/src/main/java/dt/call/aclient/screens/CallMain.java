@@ -176,25 +176,24 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							updateTime();
 						}
 					});
-				}
-
-				if(showStats)
-				{
-					final String rxDisp=formatInternetMeteric(rxData), txDisp=formatInternetMeteric(txData);
-					final int missing = txSeq-rxSeq;
-					final String latestStats = missingLabel + ": " + (missing > 0 ? missing : 0) + " " + garbageLabel + ": " + garbage + "\n"
-							+rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp + "\n"
-							+rxSeqLabel + ": " + rxSeq + " "
-							+txSeqLabel + ": " + txSeq + "\n"
-							+skippedLabel + ": " + skipped;
-					runOnUiThread(new Runnable()
+					if(showStats)
 					{
-						@Override
-						public void run()
+						final String rxDisp=formatInternetMeteric(rxData), txDisp=formatInternetMeteric(txData);
+						final int missing = txSeq-rxSeq;
+						final String latestStats = missingLabel + ": " + (missing > 0 ? missing : 0) + " " + garbageLabel + ": " + garbage + "\n"
+								+rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp + "\n"
+								+rxSeqLabel + ": " + rxSeq + " "
+								+txSeqLabel + ": " + txSeq + "\n"
+								+skippedLabel + ": " + skipped;
+						runOnUiThread(new Runnable()
 						{
-							callerid.setText(latestStats);
-						}
-					});
+							@Override
+							public void run()
+							{
+								callerid.setText(latestStats);
+							}
+						});
+					}
 				}
 			}
 		};
@@ -639,7 +638,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						final byte[] accumulatorTrimmed = new byte[accPos];
 						System.arraycopy(accumulator, 0, accumulatorTrimmed, 0, accPos);
 						final byte[] accumulatorEncrypted = SodiumUtils.symmetricEncrypt(accumulatorTrimmed, Vars.voiceSymmetricKey);
-						DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length, Vars.callServer, Vars.mediaPort);
+						final DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length, Vars.callServer, Vars.mediaPort);
 						try
 						{
 							sendQ.put(packet);
@@ -661,13 +660,14 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					}
 
 					//write the opus chunk size as a "header" before writing the actual opus data
-					byte[] encodedLengthDisassembled = Utils.disassembleInt(encodeLength, ENCODED_LENGTH_ACCURACY);
+					final byte[] encodedLengthDisassembled = Utils.disassembleInt(encodeLength, ENCODED_LENGTH_ACCURACY);
 					System.arraycopy(encodedLengthDisassembled, 0, accumulator, accPos, ENCODED_LENGTH_ACCURACY);
 					accPos = accPos + ENCODED_LENGTH_ACCURACY;
 					System.arraycopy(encodedbuffer, 0 , accumulator, accPos, encodeLength);
 					accPos = accPos + encodeLength;
 				}
 				Opus.closeEncoder();
+				Utils.applyFiller(accumulator);
 				wavRecorder.stop();
 				wavRecorder.release();
 				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has stopped");
@@ -801,7 +801,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							//advance the accumulator read position
 							readPos = readPos + encodedLength;
 						}
-
+						Utils.applyFiller(accumulatorDec);
 					}
 					catch (Exception i)
 					{
