@@ -761,6 +761,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						if(accumulatorDec == null)//contents [seq#|size1|opus chunk 1|size2|opus chunk 2|...|sizeN|opus chunk N]
 						{
 							Utils.logcat(Const.LOGD, tag, "Invalid decryption");
+							garbage++;
 							continue;
 						}
 
