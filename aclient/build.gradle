@@ -23,6 +23,12 @@ android {
     productFlavors {
     }
 
+    externalNativeBuild {
+        ndkBuild {
+            path "src/main/jni/Android.mk"
+        }
+    }
+
     packagingOptions {
         exclude 'lib/mips/libjnidispatch.so'
         exclude 'lib/mips64/libjnidispatch.so'

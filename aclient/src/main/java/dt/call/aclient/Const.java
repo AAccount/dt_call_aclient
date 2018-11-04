@@ -85,8 +85,8 @@ public class Const
 	public static final int CALL_TIMEOUT = 20;
 
 	//wakelock tag
-	public static final String WAKELOCK_INCOMING = "dt.call.aclient.wakelock.incoming";
-	public static final String WAKELOCK_INCALLA9 = "dt.call.aclient.wakelock.incalla9";
+	public static final String WAKELOCK_INCOMING = "dt.call.aclient:incoming";
+	public static final String WAKELOCK_INCALLA9 = "dt.call.aclient:incalla9";
 
 	//command maximum segments
 	public static final int COMMAND_MAX_SEGMENTS = 5;

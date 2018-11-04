@@ -31,15 +31,11 @@ import android.widget.Toast;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.DatagramPacket;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.zip.Deflater;
-import java.util.zip.Inflater;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
@@ -47,6 +43,7 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.CommandEndAsync;
+import dt.call.aclient.codec.Opus;
 import dt.call.aclient.sodium.SodiumUtils;
 
 public class CallMain extends AppCompatActivity implements View.OnClickListener, SensorEventListener
@@ -55,15 +52,16 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private static final int HEADERS = 52;
 
-	private static final int SAMPLES = 8000; //44100;
+	private static final int SAMPLES = Opus.getSampleRate();
 	private static final int S16 = AudioFormat.ENCODING_PCM_16BIT;
 	private static final int STREAMCALL = AudioManager.STREAM_VOICE_CALL;
 
-	private static final int WAVBUFFERSIZE = 500; //FdkAAC.getWavFrameSize();
+	private static final int WAVBUFFERSIZE = Opus.getWavFrameSize();
 	private static final int DIAL_TONE_SIZE = 32000;
 	private static final int END_TONE_SIZE = 10858;
 	private static final int WAV_FILE_HEADER = 44; //.wav files actually have a 44 byte header
 
+	private static final int ENCODED_LENGTH_ACCURACY = 2;
 	private static final int SEQ_LENGTH_ACCURACY = 4;
 
 	//ui stuff
@@ -529,8 +527,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		mic.setEnabled(true);
 		speaker.setEnabled(true);
 
-		//initialize the aac library before creating the threads so it will be ready when the threads start
-//		FdkAAC.initAAC();
+		//initialize the opus library before creating the threads so it will be ready when the threads start
+		Opus.init();
 		startMediaEncodeThread();
 		startMediaDecodeThread();
 	}
@@ -575,13 +573,18 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					endThread();
 				}
 
+				final byte[] accumulator = new byte[Const.SIZE_MEDIA];
+				int accPos = 4;
+
+				//the first sequence number is 0 (array is already pre 0ed)
+				// sequence #s to detect duplicate or old voice packets
 				txSeq++;
 
 				internalNetworkThread();
 
 				while (Vars.state == CallState.INCALL)
 				{
-					//final byte[] aacbuffer = new byte[AACBUFFERSIZE];
+					final byte[] encodedbuffer = new byte[WAVBUFFERSIZE];
 					final short[] wavbuffer = new short[WAVBUFFERSIZE];
 
 					if (micStatusNew)
@@ -620,35 +623,51 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						//continue;
 					}
 
-					final byte[] wavBytes = new byte[WAVBUFFERSIZE * 2];
-					ByteBuffer.wrap(wavBytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(wavbuffer);
-
-					Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
-					deflater.setInput(wavBytes);
-					deflater.finish();
-					final byte[] compressedOutput = new byte[WAVBUFFERSIZE * 2];
-					final int compressedDataLength = deflater.deflate(compressedOutput);
-
-					final byte[] accumulatorTrimmed = new byte[SEQ_LENGTH_ACCURACY + compressedDataLength];
-					final byte[] seqBytes = Utils.disassembleInt(txSeq, SEQ_LENGTH_ACCURACY);
-					System.arraycopy(seqBytes, 0, accumulatorTrimmed, 0, SEQ_LENGTH_ACCURACY);
-
-					System.arraycopy(compressedOutput, 0, accumulatorTrimmed, SEQ_LENGTH_ACCURACY, compressedDataLength);
-					final byte[] accumulatorEncrypted = SodiumUtils.symmetricEncrypt(accumulatorTrimmed, Vars.voiceSymmetricKey);
-
-					DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length, Vars.callServer, Vars.mediaPort);
-					try
+					/**
+					 *Avoid sending tons of tiny packets wasting resources for headers.
+					 */
+					final int encodeLength = Opus.encode(wavbuffer, encodedbuffer);
+					if(encodeLength < 1)
 					{
-						sendQ.put(packet);
-					}
-					catch (InterruptedException e)
-					{
-						Utils.dumpException(tag, e);
+						Utils.logcat(Const.LOGE, tag, Opus.getError(encodeLength));
+						continue;
 					}
 
-					txData = txData + accumulatorEncrypted.length + HEADERS;
-					txSeq++;
+					//if the current opus chunk won't fit in the accumulator, send the packet and restart the accumulator
+					if((accPos + ENCODED_LENGTH_ACCURACY + encodeLength) > accumulator.length)
+					{
+						final byte[] accumulatorTrimmed = new byte[accPos];
+						System.arraycopy(accumulator, 0, accumulatorTrimmed, 0, accPos);
+						final byte[] accumulatorEncrypted = SodiumUtils.symmetricEncrypt(accumulatorTrimmed, Vars.voiceSymmetricKey);
+						DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length, Vars.callServer, Vars.mediaPort);
+						try
+						{
+							sendQ.put(packet);
+						}
+						catch (InterruptedException e)
+						{
+							Utils.dumpException(tag, e);
+						}
+						txData = txData + accumulatorEncrypted.length + HEADERS;
+						txSeq++;
+
+						accPos = SEQ_LENGTH_ACCURACY;
+						Arrays.fill(accumulator, (byte)0);
+
+						//integer broken up as: 12,345,678: [12,34,56,78.....voice....]
+						final byte[] txSeqDisassembled = Utils.disassembleInt(txSeq, SEQ_LENGTH_ACCURACY);
+						System.arraycopy(txSeqDisassembled, 0, accumulator, 0, SEQ_LENGTH_ACCURACY);
+						txSeq++;
+					}
+
+					//write the opus chunk size as a "header" before writing the actual opus data
+					byte[] encodedLengthDisassembled = Utils.disassembleInt(encodeLength, ENCODED_LENGTH_ACCURACY);
+					System.arraycopy(encodedLengthDisassembled, 0, accumulator, accPos, ENCODED_LENGTH_ACCURACY);
+					accPos = accPos + ENCODED_LENGTH_ACCURACY;
+					System.arraycopy(encodedbuffer, 0 , accumulator, accPos, encodeLength);
+					accPos = accPos + encodeLength;
 				}
+				Opus.closeEncoder();
 				wavRecorder.stop();
 				wavRecorder.release();
 				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has stopped");
@@ -730,7 +749,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					try
 					{
-						//read encrypted aac
+						//read encrypted opus
 						final DatagramPacket received = receiveQ.take();
 
 						//decrypt
@@ -738,8 +757,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						rxCount++;
 						final byte[] accumulator = new byte[received.getLength()];
 						System.arraycopy(received.getData(), 0, accumulator, 0, received.getLength());
-						final byte[] accumulatorDec = SodiumUtils.symmetricDecrypt(accumulator, Vars.voiceSymmetricKey); //contents [size1|aac chunk 1|size2|aac chunk 2|...|sizeN|aac chunk N]
-						if(accumulatorDec == null)
+						final byte[] accumulatorDec = SodiumUtils.symmetricDecrypt(accumulator, Vars.voiceSymmetricKey); //contents [size1|opus chunk 1|size2|opus chunk 2|...|sizeN|opus chunk N]
+						if(accumulatorDec == null)//contents [seq#|size1|opus chunk 1|size2|opus chunk 2|...|sizeN|opus chunk N]
 						{
 							Utils.logcat(Const.LOGD, tag, "Invalid decryption");
 							continue;
@@ -755,18 +774,32 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						}
 						rxSeq = sequence;
 
-						final int compressedLength = accumulatorDec.length - SEQ_LENGTH_ACCURACY;
-						final byte[] compressedBytes = new byte[compressedLength];
-						System.arraycopy(accumulatorDec, SEQ_LENGTH_ACCURACY, compressedBytes, 0, compressedLength);
+						int readPos = SEQ_LENGTH_ACCURACY;
+						while(readPos < accumulatorDec.length)
+						{
+							//retrieve the size from the first 2 bytes
+							final byte[] encLengthBytes = new byte[ENCODED_LENGTH_ACCURACY];
+							System.arraycopy(accumulatorDec, readPos, encLengthBytes, 0, ENCODED_LENGTH_ACCURACY);
+							final int encodedLength = Utils.reassembleInt(encLengthBytes);
+							readPos = readPos + ENCODED_LENGTH_ACCURACY;
 
-						Inflater inflater = new Inflater();
-						inflater.setInput(compressedBytes);
-						final byte[] wavbytes = new byte[WAVBUFFERSIZE * 2];
-						inflater.inflate(wavbytes);
+							//extract the opus chunk
+							final byte[] encbuffer = new byte[encodedLength];
+							System.arraycopy(accumulatorDec, readPos, encbuffer, 0, encodedLength);
 
-						final short[] wavshorts = new short[WAVBUFFERSIZE];
-						ByteBuffer.wrap(wavbytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(wavshorts);
-						wavPlayer.write(wavshorts, 0, WAVBUFFERSIZE);
+							//decode opus chunk
+							final short[] wavbuffer = new short[WAVBUFFERSIZE];
+							final int frames = Opus.decode(encbuffer, wavbuffer);
+							if(frames < 1)
+							{
+								Utils.logcat(Const.LOGE, tag, Opus.getError(frames));
+								continue;
+							}
+							wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
+
+							//advance the accumulator read position
+							readPos = readPos + encodedLength;
+						}
 
 					}
 					catch (Exception i)
@@ -777,6 +810,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				wavPlayer.stop();
 				wavPlayer.flush();
 				wavPlayer.release();
+				Opus.closeDecoder();
 				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has stopped, state:" + Vars.state);
 			}
 
@@ -785,13 +819,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				Thread networkThread = new Thread(new Runnable()
 				{
 					private static final String tag = "DecodeNetwork";
-
+					private static final int UDP_BUFFER_SIZE = 1400; //1450 is the smallest I've seen so 50 under
 					@Override
 					public void run()
 					{
 						while(Vars.state == CallState.INCALL)
 						{
-							final byte[] inputBuffer = new byte[Const.SIZE_MEDIA];
+							final byte[] inputBuffer = new byte[UDP_BUFFER_SIZE];
 							final DatagramPacket received = new DatagramPacket(inputBuffer, Const.SIZE_MEDIA);
 							try
 							{
