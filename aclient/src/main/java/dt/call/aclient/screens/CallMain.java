@@ -180,8 +180,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 				if(showStats)
 				{
-					String rxDisp=formatInternetMeteric(rxData), txDisp=formatInternetMeteric(txData);
-					int missing = txSeq-rxCount;
+					final String rxDisp=formatInternetMeteric(rxData), txDisp=formatInternetMeteric(txData);
+					final int missing = txSeq-rxSeq;
 					final String latestStats = missingLabel + ": " + (missing > 0 ? missing : 0) + " " + garbageLabel + ": " + garbage + "\n"
 							+rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp + "\n"
 							+rxSeqLabel + ": " + rxSeq + " "
