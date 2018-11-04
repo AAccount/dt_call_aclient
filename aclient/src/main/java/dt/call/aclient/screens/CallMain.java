@@ -574,7 +574,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				}
 
 				final byte[] accumulator = new byte[Const.SIZE_MEDIA];
-				int accPos = 4;
+				int accPos = SEQ_LENGTH_ACCURACY;
 
 				//the first sequence number is 0 (array is already pre 0ed)
 				// sequence #s to detect duplicate or old voice packets
@@ -820,14 +820,14 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				Thread networkThread = new Thread(new Runnable()
 				{
 					private static final String tag = "DecodeNetwork";
-					private static final int UDP_BUFFER_SIZE = 1400; //1450 is the smallest I've seen so 50 under
+
 					@Override
 					public void run()
 					{
 						while(Vars.state == CallState.INCALL)
 						{
-							final byte[] inputBuffer = new byte[UDP_BUFFER_SIZE];
-							final DatagramPacket received = new DatagramPacket(inputBuffer, Const.SIZE_MEDIA);
+							final byte[] inputBuffer = new byte[Const.SIZE_MAX_UDP];
+							final DatagramPacket received = new DatagramPacket(inputBuffer, Const.SIZE_MAX_UDP);
 							try
 							{
 								Vars.mediaUdp.receive(received);

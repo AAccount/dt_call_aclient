@@ -35,6 +35,7 @@ public class Const
 	public static final String JBYTE = "D";
 	public static final int SIZE_COMMAND = 2048;
 	public static final int SIZE_MEDIA = 600;
+	public static final int SIZE_MAX_UDP = 1400;
 
 	//nobody: the default value for when not in a call
 	public static final String nobody = "(nobody)";
