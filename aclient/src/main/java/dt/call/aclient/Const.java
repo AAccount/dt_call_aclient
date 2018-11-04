@@ -34,7 +34,7 @@ public class Const
 	//heartbeat byte
 	public static final String JBYTE = "D";
 	public static final int SIZE_COMMAND = 2048;
-	public static final int SIZE_MEDIA = 1200;
+	public static final int SIZE_MEDIA = 600;
 
 	//nobody: the default value for when not in a call
 	public static final String nobody = "(nobody)";
