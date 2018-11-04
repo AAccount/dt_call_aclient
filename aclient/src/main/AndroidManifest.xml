@@ -9,8 +9,8 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/> <!-- so the other person can hear you talk -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/> <!-- switch ear piece/speaker phone -->
     <uses-permission android:name="android.permission.VIBRATE"/> <!-- vibrate when in silent mode -->
-    <uses-permission android:name="android.permission.WAKE_LOCK"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/> <!-- immediately flash the incoming call screen. also android 9+ MUST keep the screen on in call because when the screen is off network io dies (another stupid "battery savings") -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/> <!-- another stupid "battery savings" workaround: command listener must be run as foreground -->
 
     <!-- turn on the screen after the cell phone hasn't been used in a while -->
     <!-- allowBackup=false to prevent automatic cloud backup which will unknowingly leak your information. -->
