@@ -73,6 +73,9 @@ Java_dt_call_aclient_codec_Opus_encode(JNIEnv* env, jclass type, jshortArray wav
         const int copyAmount = opusSize < length ? opusSize : length;
         (*env)->SetByteArrayRegion(env, opus_, 0, copyAmount, (jbyte*)output);
     }
+
+    memset(wav, 0, (size_t)wavSamplesPerChannel*STEREO2CH);
+    memset(output, 0, RECOMMENDED_BUFFER_SIZE);
     (*env)->ReleaseShortArrayElements(env, wav_, wav, 0);
     return length;
 }
@@ -99,6 +102,9 @@ Java_dt_call_aclient_codec_Opus_decode(JNIEnv* env, jclass type, jbyteArray opus
         const int copyAmount = totalSamples < decodedSamples ? totalSamples : decodedSamples;
         (*env)->SetShortArrayRegion(env, wav_, 0, copyAmount, output);
     }
+
+    memset(opus, 0, (size_t)opusSize);
+    memset(output, 0, totalSamples*sizeof(jshort));
     (*env)->ReleaseByteArrayElements(env, opus_, opus, 0);
     return decodedSamples;
 }

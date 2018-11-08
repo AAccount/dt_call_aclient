@@ -665,6 +665,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					accPos = accPos + ENCODED_LENGTH_ACCURACY;
 					System.arraycopy(encodedbuffer, 0 , accumulator, accPos, encodeLength);
 					accPos = accPos + encodeLength;
+
+					Arrays.fill(wavbuffer, (short)0);
+					Arrays.fill(encodedbuffer, (byte)0);
 				}
 				Opus.closeEncoder();
 				Utils.applyFiller(accumulator);
@@ -796,11 +799,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 								continue;
 							}
 							wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
+							Arrays.fill(encbuffer, (byte)0);
+							Arrays.fill(wavbuffer, (short)0);
 
 							//advance the accumulator read position
 							readPos = readPos + encodedLength;
 						}
-						Utils.applyFiller(accumulatorDec);
+						Arrays.fill(accumulatorDec, (byte)0);
 					}
 					catch (Exception i)
 					{
