@@ -37,6 +37,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import dt.call.aclient.ByteBufferPool;
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
@@ -738,6 +739,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			private static final int STEREO = AudioFormat.CHANNEL_OUT_STEREO;
 
 			private final LinkedBlockingQueue<DatagramPacket> receiveQ = new LinkedBlockingQueue<DatagramPacket>();
+			private ByteBufferPool byteBufferPool = new ByteBufferPool(Const.SIZE_MAX_UDP);
 
 			@Override
 			public void run()
@@ -763,6 +765,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						rxData = rxData + received.getLength() + HEADERS;
 						final byte[] accumulator = new byte[received.getLength()];
 						System.arraycopy(received.getData(), 0, accumulator, 0, received.getLength());
+						byteBufferPool.returnBuffer(received.getData());
 						final byte[] accumulatorDec = SodiumUtils.symmetricDecrypt(accumulator, Vars.voiceSymmetricKey); //contents [size1|opus chunk 1|size2|opus chunk 2|...|sizeN|opus chunk N]
 						if(accumulatorDec == null)//contents [seq#|size1|opus chunk 1|size2|opus chunk 2|...|sizeN|opus chunk N]
 						{
@@ -834,8 +837,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					{
 						while(Vars.state == CallState.INCALL)
 						{
-							final byte[] inputBuffer = new byte[Const.SIZE_MAX_UDP];
-							final DatagramPacket received = new DatagramPacket(inputBuffer, Const.SIZE_MAX_UDP);
+							final DatagramPacket received = new DatagramPacket(byteBufferPool.getByteBuffer(), Const.SIZE_MAX_UDP);
 							try
 							{
 								Vars.mediaUdp.receive(received);
