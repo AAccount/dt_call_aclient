@@ -33,10 +33,11 @@ public class Opus
 	/**
 	 * Decode opus audio into raw wave
 	 * @param opus Encoded opus audio. Must be the exact size. No padding at the end.
+	 * @param opusSize How much of the opus byte array is useable data
 	 * @param wav Where the raw wave will be dumped into. Should get back the size specified by getWavFrameSize()
 	 * @return Decoder errors (if there are any). Otherwise 0
 	 */
-	public static native int decode(byte[] opus, short[] wav);
+	public static native int decode(byte[] opus, int opusSize, short[] wav);
 	public static native void closeDecoder();
 
 	public static String getError(int error)

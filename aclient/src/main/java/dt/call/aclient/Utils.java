@@ -29,6 +29,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.ByteBuffer;
+import java.nio.ShortBuffer;
 
 import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.screens.CallIncoming;
@@ -349,6 +351,20 @@ public class Utils
 		}
 		final byte[] filler = lazySodium.randomBytesBuf(sensitiveStuff.length);
 		System.arraycopy(filler, 0, sensitiveStuff, 0, sensitiveStuff.length);
+	}
+
+	public static void applyFiller(short[] sensitiveStuff)
+	{
+		if(sensitiveStuff == null)
+		{
+			return;
+		}
+
+		final byte[] filler = lazySodium.randomBytesBuf(sensitiveStuff.length*2);
+		final ByteBuffer byteBuffer = ByteBuffer.wrap(filler);
+		final ShortBuffer shortBuffer = byteBuffer.asShortBuffer();
+		final short[] shortsFiller = shortBuffer.array();
+		System.arraycopy(shortsFiller, 0, sensitiveStuff, 0, sensitiveStuff.length);
 	}
 
 	public static byte[] readDataDataFile(String fileName, int length, Context context) //so named because files are in /data/data/dt.call.aclient

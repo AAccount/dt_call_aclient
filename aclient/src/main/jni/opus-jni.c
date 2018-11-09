@@ -88,10 +88,9 @@ Java_dt_call_aclient_codec_Opus_closeEncoder(JNIEnv* env, jclass type)
 }
 
 JNIEXPORT jint JNICALL
-Java_dt_call_aclient_codec_Opus_decode(JNIEnv* env, jclass type, jbyteArray opus_, jshortArray wav_)
+Java_dt_call_aclient_codec_Opus_decode(JNIEnv* env, jclass type, jbyteArray opus_, jint opusSize, jshortArray wav_)
 {
     jbyte* opus = (*env)->GetByteArrayElements(env, opus_, NULL);
-    const jsize opusSize = (*env)->GetArrayLength(env, opus_);
 
     const jsize totalSamples = (*env)->GetArrayLength(env, wav_);
     jshort* output = (jshort*)alloca(totalSamples*sizeof(jshort));
@@ -103,7 +102,7 @@ Java_dt_call_aclient_codec_Opus_decode(JNIEnv* env, jclass type, jbyteArray opus
         (*env)->SetShortArrayRegion(env, wav_, 0, copyAmount, output);
     }
 
-    memset(opus, 0, (size_t)opusSize);
+    memset(opus, 0, (size_t)opusSize); //unused part of the array will already be zeroed
     memset(output, 0, totalSamples*sizeof(jshort));
     (*env)->ReleaseByteArrayElements(env, opus_, opus, 0);
     return decodedSamples;

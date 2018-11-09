@@ -580,11 +580,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				txSeq++;
 
 				internalNetworkThread();
+				final short[] wavbuffer = new short[WAVBUFFERSIZE];
+				final byte[] encodedbuffer = new byte[WAVBUFFERSIZE];
 
 				while (Vars.state == CallState.INCALL)
 				{
-					final byte[] encodedbuffer = new byte[WAVBUFFERSIZE];
-					final short[] wavbuffer = new short[WAVBUFFERSIZE];
 
 					if (micStatusNew)
 					{
@@ -606,6 +606,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						micStatusNew = false;
 					}
 
+					Arrays.fill(wavbuffer, (short)0);
 					int totalRead = 0, dataRead;
 					while (totalRead < WAVBUFFERSIZE)
 					{//although unlikely to be necessary, bufferSize the mic input
@@ -625,6 +626,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					/**
 					 *Avoid sending tons of tiny packets wasting resources for headers.
 					 */
+					Arrays.fill(encodedbuffer, (byte)0);
 					final int encodeLength = Opus.encode(wavbuffer, encodedbuffer);
 					if(encodeLength < 1)
 					{
@@ -665,12 +667,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					accPos = accPos + ENCODED_LENGTH_ACCURACY;
 					System.arraycopy(encodedbuffer, 0 , accumulator, accPos, encodeLength);
 					accPos = accPos + encodeLength;
-
-					Arrays.fill(wavbuffer, (short)0);
-					Arrays.fill(encodedbuffer, (byte)0);
 				}
-				Opus.closeEncoder();
 				Utils.applyFiller(accumulator);
+				Utils.applyFiller(encodedbuffer);
+				Utils.applyFiller(wavbuffer);
+				Opus.closeEncoder();
 				wavRecorder.stop();
 				wavRecorder.release();
 				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has stopped");
@@ -748,6 +749,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				wavPlayer.play();
 
 				internalNetworkThread();
+				final byte[] encbuffer = new byte[WAVBUFFERSIZE];
+				final short[] wavbuffer = new short[WAVBUFFERSIZE];
+
 				while(Vars.state == CallState.INCALL)
 				{
 					try
@@ -787,31 +791,31 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							readPos = readPos + ENCODED_LENGTH_ACCURACY;
 
 							//extract the opus chunk
-							final byte[] encbuffer = new byte[encodedLength];
+							Arrays.fill(encbuffer, (byte)0);
 							System.arraycopy(accumulatorDec, readPos, encbuffer, 0, encodedLength);
 
 							//decode opus chunk
-							final short[] wavbuffer = new short[WAVBUFFERSIZE];
-							final int frames = Opus.decode(encbuffer, wavbuffer);
+							Arrays.fill(wavbuffer, (short)0);
+							final int frames = Opus.decode(encbuffer, encodedLength, wavbuffer);
 							if(frames < 1)
 							{
 								Utils.logcat(Const.LOGE, tag, Opus.getError(frames));
 								continue;
 							}
 							wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
-							Arrays.fill(encbuffer, (byte)0);
-							Arrays.fill(wavbuffer, (short)0);
 
 							//advance the accumulator read position
 							readPos = readPos + encodedLength;
 						}
-						Arrays.fill(accumulatorDec, (byte)0);
+						Utils.applyFiller(accumulatorDec);
 					}
 					catch (Exception i)
 					{
 						Utils.dumpException(tag, i);
 					}
 				}
+				Utils.applyFiller(encbuffer);
+				Utils.applyFiller(wavbuffer);
 				wavPlayer.stop();
 				wavPlayer.flush();
 				wavPlayer.release();
