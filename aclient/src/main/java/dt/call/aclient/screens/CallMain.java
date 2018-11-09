@@ -538,7 +538,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		{
 			private static final String tag = "EncodingThread";
 
-			private static final int MONO = AudioFormat.CHANNEL_IN_MONO;
+			private static final int STEREO = AudioFormat.CHANNEL_IN_STEREO;
 			private static final int MIC = MediaRecorder.AudioSource.DEFAULT;
 
 			private final LinkedBlockingQueue<DatagramPacket> sendQ = new LinkedBlockingQueue<DatagramPacket>();
@@ -549,7 +549,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has started");
 
 				//setup the wave audio recorder. since it is released and restarted, it needs to be setup here and not onCreate
-				AudioRecord wavRecorder = new AudioRecord(MIC, SAMPLES, MONO, S16, WAVBUFFERSIZE);
+				AudioRecord wavRecorder = new AudioRecord(MIC, SAMPLES, STEREO, S16, WAVBUFFERSIZE);
 				wavRecorder.startRecording();
 
 				//my dying i9300 on CM12.1 sometimes can't get the audio record on its first try
@@ -558,7 +558,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					wavRecorder.stop();
 					wavRecorder.release();
-					wavRecorder = new AudioRecord(MIC, SAMPLES, MONO, S16, WAVBUFFERSIZE);
+					wavRecorder = new AudioRecord(MIC, SAMPLES, STEREO, S16, WAVBUFFERSIZE);
 					wavRecorder.startRecording();
 					Utils.logcat(Const.LOGW, tag, "audiorecord failed to initialized. retried");
 					recorderRetries--;
@@ -734,7 +734,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		Thread playbackThread = new Thread(new Runnable()
 		{
 			private static final String tag = "DecodingThread";
-			private static final int MONO = AudioFormat.CHANNEL_OUT_MONO;
+			private static final int STEREO = AudioFormat.CHANNEL_OUT_STEREO;
 
 			private final LinkedBlockingQueue<DatagramPacket> receiveQ = new LinkedBlockingQueue<DatagramPacket>();
 
@@ -744,7 +744,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has started");
 
 				//setup the wave audio track with enhancements if available
-				final AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLES, MONO, S16, WAVBUFFERSIZE, AudioTrack.MODE_STREAM);
+				final AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLES, STEREO, S16, WAVBUFFERSIZE, AudioTrack.MODE_STREAM);
 				wavPlayer.play();
 
 				internalNetworkThread();
