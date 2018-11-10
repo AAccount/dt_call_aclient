@@ -31,13 +31,15 @@ public class SodiumSocket
 		final byte[] tempKeyResponse = new byte[Const.SIZE_COMMAND];
 		final int read = socket.getInputStream().read(tempKeyResponse);
 		final byte[] tempKeyResponseTrimmed = Utils.trimArray(tempKeyResponse, read);
-		final byte[] tempKeyResponseDec = SodiumUtils.asymmetricDecrypt(tempKeyResponseTrimmed, hostPublicSodium, tempPrivate);
+		final byte[] tempKeyResponseDec = SodiumUtils.decryptionBuffers.getByteBuffer();
+		final int tempKeyResponseDecLength = SodiumUtils.asymmetricDecrypt(tempKeyResponseTrimmed, hostPublicSodium, tempPrivate, tempKeyResponseDec);
 		Utils.applyFiller(tempPrivate);
-		if(tempKeyResponseDec == null)
+		if(tempKeyResponseDecLength == 0)
 		{
 			throw new SodiumException("sodium decryption of the TCP key failed");
 		}
-		tcpKey = tempKeyResponseDec;
+		tcpKey = Utils.trimArray(tempKeyResponseDec, tempKeyResponseDecLength);
+		SodiumUtils.decryptionBuffers.returnBuffer(tempKeyResponseDec);
 	}
 
 	public byte[] getTcpKey()
@@ -68,13 +70,17 @@ public class SodiumSocket
 	{
 		final byte[] rawEnc = new byte[max];
 		final int length = socket.getInputStream().read(rawEnc);
-		final byte[] response = SodiumUtils.symmetricDecrypt(Utils.trimArray(rawEnc, length), tcpKey);
+		final byte[] responseDecrypted = SodiumUtils.decryptionBuffers.getByteBuffer();
+		final int responseDecryptedLength = SodiumUtils.symmetricDecrypt(rawEnc, length, tcpKey, responseDecrypted);
 
-		if(length < 0)
+		if(length < 0 || responseDecryptedLength < 1)
 		{
 			throw new SodiumException("sodium socket read using symmetric decryption failed");
 		}
-		return response;
+
+		byte[] read = Utils.trimArray(responseDecrypted, responseDecryptedLength);
+		SodiumUtils.decryptionBuffers.returnBuffer(responseDecrypted);
+		return read;
 	}
 
 	public void write(String string) throws IOException, SodiumException
@@ -84,11 +90,13 @@ public class SodiumSocket
 
 	private void write(byte[] bytes) throws IOException, SodiumException
 	{
-		final byte[] bytesenc = SodiumUtils.symmetricEncrypt(bytes, tcpKey);
-		if(bytesenc == null)
+		final byte[] output = SodiumUtils.encryptionBuffers.getByteBuffer();
+		final int bytesencLength = SodiumUtils.symmetricEncrypt(bytes, bytes.length, tcpKey, output);
+		if(bytesencLength == 0)
 		{
 			throw new SodiumException("sodium socket write using symmetric encryption failed");
 		}
-		socket.getOutputStream().write(bytesenc);
+		socket.getOutputStream().write(output, 0, bytesencLength);
+		SodiumUtils.encryptionBuffers.returnBuffer(output);
 	}
 }

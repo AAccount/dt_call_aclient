@@ -198,8 +198,10 @@ public class CmdListener extends IntentService
 						Vars.voiceSymmetricKey = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
 
 						//have sodium encrypt its key
-						final byte[] sodiumAsymEncrypted = SodiumUtils.asymmetricEncrypt(Vars.voiceSymmetricKey, expectedKey, Vars.selfPrivateSodium);
-						final String finalEncryptedString = Utils.stringify(sodiumAsymEncrypted);
+						final byte[] sodiumAsymEncrypted = SodiumUtils.encryptionBuffers.getByteBuffer();
+						final int sodiumAsymEncryptedLength	= SodiumUtils.asymmetricEncrypt(Vars.voiceSymmetricKey, expectedKey, Vars.selfPrivateSodium, sodiumAsymEncrypted);
+						final String finalEncryptedString = Utils.stringify(sodiumAsymEncrypted, sodiumAsymEncryptedLength);
+						SodiumUtils.encryptionBuffers.returnBuffer(sodiumAsymEncrypted);
 
 						//send the sodium key
 						final String passthrough = Utils.currentTimeSeconds() + "|passthrough|" + involved + "|" + finalEncryptedString + "|" + Vars.sessionKey;
@@ -249,17 +251,20 @@ public class CmdListener extends IntentService
 						}
 
 						//extract ack response
-						final byte[] ackEncBytes = new byte[ack.getLength()];
-						System.arraycopy(ack.getData(), 0, ackEncBytes, 0, ack.getLength());
+//						final byte[] ackEncBytes = new byte[ack.getLength()];
+//						System.arraycopy(ack.getData(), 0, ackEncBytes, 0, ack.getLength());
 
 						//decrypt ack
-						final byte[] decAck = SodiumUtils.symmetricDecrypt(ackEncBytes, Vars.commandSocket.getTcpKey());
-						if(decAck == null)
+						final byte[] decAck = SodiumUtils.decryptionBuffers.getByteBuffer();
+						final int decAckLength = SodiumUtils.symmetricDecrypt(ack.getData(), ack.getLength(), Vars.commandSocket.getTcpKey(), decAck);
+						if(decAckLength == 0)
 						{
 							gotAck = false;
+							SodiumUtils.decryptionBuffers.returnBuffer(decAck);
 							break;
 						}
-						final String ackString = new String(decAck, "UTF-8");
+						final String ackString = new String(decAck, 0, decAckLength);
+						SodiumUtils.decryptionBuffers.returnBuffer(decAck);
 
 						//verify ack timestamp
 						long ackts = 0;
@@ -299,7 +304,11 @@ public class CmdListener extends IntentService
 					final String setupString = respContents[2];
 					final byte[] setup = Utils.destringify(setupString);
 					final byte[] callWithKey = Vars.publicSodiumTable.get(involved);
-					Vars.voiceSymmetricKey = SodiumUtils.asymmetricDecrypt(setup, callWithKey, Vars.selfPrivateSodium);
+					final byte[] voiceKeyDecrypted = SodiumUtils.decryptionBuffers.getByteBuffer();
+					final int voiceKeyDecryptedLength = SodiumUtils.asymmetricDecrypt(setup, callWithKey, Vars.selfPrivateSodium, voiceKeyDecrypted);
+					Vars.voiceSymmetricKey = new byte[voiceKeyDecryptedLength];
+					System.arraycopy(voiceKeyDecrypted, 0, Vars.voiceSymmetricKey, 0, voiceKeyDecryptedLength);
+					SodiumUtils.decryptionBuffers.returnBuffer(voiceKeyDecrypted);
 
 					if(Vars.voiceSymmetricKey != null)
 					{

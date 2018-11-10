@@ -94,6 +94,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	final private AudioTrack dialTone = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, S16, DIAL_TONE_SIZE, AudioTrack.MODE_STATIC);
 	private boolean playedEndTone=false;
 
+	private final DecimalFormat decimalFormat = new DecimalFormat("#.###");
+	private final StringBuilder statsBuilder = new StringBuilder();
+	private final StringBuilder timeBuilder = new StringBuilder();
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
 	{
@@ -181,17 +185,18 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					{
 						final String rxDisp=formatInternetMeteric(rxData), txDisp=formatInternetMeteric(txData);
 						final int missing = txSeq-rxSeq;
-						final String latestStats = missingLabel + ": " + (missing > 0 ? missing : 0) + " " + garbageLabel + ": " + garbage + "\n"
-								+rxLabel + ": " + rxDisp + " "  + txLabel + ": " + txDisp + "\n"
-								+rxSeqLabel + ": " + rxSeq + " "
-								+txSeqLabel + ": " + txSeq + "\n"
-								+skippedLabel + ": " + skipped;
+						statsBuilder.setLength(0);
+						statsBuilder
+								.append(missingLabel).append(":").append(missing > 0 ? missing : 0).append(" ").append(garbageLabel).append(":").append(garbage).append("\n")
+								.append(rxLabel).append(":").append(rxDisp).append(" ").append(txLabel).append(":").append(txDisp).append("\n")
+								.append(rxSeqLabel).append(":").append(rxSeq).append(" ").append(txSeqLabel).append(":").append(txSeq).append("\n")
+								.append(skippedLabel).append(":").append(skipped);
 						runOnUiThread(new Runnable()
 						{
 							@Override
 							public void run()
 							{
-								callerid.setText(latestStats);
+								callerid.setText(statsBuilder.toString());
 							}
 						});
 					}
@@ -482,13 +487,14 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private void updateTime()
 	{
+		timeBuilder.setLength(0);
 		if(sec < 10)
 		{
-			time.setText(min + ":0" + sec);
+			time.setText(timeBuilder.append(min).append(":0").append(sec).toString());
 		}
 		else
 		{
-			time.setText(min + ":" + sec);
+			time.setText(timeBuilder.append(min).append(":").append(sec).toString());
 		}
 	}
 
@@ -638,19 +644,26 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					//if the current opus chunk won't fit in the accumulator, send the packet and restart the accumulator
 					if((accPos + ENCODED_LENGTH_ACCURACY + encodeLength) > accumulator.length)
 					{
-						final byte[] accumulatorTrimmed = new byte[accPos];
-						System.arraycopy(accumulator, 0, accumulatorTrimmed, 0, accPos);
-						final byte[] accumulatorEncrypted = SodiumUtils.symmetricEncrypt(accumulatorTrimmed, Vars.voiceSymmetricKey);
-						final DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncrypted.length, Vars.callServer, Vars.mediaPort);
-						try
+						final byte[] accumulatorEncrypted = SodiumUtils.encryptionBuffers.getByteBuffer();
+						final int accumulatorEncryptedLength = SodiumUtils.symmetricEncrypt(accumulator, accPos, Vars.voiceSymmetricKey, accumulatorEncrypted);
+						if(accumulatorEncryptedLength == 0)
 						{
-							sendQ.put(packet);
+							Utils.logcat(Const.LOGE, tag, "voice symmetric encryption failed");
+							SodiumUtils.encryptionBuffers.returnBuffer(accumulatorEncrypted);
 						}
-						catch (InterruptedException e)
+						else
 						{
-							Utils.dumpException(tag, e);
+							final DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncryptedLength, Vars.callServer, Vars.mediaPort);
+							try
+							{
+								sendQ.put(packet);
+							}
+							catch (InterruptedException e)
+							{
+								Utils.dumpException(tag, e);
+							}
+							txData = txData + accumulatorEncrypted.length + HEADERS;
 						}
-						txData = txData + accumulatorEncrypted.length + HEADERS;
 						txSeq++;
 
 						accPos = SEQ_LENGTH_ACCURACY;
@@ -710,6 +723,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							{
 								final DatagramPacket packet = sendQ.take();
 								Vars.mediaUdp.send(packet);
+								SodiumUtils.encryptionBuffers.returnBuffer(packet.getData());
 							}
 							catch (IOException e)
 							{
@@ -753,6 +767,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				internalNetworkThread();
 				final byte[] encbuffer = new byte[WAVBUFFERSIZE];
 				final short[] wavbuffer = new short[WAVBUFFERSIZE];
+				final byte[] accumulatorDec = SodiumUtils.decryptionBuffers.getByteBuffer();
 
 				while(Vars.state == CallState.INCALL)
 				{
@@ -763,11 +778,12 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 						//decrypt
 						rxData = rxData + received.getLength() + HEADERS;
-						final byte[] accumulatorDec = SodiumUtils.symmetricDecrypt(received.getData(), received.getLength(), Vars.voiceSymmetricKey); //contents [size1|opus chunk 1|size2|opus chunk 2|...|sizeN|opus chunk N]
+						final int accumulatorDecLength = SodiumUtils.symmetricDecrypt(received.getData(), received.getLength(), Vars.voiceSymmetricKey, accumulatorDec); //contents [size1|opus chunk 1|size2|opus chunk 2|...|sizeN|opus chunk N]
 						byteBufferPool.returnBuffer(received.getData());
-						if(accumulatorDec == null)//contents [seq#|size1|opus chunk 1|size2|opus chunk 2|...|sizeN|opus chunk N]
+						if(accumulatorDecLength == 0)//contents [seq#|size1|opus chunk 1|size2|opus chunk 2|...|sizeN|opus chunk N]
 						{
 							Utils.logcat(Const.LOGD, tag, "Invalid decryption");
+							SodiumUtils.decryptionBuffers.returnBuffer(accumulatorDec);
 							garbage++;
 							continue;
 						}
@@ -783,7 +799,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						rxSeq = sequence;
 
 						int readPos = SEQ_LENGTH_ACCURACY;
-						while(readPos < accumulatorDec.length)
+						while(readPos < accumulatorDecLength)
 						{
 							//retrieve the size from the first 2 bytes
 							final byte[] encLengthBytes = new byte[ENCODED_LENGTH_ACCURACY];
@@ -808,13 +824,14 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							//advance the accumulator read position
 							readPos = readPos + encodedLength;
 						}
-						Utils.applyFiller(accumulatorDec);
 					}
 					catch (Exception i)
 					{
 						Utils.dumpException(tag, i);
 					}
 				}
+				Utils.applyFiller(accumulatorDec);
+				SodiumUtils.decryptionBuffers.returnBuffer(accumulatorDec);
 				Utils.applyFiller(encbuffer);
 				Utils.applyFiller(wavbuffer);
 				wavPlayer.stop();
@@ -914,7 +931,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		final int mega = 1000000;
 		final int kilo = 1000;
 
-		final DecimalFormat decimalFormat = new DecimalFormat("#.###");
 		if(n > mega)
 		{
 			return decimalFormat.format((float)n / (float)mega) + "M";

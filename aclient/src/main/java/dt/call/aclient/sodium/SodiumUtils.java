@@ -14,6 +14,7 @@ import com.goterl.lazycode.lazysodium.interfaces.SecretBox;
 import java.io.InputStream;
 import java.util.Arrays;
 
+import dt.call.aclient.ByteBufferPool;
 import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
 
@@ -21,19 +22,27 @@ public class SodiumUtils
 {
 	private static final LazySodiumAndroid lazySodium = new LazySodiumAndroid(new SodiumAndroid());
 	private static final String tag = "sodium_utils";
+	public static final ByteBufferPool encryptionBuffers = new ByteBufferPool(10000);
+	public static final ByteBufferPool decryptionBuffers = new ByteBufferPool(10000);
+	private static final ByteBufferPool decryptionNonces = new ByteBufferPool(Box.NONCEBYTES);
 
-	public static byte[] asymmetricEncrypt(byte[] message, byte[] receiverPublic, byte[] myPrivate)
+	public static int asymmetricEncrypt(byte[] message, byte[] receiverPublic, byte[] myPrivate, byte[] output)
 	{
-		return encrypt(message, true, receiverPublic, myPrivate);
+		return encrypt(message, message.length,true, receiverPublic, myPrivate, output);
 	}
 
-	public static byte[] symmetricEncrypt(byte[] message, byte[] symkey)
+	public static int symmetricEncrypt(byte[] message, int length, byte[] symkey, byte[] output)
 	{
-		return encrypt(message, false, null, symkey);
+		return encrypt(message, length,false, null, symkey, output);
 	}
 
-	private static byte[] encrypt(byte[] message, boolean asym, byte[] receiverPublic, byte[] myPrivate)
+	private static int encrypt(byte[] message, int length, boolean asym, byte[] receiverPublic, byte[] myPrivate, byte[] output)
 	{
+		if(length > message.length)
+		{
+			return 0;
+		}
+
 		//setup nonce (like a password salt)
 		int nonceLength = 0;
 		if(asym)
@@ -49,77 +58,71 @@ public class SodiumUtils
 		//setup cipher text
 		int cipherTextLength = 0;
 		boolean libsodiumOK = false;
-		byte[]cipherText;
+		byte[] cipherText = encryptionBuffers.getByteBuffer();
 		if(asym)
 		{
-			cipherTextLength = Box.MACBYTES + message.length;
-			cipherText = new byte[cipherTextLength];
-			libsodiumOK = lazySodium.cryptoBoxEasy(cipherText, message, message.length, nonce, receiverPublic, myPrivate);
+			cipherTextLength = Box.MACBYTES + length;
+			libsodiumOK = lazySodium.cryptoBoxEasy(cipherText, message, length, nonce, receiverPublic, myPrivate);
 		}
 		else
 		{
-			cipherTextLength = SecretBox.MACBYTES + message.length;
-			cipherText = new byte[cipherTextLength];
-			libsodiumOK = lazySodium.cryptoSecretBoxEasy(cipherText, message, message.length, nonce, myPrivate);
+			cipherTextLength = SecretBox.MACBYTES + length;
+			libsodiumOK = lazySodium.cryptoSecretBoxEasy(cipherText, message, length, nonce, myPrivate);
 		}
 
 		//something went wrong with the encryption
 		if(!libsodiumOK)
 		{
-			Utils.logcat(Const.LOGE, tag, "sodium encryption failed, asym: " + asym + " return code: " + libsodiumOK);;
-			return null;
+			Utils.logcat(Const.LOGE, tag, "sodium encryption failed, asym: " + asym + " return code: " + libsodiumOK);
+			encryptionBuffers.returnBuffer(cipherText);
+			return 0;
 		}
 
 		//glue all the information together for sending
 		//[nonce|message length|encrypted message]
-		final byte[] messageLengthDissasembled = Utils.disassembleInt(message.length, Const.JAVA_MAX_PRECISION_INT);
-		final byte[] finalSetup = new byte[nonceLength+Const.JAVA_MAX_PRECISION_INT+cipherTextLength];
-		System.arraycopy(nonce, 0, finalSetup, 0, nonceLength);
-		System.arraycopy(messageLengthDissasembled, 0, finalSetup, nonceLength, Const.JAVA_MAX_PRECISION_INT);
-		System.arraycopy(cipherText, 0, finalSetup, nonceLength+Const.JAVA_MAX_PRECISION_INT, cipherTextLength);
-		return finalSetup;
+		final byte[] messageLengthDissasembled = Utils.disassembleInt(length, Const.JAVA_MAX_PRECISION_INT);
+		final int setupLength = nonceLength+Const.JAVA_MAX_PRECISION_INT+cipherTextLength;
+		System.arraycopy(nonce, 0, output, 0, nonceLength);
+		System.arraycopy(messageLengthDissasembled, 0, output, nonceLength, Const.JAVA_MAX_PRECISION_INT);
+		System.arraycopy(cipherText, 0, output, nonceLength+Const.JAVA_MAX_PRECISION_INT, cipherTextLength);
+		encryptionBuffers.returnBuffer(cipherText);
+		return setupLength;
 	}
 
-	public static byte[] asymmetricDecrypt(byte[] setup, byte[] senderPublic, byte[] myPrivate)
+	public static int asymmetricDecrypt(byte[] setup, byte[] senderPublic, byte[] myPrivate, byte[] output)
 	{
-		return decrypt(setup, setup.length, true, senderPublic, myPrivate);
+		return decrypt(setup, setup.length, true, senderPublic, myPrivate, output);
 	}
 
-	public static byte[] symmetricDecrypt(byte[] setup, byte[] symkey)
+	public static int symmetricDecrypt(byte[] setup, byte[] symkey, byte[] output)
 	{
-		return decrypt(setup, setup.length, false, null, symkey);
+		return decrypt(setup, setup.length, false, null, symkey, output);
 	}
 
-	public static byte[] symmetricDecrypt(byte[] setup, int setupLength, byte[] symkey)
+	public static int symmetricDecrypt(byte[] setup, int setupLength, byte[] symkey, byte[] output)
 	{
-		return decrypt(setup, setupLength, false, null, symkey);
+		return decrypt(setup, setupLength, false, null, symkey, output);
 	}
-	private static byte[] decrypt(byte[] setup, int setupLength, boolean asym, byte[] senderPublic, byte[] myPrivate)
+
+	private static int decrypt(byte[] setup, int setupLength, boolean asym, byte[] senderPublic, byte[] myPrivate, byte[] output)
 	{
 		if(setupLength > setup.length)
 		{
-			return null;
+			return 0;
 		}
 
 		//[nonce|message length|encrypted message]
-		int nonceLength = 0;
-		if(asym)
-		{
-			nonceLength = Box.NONCEBYTES;
-		}
-		else
-		{
-			nonceLength = SecretBox.NONCEBYTES;
-		}
+		//both nonce lengths are 24
+		final int nonceLength = Box.NONCEBYTES;
 
 		//check if the nonce and message length are there
 		if(setupLength < (nonceLength + Const.JAVA_MAX_PRECISION_INT))
 		{
-			return null;
+			return 0;
 		}
 
 		//reassemble the nonce
-		final byte[] nonce = new byte[nonceLength];
+		final byte[] nonce = decryptionNonces.getByteBuffer();
 		System.arraycopy(setup, 0, nonce, 0, nonceLength);
 
 		//get the message length and check it
@@ -131,35 +134,37 @@ public class SodiumUtils
 		final boolean messageMIA = messageLength < 1;
 		if(messageCompressed || messageMIA)
 		{
-			return null;
+			return 0;
 		}
 
 		//get the cipher text
-		final byte[] cipherText = new byte[cipherLength];
+		final byte[] cipherText = decryptionBuffers.getByteBuffer();
 		System.arraycopy(setup, nonceLength+Const.JAVA_MAX_PRECISION_INT, cipherText, 0, cipherLength);
-		final byte[] messageStorage= new byte[cipherLength];//store the message in somewhere it is guaranteed to fit in case messageLength is bogus/malicious
+//		final byte[] messageStorage= new byte[cipherLength];//store the message in somewhere it is guaranteed to fit in case messageLength is bogus/malicious
 
 		boolean libsodiumOK = false;
 		if(asym)
 		{
-			libsodiumOK = lazySodium.cryptoBoxOpenEasy(messageStorage, cipherText, cipherLength, nonce, senderPublic, myPrivate);
+			libsodiumOK = lazySodium.cryptoBoxOpenEasy(output, cipherText, cipherLength, nonce, senderPublic, myPrivate);
 		}
 		else
 		{
-			libsodiumOK = lazySodium.cryptoSecretBoxOpenEasy(messageStorage, cipherText, cipherLength, nonce, myPrivate);
+			libsodiumOK = lazySodium.cryptoSecretBoxOpenEasy(output, cipherText, cipherLength, nonce, myPrivate);
 		}
+		decryptionBuffers.returnBuffer(cipherText);
+		decryptionNonces.returnBuffer(nonce);
 
 		if(!libsodiumOK)
 		{
 			Utils.logcat(Const.LOGE, tag, "sodium decryption failed, asym: " + asym + " return code: " + libsodiumOK);;
-			return null;
+			return 0;
 		}
 
 		//now that the message has been successfully decrypted, take in on blind faith messageLength was ok
 		//	up to the next function to make sure the decryption contents aren't truncated by a malicious messageLength
-		final byte[] message = new byte[messageLength];
-		System.arraycopy(messageStorage, 0, message, 0, messageLength);
-		return message;
+//		final byte[] message = new byte[messageLength];
+//		System.arraycopy(messageStorage, 0, message, 0, messageLength);
+		return messageLength;
 	}
 
 	public static byte[] interpretKey(byte[] dump, boolean isPrivate)

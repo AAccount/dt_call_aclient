@@ -92,14 +92,17 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			byte[] challengeBytes = Utils.destringify(challenge);
 
 			//answer the challenge
-			byte[] decrypted = SodiumUtils.asymmetricDecrypt(challengeBytes, Vars.serverPublicSodium, Vars.selfPrivateSodium);
-			if(decrypted == null)
+			byte[] decrypted = SodiumUtils.decryptionBuffers.getByteBuffer();
+			final int decryptedLength =	SodiumUtils.asymmetricDecrypt(challengeBytes, Vars.serverPublicSodium, Vars.selfPrivateSodium, decrypted);
+			if(decryptedLength == 0)
 			{
 				Utils.logcat(Const.LOGW, tag, "sodium asymmetric decryption failed");
+				SodiumUtils.decryptionBuffers.returnBuffer(decrypted);
 				onPostExecute(false);
 				return false;
 			}
-			String challengeDec = new String(decrypted, "UTF8");
+			String challengeDec = new String(decrypted, 0, decryptedLength);
+			SodiumUtils.decryptionBuffers.returnBuffer(decrypted);
 			String loginChallengeResponse = Utils.currentTimeSeconds() + "|login2|" + Vars.uname + "|" + challengeDec;
 			Vars.commandSocket.write(loginChallengeResponse);
 

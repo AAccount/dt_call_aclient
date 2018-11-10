@@ -428,10 +428,15 @@ public class Utils
 
 	public static String stringify(byte[] bytes)
 	{
+		return stringify(bytes, bytes.length);
+	}
+
+	public static String stringify(byte[] bytes, int length)
+	{
 		StringBuilder resultBuilder = new StringBuilder(bytes.length*Const.STRINGIFY_EXPANSION);
-		for (byte aByte : bytes)
+		for(int i=0; i<length; i++)
 		{
-			int unsignedchar = aByte & Const.UNSIGNED_CHAR_MAX;
+			int unsignedchar = bytes[i] & Const.UNSIGNED_CHAR_MAX;
 			String number = String.valueOf(unsignedchar);
 
 			//prepend the required zeros
