@@ -82,16 +82,25 @@ public class SodiumUtils
 
 	public static byte[] asymmetricDecrypt(byte[] setup, byte[] senderPublic, byte[] myPrivate)
 	{
-		return decrypt(setup, true, senderPublic, myPrivate);
+		return decrypt(setup, setup.length, true, senderPublic, myPrivate);
 	}
 
 	public static byte[] symmetricDecrypt(byte[] setup, byte[] symkey)
 	{
-		return decrypt(setup, false, null, symkey);
+		return decrypt(setup, setup.length, false, null, symkey);
 	}
 
-	private static byte[] decrypt(byte[] setup, boolean asym, byte[] senderPublic, byte[] myPrivate)
+	public static byte[] symmetricDecrypt(byte[] setup, int setupLength, byte[] symkey)
 	{
+		return decrypt(setup, setupLength, false, null, symkey);
+	}
+	private static byte[] decrypt(byte[] setup, int setupLength, boolean asym, byte[] senderPublic, byte[] myPrivate)
+	{
+		if(setupLength > setup.length)
+		{
+			return null;
+		}
+
 		//[nonce|message length|encrypted message]
 		int nonceLength = 0;
 		if(asym)
@@ -104,7 +113,7 @@ public class SodiumUtils
 		}
 
 		//check if the nonce and message length are there
-		if(setup.length < (nonceLength + Const.JAVA_MAX_PRECISION_INT))
+		if(setupLength < (nonceLength + Const.JAVA_MAX_PRECISION_INT))
 		{
 			return null;
 		}
@@ -117,7 +126,7 @@ public class SodiumUtils
 		final byte[] messageLengthDisassembled = new byte[Const.JAVA_MAX_PRECISION_INT];
 		System.arraycopy(setup, nonceLength, messageLengthDisassembled, 0, Const.JAVA_MAX_PRECISION_INT);
 		final int messageLength = Utils.reassembleInt(messageLengthDisassembled);
-		final int cipherLength = setup.length - nonceLength - Const.JAVA_MAX_PRECISION_INT;
+		final int cipherLength = setupLength - nonceLength - Const.JAVA_MAX_PRECISION_INT;
 		final boolean messageCompressed = messageLength > cipherLength;
 		final boolean messageMIA = messageLength < 1;
 		if(messageCompressed || messageMIA)

@@ -763,10 +763,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 						//decrypt
 						rxData = rxData + received.getLength() + HEADERS;
-						final byte[] accumulator = new byte[received.getLength()];
-						System.arraycopy(received.getData(), 0, accumulator, 0, received.getLength());
+						final byte[] accumulatorDec = SodiumUtils.symmetricDecrypt(received.getData(), received.getLength(), Vars.voiceSymmetricKey); //contents [size1|opus chunk 1|size2|opus chunk 2|...|sizeN|opus chunk N]
 						byteBufferPool.returnBuffer(received.getData());
-						final byte[] accumulatorDec = SodiumUtils.symmetricDecrypt(accumulator, Vars.voiceSymmetricKey); //contents [size1|opus chunk 1|size2|opus chunk 2|...|sizeN|opus chunk N]
 						if(accumulatorDec == null)//contents [seq#|size1|opus chunk 1|size2|opus chunk 2|...|sizeN|opus chunk N]
 						{
 							Utils.logcat(Const.LOGD, tag, "Invalid decryption");
