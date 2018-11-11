@@ -14,7 +14,7 @@ import com.goterl.lazycode.lazysodium.interfaces.SecretBox;
 import java.io.InputStream;
 import java.util.Arrays;
 
-import dt.call.aclient.ByteBufferPool;
+import dt.call.aclient.pool.ByteBufferPool;
 import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
 

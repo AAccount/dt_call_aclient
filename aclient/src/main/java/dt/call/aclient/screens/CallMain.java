@@ -37,9 +37,10 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import dt.call.aclient.ByteBufferPool;
+import dt.call.aclient.pool.ByteBufferPool;
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
+import dt.call.aclient.pool.DatagramPacketPool;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
@@ -549,6 +550,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			private static final int MIC = MediaRecorder.AudioSource.DEFAULT;
 
 			private final LinkedBlockingQueue<DatagramPacket> sendQ = new LinkedBlockingQueue<DatagramPacket>();
+			private DatagramPacketPool packetPool = new DatagramPacketPool(Vars.callServer, Vars.mediaPort);
 
 			private Thread internalNetworkThread = new Thread(new Runnable()
 			{
@@ -564,6 +566,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							final DatagramPacket packet = sendQ.take();
 							Vars.mediaUdp.send(packet);
 							SodiumUtils.encryptionBuffers.returnBuffer(packet.getData());
+							packetPool.returnDatagramPacket(packet);
 						}
 						catch (IOException e)
 						{
@@ -680,7 +683,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					}
 					else
 					{
-						final DatagramPacket packet = new DatagramPacket(packetBufferEncrypted, packetBufferEncryptedLength, Vars.callServer, Vars.mediaPort);
+						final DatagramPacket packet = packetPool.getDatagramPacket();
+						packet.setData(packetBufferEncrypted);
+						packet.setLength(packetBufferEncryptedLength);
 						try
 						{
 							sendQ.put(packet);
@@ -733,6 +738,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 			private final LinkedBlockingQueue<DatagramPacket> receiveQ = new LinkedBlockingQueue<DatagramPacket>();
 			private ByteBufferPool udpBufferPool = new ByteBufferPool(Const.SIZE_MAX_UDP);
+			private DatagramPacketPool packetPool = new DatagramPacketPool();
 
 			private Thread networkThread = new Thread(new Runnable()
 			{
@@ -743,7 +749,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					while(Vars.state == CallState.INCALL)
 					{
-						final DatagramPacket received = new DatagramPacket(udpBufferPool.getByteBuffer(), Const.SIZE_MAX_UDP);
+						final DatagramPacket received = packetPool.getDatagramPacket();
+						received.setData(udpBufferPool.getByteBuffer());
+						received.setLength(Const.SIZE_MAX_UDP);
 						try
 						{
 							Vars.mediaUdp.receive(received);
@@ -801,6 +809,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						rxData = rxData + received.getLength() + HEADERS;
 						final int packetDecLength = SodiumUtils.symmetricDecrypt(received.getData(), received.getLength(), Vars.voiceSymmetricKey, packetDecrypted); //contents [seq#|opus chunk]
 						udpBufferPool.returnBuffer(received.getData());
+						packetPool.returnDatagramPacket(received);
 						if(packetDecLength == 0)//contents [seq#|opus chunk]
 						{
 							Utils.logcat(Const.LOGD, tag, "Invalid decryption");
