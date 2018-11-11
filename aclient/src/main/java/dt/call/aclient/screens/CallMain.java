@@ -579,14 +579,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					endThread();
 				}
 
-				final byte[] accumulator = new byte[Const.SIZE_MEDIA];
-				int accPos = SEQ_LENGTH_ACCURACY;
-
-				//the first sequence number is 0 (array is already pre 0ed)
-				// sequence #s to detect duplicate or old voice packets
-				txSeq++;
-
 				internalNetworkThread();
+				final byte[] packetBuffer = new byte[Const.SIZE_MEDIA];
 				final short[] wavbuffer = new short[WAVBUFFERSIZE];
 				final byte[] encodedbuffer = new byte[WAVBUFFERSIZE];
 
@@ -630,9 +624,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						//continue;
 					}
 
-					/**
-					 *Avoid sending tons of tiny packets wasting resources for headers.
-					 */
 					Arrays.fill(encodedbuffer, (byte)0);
 					final int encodeLength = Opus.encode(wavbuffer, encodedbuffer);
 					if(encodeLength < 1)
@@ -641,48 +632,36 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						continue;
 					}
 
-					//if the current opus chunk won't fit in the accumulator, send the packet and restart the accumulator
-					if((accPos + ENCODED_LENGTH_ACCURACY + encodeLength) > accumulator.length)
+					//integer broken up as: 12,345,678: [12,34,56,78.....voice....]
+					Arrays.fill(packetBuffer, (byte)0);
+					final byte[] txSeqDisassembled = Utils.disassembleInt(txSeq, SEQ_LENGTH_ACCURACY);
+					System.arraycopy(txSeqDisassembled, 0, packetBuffer, 0, SEQ_LENGTH_ACCURACY);
+					txSeq++;
+					System.arraycopy(encodedbuffer, 0 , packetBuffer, SEQ_LENGTH_ACCURACY, encodeLength);
+
+
+					final byte[] packetBufferEncrypted = SodiumUtils.encryptionBuffers.getByteBuffer();
+					final int packetBufferEncryptedLength = SodiumUtils.symmetricEncrypt(packetBuffer, SEQ_LENGTH_ACCURACY+encodeLength, Vars.voiceSymmetricKey, packetBufferEncrypted);
+					if(packetBufferEncryptedLength == 0)
 					{
-						final byte[] accumulatorEncrypted = SodiumUtils.encryptionBuffers.getByteBuffer();
-						final int accumulatorEncryptedLength = SodiumUtils.symmetricEncrypt(accumulator, accPos, Vars.voiceSymmetricKey, accumulatorEncrypted);
-						if(accumulatorEncryptedLength == 0)
-						{
-							Utils.logcat(Const.LOGE, tag, "voice symmetric encryption failed");
-							SodiumUtils.encryptionBuffers.returnBuffer(accumulatorEncrypted);
-						}
-						else
-						{
-							final DatagramPacket packet = new DatagramPacket(accumulatorEncrypted, accumulatorEncryptedLength, Vars.callServer, Vars.mediaPort);
-							try
-							{
-								sendQ.put(packet);
-							}
-							catch (InterruptedException e)
-							{
-								Utils.dumpException(tag, e);
-							}
-							txData = txData + accumulatorEncrypted.length + HEADERS;
-						}
-						txSeq++;
-
-						accPos = SEQ_LENGTH_ACCURACY;
-						Arrays.fill(accumulator, (byte)0);
-
-						//integer broken up as: 12,345,678: [12,34,56,78.....voice....]
-						final byte[] txSeqDisassembled = Utils.disassembleInt(txSeq, SEQ_LENGTH_ACCURACY);
-						System.arraycopy(txSeqDisassembled, 0, accumulator, 0, SEQ_LENGTH_ACCURACY);
-						txSeq++;
+						Utils.logcat(Const.LOGE, tag, "voice symmetric encryption failed");
+						SodiumUtils.encryptionBuffers.returnBuffer(packetBufferEncrypted);
 					}
-
-					//write the opus chunk size as a "header" before writing the actual opus data
-					final byte[] encodedLengthDisassembled = Utils.disassembleInt(encodeLength, ENCODED_LENGTH_ACCURACY);
-					System.arraycopy(encodedLengthDisassembled, 0, accumulator, accPos, ENCODED_LENGTH_ACCURACY);
-					accPos = accPos + ENCODED_LENGTH_ACCURACY;
-					System.arraycopy(encodedbuffer, 0 , accumulator, accPos, encodeLength);
-					accPos = accPos + encodeLength;
+					else
+					{
+						final DatagramPacket packet = new DatagramPacket(packetBufferEncrypted, packetBufferEncryptedLength, Vars.callServer, Vars.mediaPort);
+						try
+						{
+							sendQ.put(packet);
+						}
+						catch (InterruptedException e)
+						{
+							Utils.dumpException(tag, e);
+						}
+						txData = txData + packetBufferEncryptedLength + HEADERS;
+					}
 				}
-				Utils.applyFiller(accumulator);
+				Utils.applyFiller(packetBuffer);
 				Utils.applyFiller(encodedbuffer);
 				Utils.applyFiller(wavbuffer);
 				Opus.closeEncoder();
@@ -753,7 +732,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			private static final int STEREO = AudioFormat.CHANNEL_OUT_STEREO;
 
 			private final LinkedBlockingQueue<DatagramPacket> receiveQ = new LinkedBlockingQueue<DatagramPacket>();
-			private ByteBufferPool byteBufferPool = new ByteBufferPool(Const.SIZE_MAX_UDP);
+			private ByteBufferPool udpBufferPool = new ByteBufferPool(Const.SIZE_MAX_UDP);
 
 			@Override
 			public void run()
@@ -767,7 +746,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				internalNetworkThread();
 				final byte[] encbuffer = new byte[WAVBUFFERSIZE];
 				final short[] wavbuffer = new short[WAVBUFFERSIZE];
-				final byte[] accumulatorDec = SodiumUtils.decryptionBuffers.getByteBuffer();
+				final byte[] packetDecrypted = SodiumUtils.decryptionBuffers.getByteBuffer();
 
 				while(Vars.state == CallState.INCALL)
 				{
@@ -778,18 +757,18 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 						//decrypt
 						rxData = rxData + received.getLength() + HEADERS;
-						final int accumulatorDecLength = SodiumUtils.symmetricDecrypt(received.getData(), received.getLength(), Vars.voiceSymmetricKey, accumulatorDec); //contents [size1|opus chunk 1|size2|opus chunk 2|...|sizeN|opus chunk N]
-						byteBufferPool.returnBuffer(received.getData());
-						if(accumulatorDecLength == 0)//contents [seq#|size1|opus chunk 1|size2|opus chunk 2|...|sizeN|opus chunk N]
+						final int packetDecLength = SodiumUtils.symmetricDecrypt(received.getData(), received.getLength(), Vars.voiceSymmetricKey, packetDecrypted); //contents [seq#|opus chunk]
+						udpBufferPool.returnBuffer(received.getData());
+						if(packetDecLength == 0)//contents [seq#|opus chunk]
 						{
 							Utils.logcat(Const.LOGD, tag, "Invalid decryption");
-							SodiumUtils.decryptionBuffers.returnBuffer(accumulatorDec);
+							SodiumUtils.decryptionBuffers.returnBuffer(packetDecrypted);
 							garbage++;
 							continue;
 						}
 
 						final byte[] sequenceBytes = new byte[SEQ_LENGTH_ACCURACY];
-						System.arraycopy(accumulatorDec, 0, sequenceBytes, 0, SEQ_LENGTH_ACCURACY);
+						System.arraycopy(packetDecrypted, 0, sequenceBytes, 0, SEQ_LENGTH_ACCURACY);
 						final int sequence = Utils.reassembleInt(sequenceBytes);
 						if(sequence <= rxSeq)
 						{
@@ -798,40 +777,28 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						}
 						rxSeq = sequence;
 
-						int readPos = SEQ_LENGTH_ACCURACY;
-						while(readPos < accumulatorDecLength)
+						//extract the opus chunk
+						Arrays.fill(encbuffer, (byte)0);
+						final int encodedLength = packetDecLength - SEQ_LENGTH_ACCURACY;
+						System.arraycopy(packetDecrypted, SEQ_LENGTH_ACCURACY, encbuffer, 0, encodedLength);
+
+						//decode opus chunk
+						Arrays.fill(wavbuffer, (short)0);
+						final int frames = Opus.decode(encbuffer, encodedLength, wavbuffer);
+						if(frames < 1)
 						{
-							//retrieve the size from the first 2 bytes
-							final byte[] encLengthBytes = new byte[ENCODED_LENGTH_ACCURACY];
-							System.arraycopy(accumulatorDec, readPos, encLengthBytes, 0, ENCODED_LENGTH_ACCURACY);
-							final int encodedLength = Utils.reassembleInt(encLengthBytes);
-							readPos = readPos + ENCODED_LENGTH_ACCURACY;
-
-							//extract the opus chunk
-							Arrays.fill(encbuffer, (byte)0);
-							System.arraycopy(accumulatorDec, readPos, encbuffer, 0, encodedLength);
-
-							//decode opus chunk
-							Arrays.fill(wavbuffer, (short)0);
-							final int frames = Opus.decode(encbuffer, encodedLength, wavbuffer);
-							if(frames < 1)
-							{
-								Utils.logcat(Const.LOGE, tag, Opus.getError(frames));
-								continue;
-							}
-							wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
-
-							//advance the accumulator read position
-							readPos = readPos + encodedLength;
+							Utils.logcat(Const.LOGE, tag, Opus.getError(frames));
+							continue;
 						}
+						wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
 					}
 					catch (Exception i)
 					{
 						Utils.dumpException(tag, i);
 					}
 				}
-				Utils.applyFiller(accumulatorDec);
-				SodiumUtils.decryptionBuffers.returnBuffer(accumulatorDec);
+				Utils.applyFiller(packetDecrypted);
+				SodiumUtils.decryptionBuffers.returnBuffer(packetDecrypted);
 				Utils.applyFiller(encbuffer);
 				Utils.applyFiller(wavbuffer);
 				wavPlayer.stop();
@@ -852,7 +819,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					{
 						while(Vars.state == CallState.INCALL)
 						{
-							final DatagramPacket received = new DatagramPacket(byteBufferPool.getByteBuffer(), Const.SIZE_MAX_UDP);
+							final DatagramPacket received = new DatagramPacket(udpBufferPool.getByteBuffer(), Const.SIZE_MAX_UDP);
 							try
 							{
 								Vars.mediaUdp.receive(received);
