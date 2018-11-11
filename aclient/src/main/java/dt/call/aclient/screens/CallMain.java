@@ -441,7 +441,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		if(v == end)
 		{
 			Vars.state = CallState.NONE; //guarantee onStop sees state == NONE
-			onStop();
+			onStopWrapper();
 		}
 		else if (v == mic)
 		{
@@ -550,6 +550,35 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 			private final LinkedBlockingQueue<DatagramPacket> sendQ = new LinkedBlockingQueue<DatagramPacket>();
 
+			private Thread internalNetworkThread = new Thread(new Runnable()
+			{
+				private static final String tag = "EncodeNetwork";
+
+				@Override
+				public void run()
+				{
+					while(Vars.state == CallState.INCALL)
+					{
+						try
+						{
+							final DatagramPacket packet = sendQ.take();
+							Vars.mediaUdp.send(packet);
+							SodiumUtils.encryptionBuffers.returnBuffer(packet.getData());
+						}
+						catch (IOException e)
+						{
+							Utils.dumpException(tag, e);
+							endThread();
+							return;
+						}
+						catch (InterruptedException e)
+						{
+							return;
+						}
+					}
+				}
+			});
+
 			@Override
 			public void run()
 			{
@@ -579,7 +608,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					endThread();
 				}
 
-				internalNetworkThread();
+				internalNetworkThread.setName("Media_Encoder_Network");
+				internalNetworkThread.start();
+
 				final byte[] packetBuffer = new byte[Const.SIZE_MEDIA];
 				final short[] wavbuffer = new short[WAVBUFFERSIZE];
 				final byte[] encodedbuffer = new byte[WAVBUFFERSIZE];
@@ -667,12 +698,14 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				Opus.closeEncoder();
 				wavRecorder.stop();
 				wavRecorder.release();
+				internalNetworkThread.interrupt();
 				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has stopped");
 			}
 
 			private void endThread()
 			{
 				Vars.state = CallState.NONE;
+
 				//kill the socket in case it's the reason end thread is being called.
 				Utils.killSockets();
 
@@ -685,39 +718,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					//don't know whether encode or decode will call onStop() first. the second one will get a null exception
 					//because the main ui thead will be gone after the first onStop() is called. catch the exception
 				}
-			}
-
-			private void internalNetworkThread()
-			{
-				Thread networkThread = new Thread(new Runnable()
-				{
-					private static final String tag = "EncodeNetwork";
-
-					@Override
-					public void run()
-					{
-						while(Vars.state == CallState.INCALL)
-						{
-							try
-							{
-								final DatagramPacket packet = sendQ.take();
-								Vars.mediaUdp.send(packet);
-								SodiumUtils.encryptionBuffers.returnBuffer(packet.getData());
-							}
-							catch (IOException e)
-							{
-								Utils.dumpException(tag, e);
-								endThread();
-							}
-							catch (InterruptedException e)
-							{
-								Utils.dumpException(tag, e);
-							}
-						}
-					}
-				});
-				networkThread.setName("Media_Encoder_Network");
-				networkThread.start();
 			}
 		});
 		recordThread.setName("Media_Encoder");
@@ -734,6 +734,46 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			private final LinkedBlockingQueue<DatagramPacket> receiveQ = new LinkedBlockingQueue<DatagramPacket>();
 			private ByteBufferPool udpBufferPool = new ByteBufferPool(Const.SIZE_MAX_UDP);
 
+			private Thread networkThread = new Thread(new Runnable()
+			{
+				private static final String tag = "DecodeNetwork";
+
+				@Override
+				public void run()
+				{
+					while(Vars.state == CallState.INCALL)
+					{
+						final DatagramPacket received = new DatagramPacket(udpBufferPool.getByteBuffer(), Const.SIZE_MAX_UDP);
+						try
+						{
+							Vars.mediaUdp.receive(received);
+							receiveQ.put(received);
+						}
+						catch(InterruptedException e)
+						{
+							return;
+						}
+						catch (IOException e)
+						{
+							//if the socket has problems, shouldn't continue the call.
+							Utils.dumpException(tag, e);
+							Vars.state = CallState.NONE;
+							Utils.killSockets();
+
+							try
+							{
+								onStopWrapper();
+							}
+							catch (Exception inner)
+							{
+								//see encoder thread for why onStop() is called in a try
+							}
+							return;
+						}
+					}
+				}
+			});
+
 			@Override
 			public void run()
 			{
@@ -743,7 +783,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				final AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLES, STEREO, S16, WAVBUFFERSIZE, AudioTrack.MODE_STREAM);
 				wavPlayer.play();
 
-				internalNetworkThread();
+				networkThread.setName("Media_Decoder_Network");
+				networkThread.start();
+
 				final byte[] encbuffer = new byte[WAVBUFFERSIZE];
 				final short[] wavbuffer = new short[WAVBUFFERSIZE];
 				final byte[] packetDecrypted = SodiumUtils.decryptionBuffers.getByteBuffer();
@@ -805,51 +847,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				wavPlayer.flush();
 				wavPlayer.release();
 				Opus.closeDecoder();
+				networkThread.interrupt();
 				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has stopped, state:" + Vars.state);
-			}
-
-			private void internalNetworkThread()
-			{
-				Thread networkThread = new Thread(new Runnable()
-				{
-					private static final String tag = "DecodeNetwork";
-
-					@Override
-					public void run()
-					{
-						while(Vars.state == CallState.INCALL)
-						{
-							final DatagramPacket received = new DatagramPacket(udpBufferPool.getByteBuffer(), Const.SIZE_MAX_UDP);
-							try
-							{
-								Vars.mediaUdp.receive(received);
-								receiveQ.put(received);
-							}
-							catch(InterruptedException e)
-							{
-								Utils.dumpException(tag, e);
-							}
-							catch (IOException e)
-							{
-								//if the socket has problems, shouldn't continue the call.
-								Utils.dumpException(tag, e);
-								Vars.state = CallState.NONE;
-								Utils.killSockets();
-
-								try
-								{
-									onStopWrapper();
-								}
-								catch (Exception inner)
-								{
-									//see encoder thread for why onStop() is called in a try
-								}
-							}
-						}
-					}
-				});
-				networkThread.setName("Media_Decoder_Network");
-				networkThread.start();
 			}
 		});
 		playbackThread.setName("Media_Decoder");
