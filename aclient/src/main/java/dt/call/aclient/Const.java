@@ -100,8 +100,7 @@ public class Const
 	public static final String SODIUM_PLACEHOLDER = "SODIUM_SETUP_PLACEHOLDER";
 
 	//maximum disassembly accuracy for taking apart an int into signed chars
-	public static final int JAVA_MAX_PRECISION_INT = 5;
-	public static final int SIZEOF_USEABLE_JBYTE = 7; //8th bit for the sign
+	public static final int SIZEOF_INT = 4;
 	public static final int STRINGIFY_EXPANSION = 3;
 
 

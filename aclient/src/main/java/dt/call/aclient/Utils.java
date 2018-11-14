@@ -31,13 +31,11 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.ShortBuffer;
 
 import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.screens.CallIncoming;
 import dt.call.aclient.screens.CallMain;
 import dt.call.aclient.screens.UserHome;
-import dt.call.aclient.sodium.SodiumUtils;
 import dt.call.aclient.sqlite.DBLog;
 import dt.call.aclient.sqlite.SQLiteDb;
 
@@ -462,26 +460,14 @@ public class Utils
 		return result;
 	}
 
-	//break up an into into "byte sized" chunks: 123456: [12, 34, 56]
-	public static byte[] disassembleInt(int input, int accuracy /*how many bytes to use*/)
+	public static byte[] disassembleInt(int input)
 	{
-		byte[] result = new byte[accuracy];
-		for(int i=0; i<accuracy; i++)
-		{
-			result[i] = (byte)((input >> (Const.SIZEOF_USEABLE_JBYTE *(accuracy-1-i))) & Byte.MAX_VALUE);
-		}
-		return result;
+		return ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(input).array();
 	}
 
-	//merge together a split up in [12, 34, 56] as 123456
 	public static int reassembleInt(byte[] disassembled)
 	{
-		int result = 0;
-		for(int i=0; i<disassembled.length; i++)
-		{
-			result = result +((int)disassembled[i]) << (Const.SIZEOF_USEABLE_JBYTE *(disassembled.length-1-i));
-		}
-		return result;
+		return ByteBuffer.wrap(disassembled).order(ByteOrder.BIG_ENDIAN).getInt();
 	}
 
 	public static byte[] trimArray(byte[] input, int trimmed)
