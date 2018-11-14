@@ -3,6 +3,7 @@ package dt.call.aclient.pool;
 //Created November 8, 2018 22:55:10
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class ByteBufferPool
 {
@@ -34,6 +35,7 @@ public class ByteBufferPool
 		}
 		byte[] buffer = buffers.get(0);
 		buffers.remove(0);
+		Arrays.fill(buffer, (byte)0);
 		return buffer;
 	}
 

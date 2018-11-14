@@ -15,6 +15,7 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.CmdListener;
+import dt.call.aclient.pool.ByteBufferPool;
 import dt.call.aclient.sodium.SodiumSocket;
 import dt.call.aclient.sodium.SodiumUtils;
 
@@ -31,6 +32,8 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 {
 	private static final String tag = "Login Async Task";
 	private static final Object loginLock = new Object();
+	private static ByteBufferPool byteBufferPool = new ByteBufferPool(Const.SIZE_COMMAND);
+
 	public static boolean noNotificationOnFail = false;
 	private static boolean tryingLogin;
 
@@ -92,17 +95,17 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			byte[] challengeBytes = Utils.destringify(challenge);
 
 			//answer the challenge
-			byte[] decrypted = SodiumUtils.decryptionBuffers.getByteBuffer();
+			byte[] decrypted = byteBufferPool.getByteBuffer();
 			final int decryptedLength =	SodiumUtils.asymmetricDecrypt(challengeBytes, Vars.serverPublicSodium, Vars.selfPrivateSodium, decrypted);
 			if(decryptedLength == 0)
 			{
 				Utils.logcat(Const.LOGW, tag, "sodium asymmetric decryption failed");
-				SodiumUtils.decryptionBuffers.returnBuffer(decrypted);
+				byteBufferPool.returnBuffer(decrypted);
 				onPostExecute(false);
 				return false;
 			}
 			String challengeDec = new String(decrypted, 0, decryptedLength);
-			SodiumUtils.decryptionBuffers.returnBuffer(decrypted);
+			byteBufferPool.returnBuffer(decrypted);
 			String loginChallengeResponse = Utils.currentTimeSeconds() + "|login2|" + Vars.uname + "|" + challengeDec;
 			Vars.commandSocket.write(loginChallengeResponse);
 

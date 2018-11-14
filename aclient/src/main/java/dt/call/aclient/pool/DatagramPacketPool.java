@@ -3,6 +3,7 @@ package dt.call.aclient.pool;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class DatagramPacketPool
 {
@@ -10,8 +11,8 @@ public class DatagramPacketPool
 	private int size = 10;
 	private InetAddress defaultAddress = null;
 	private int defaultPort = 0;
-	private final int placeholderSize = 1;
-	private byte[] placeholder = new byte[placeholderSize];
+
+	private static final int BUFFER_SIZE = 2048;
 
 	public DatagramPacketPool()
 	{
@@ -29,7 +30,8 @@ public class DatagramPacketPool
 	{
 		for(int i=0; i<size; i++)
 		{
-			DatagramPacket packet = new DatagramPacket(placeholder, placeholderSize);
+			final byte[] packetBuffer = new byte[BUFFER_SIZE];
+			DatagramPacket packet = new DatagramPacket(packetBuffer, BUFFER_SIZE);
 			if(defaultAddress != null)
 			{
 				packet.setAddress(defaultAddress);
@@ -46,9 +48,10 @@ public class DatagramPacketPool
 		{
 			generatePackets();
 		}
-		DatagramPacket buffer = packets.get(0);
+		DatagramPacket packet = packets.get(0);
 		packets.remove(0);
-		return buffer;
+		Arrays.fill(packet.getData(), (byte)0);
+		return packet;
 	}
 
 	public void returnDatagramPacket(DatagramPacket datagramPacket)

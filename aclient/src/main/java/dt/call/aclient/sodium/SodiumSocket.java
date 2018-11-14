@@ -31,18 +31,18 @@ public class SodiumSocket
 		socket.getOutputStream().write(tempPublic);
 
 		//establish tcp symmetric encryption key
-		final byte[] tempKeyResponse = new byte[Const.SIZE_COMMAND];
-		final int read = socket.getInputStream().read(tempKeyResponse);
-		final byte[] tempKeyResponseTrimmed = Utils.trimArray(tempKeyResponse, read);
-		final byte[] tempKeyResponseDec = SodiumUtils.decryptionBuffers.getByteBuffer();
-		final int tempKeyResponseDecLength = SodiumUtils.asymmetricDecrypt(tempKeyResponseTrimmed, hostPublicSodium, tempPrivate, tempKeyResponseDec);
+//		final byte[] tempKeyResponse = new byte[Const.SIZE_COMMAND];
+		final int read = socket.getInputStream().read(encryptionBuffer);
+//		final byte[] tempKeyResponseTrimmed = Utils.trimArray(tempKeyResponse, read);
+//		final byte[] tempKeyResponseDec = SodiumUtils.decryptionBuffers.getByteBuffer();
+		final int tempKeyResponseDecLength = SodiumUtils.asymmetricDecrypt(encryptionBuffer, read, hostPublicSodium, tempPrivate, decryptionBuffer);
 		Utils.applyFiller(tempPrivate);
 		if(tempKeyResponseDecLength == 0)
 		{
 			throw new SodiumException("sodium decryption of the TCP key failed");
 		}
-		tcpKey = Utils.trimArray(tempKeyResponseDec, tempKeyResponseDecLength);
-		SodiumUtils.decryptionBuffers.returnBuffer(tempKeyResponseDec);
+		tcpKey = Utils.trimArray(decryptionBuffer, tempKeyResponseDecLength);
+//		SodiumUtils.decryptionBuffers.returnBuffer(tempKeyResponseDec);
 	}
 
 	public byte[] getTcpKey()

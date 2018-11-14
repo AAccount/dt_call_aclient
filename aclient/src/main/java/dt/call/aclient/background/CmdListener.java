@@ -26,6 +26,7 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.CommandEndAsync;
+import dt.call.aclient.pool.ByteBufferPool;
 import dt.call.aclient.screens.CallIncoming;
 import dt.call.aclient.sodium.SodiumUtils;
 import dt.call.aclient.sqlite.SQLiteDb;
@@ -37,6 +38,7 @@ import dt.call.aclient.sqlite.SQLiteDb;
 public class CmdListener extends IntentService
 {
 	private static final String tag = "CmdListener";
+	private static ByteBufferPool byteBufferPool = new ByteBufferPool(Const.SIZE_COMMAND);
 
 	//copied over from jclient
 	private boolean inputValid = true; //causes the thread to stop whether for technical or paranoia
@@ -198,10 +200,10 @@ public class CmdListener extends IntentService
 						Vars.voiceSymmetricKey = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
 
 						//have sodium encrypt its key
-						final byte[] sodiumAsymEncrypted = SodiumUtils.encryptionBuffers.getByteBuffer();
+						final byte[] sodiumAsymEncrypted = byteBufferPool.getByteBuffer();
 						final int sodiumAsymEncryptedLength	= SodiumUtils.asymmetricEncrypt(Vars.voiceSymmetricKey, expectedKey, Vars.selfPrivateSodium, sodiumAsymEncrypted);
 						final String finalEncryptedString = Utils.stringify(sodiumAsymEncrypted, sodiumAsymEncryptedLength);
-						SodiumUtils.encryptionBuffers.returnBuffer(sodiumAsymEncrypted);
+						byteBufferPool.returnBuffer(sodiumAsymEncrypted);
 
 						//send the sodium key
 						final String passthrough = Utils.currentTimeSeconds() + "|passthrough|" + involved + "|" + finalEncryptedString + "|" + Vars.sessionKey;
@@ -255,16 +257,16 @@ public class CmdListener extends IntentService
 //						System.arraycopy(ack.getData(), 0, ackEncBytes, 0, ack.getLength());
 
 						//decrypt ack
-						final byte[] decAck = SodiumUtils.decryptionBuffers.getByteBuffer();
+						final byte[] decAck = byteBufferPool.getByteBuffer();
 						final int decAckLength = SodiumUtils.symmetricDecrypt(ack.getData(), ack.getLength(), Vars.commandSocket.getTcpKey(), decAck);
 						if(decAckLength == 0)
 						{
 							gotAck = false;
-							SodiumUtils.decryptionBuffers.returnBuffer(decAck);
+							byteBufferPool.returnBuffer(decAck);
 							break;
 						}
 						final String ackString = new String(decAck, 0, decAckLength);
-						SodiumUtils.decryptionBuffers.returnBuffer(decAck);
+						byteBufferPool.returnBuffer(decAck);
 
 						//verify ack timestamp
 						long ackts = 0;
@@ -304,11 +306,11 @@ public class CmdListener extends IntentService
 					final String setupString = respContents[2];
 					final byte[] setup = Utils.destringify(setupString);
 					final byte[] callWithKey = Vars.publicSodiumTable.get(involved);
-					final byte[] voiceKeyDecrypted = SodiumUtils.decryptionBuffers.getByteBuffer();
+					final byte[] voiceKeyDecrypted = byteBufferPool.getByteBuffer();
 					final int voiceKeyDecryptedLength = SodiumUtils.asymmetricDecrypt(setup, callWithKey, Vars.selfPrivateSodium, voiceKeyDecrypted);
 					Vars.voiceSymmetricKey = new byte[voiceKeyDecryptedLength];
 					System.arraycopy(voiceKeyDecrypted, 0, Vars.voiceSymmetricKey, 0, voiceKeyDecryptedLength);
-					SodiumUtils.decryptionBuffers.returnBuffer(voiceKeyDecrypted);
+					byteBufferPool.returnBuffer(voiceKeyDecrypted);
 
 					if(Vars.voiceSymmetricKey != null)
 					{

@@ -22,8 +22,8 @@ public class SodiumUtils
 {
 	private static final LazySodiumAndroid lazySodium = new LazySodiumAndroid(new SodiumAndroid());
 	private static final String tag = "sodium_utils";
-	public static final ByteBufferPool encryptionBuffers = new ByteBufferPool(10000);
-	public static final ByteBufferPool decryptionBuffers = new ByteBufferPool(10000);
+	private static final ByteBufferPool encryptionBuffers = new ByteBufferPool(10000);
+	private static final ByteBufferPool decryptionBuffers = new ByteBufferPool(10000);
 	private static final ByteBufferPool decryptionNonces = new ByteBufferPool(Box.NONCEBYTES);
 
 	public static int asymmetricEncrypt(byte[] message, byte[] receiverPublic, byte[] myPrivate, byte[] output)
