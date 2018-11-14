@@ -99,7 +99,6 @@ public class Const
 	public static final int DSCP_EXPEDITED_FWD = (0x2E << 2);
 	public static final String SODIUM_PLACEHOLDER = "SODIUM_SETUP_PLACEHOLDER";
 
-	//maximum disassembly accuracy for taking apart an int into signed chars
 	public static final int SIZEOF_INT = 4;
 	public static final int STRINGIFY_EXPANSION = 3;
 
