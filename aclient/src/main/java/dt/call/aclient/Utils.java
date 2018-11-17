@@ -46,6 +46,7 @@ import dt.call.aclient.sqlite.SQLiteDb;
  */
 public class Utils
 {
+	private static final ByteOrder NETWORK_BYTEORDER = ByteOrder.BIG_ENDIAN;
 	private static final String tag = "Utils";
 	private static LazySodiumAndroid lazySodium = new LazySodiumAndroid(new SodiumAndroid());;
 
@@ -462,12 +463,12 @@ public class Utils
 
 	public static byte[] disassembleInt(int input)
 	{
-		return ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(input).array();
+		return ByteBuffer.allocate(Const.SIZEOF_INT).order(NETWORK_BYTEORDER).putInt(input).array();
 	}
 
 	public static int reassembleInt(byte[] disassembled)
 	{
-		return ByteBuffer.wrap(disassembled).order(ByteOrder.BIG_ENDIAN).getInt();
+		return ByteBuffer.wrap(disassembled).order(NETWORK_BYTEORDER).getInt();
 	}
 
 	public static byte[] trimArray(byte[] input, int trimmed)
