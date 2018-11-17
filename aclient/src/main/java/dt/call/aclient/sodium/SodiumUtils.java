@@ -120,8 +120,8 @@ public class SodiumUtils
 		//both nonce lengths are 24
 		final int nonceLength = Box.NONCEBYTES;
 
-		//check if the nonce and message length are there
-		if(setupLength < (nonceLength + Const.SIZEOF_INT))
+		//check if more than just the nonce and message length are there
+		if(setupLength <= (nonceLength + Const.SIZEOF_INT))
 		{
 			return 0;
 		}
