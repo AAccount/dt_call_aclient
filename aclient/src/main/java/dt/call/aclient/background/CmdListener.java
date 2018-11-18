@@ -339,7 +339,16 @@ public class CmdListener extends IntentService
 			}
 			catch (IOException e)
 			{
-				Utils.killSockets();
+				//when in a call, try to reestablish the command socket. don't drop the call
+				if(Vars.state == CallState.INCALL && Vars.commandSocket != null)
+				{
+					Vars.commandSocket.close();
+					Vars.commandSocket = null;
+				}
+				else
+				{
+					Utils.killSockets();
+				}
 				Utils.logcat(Const.LOGE, tag, logd+"Command socket closed...");
 				Utils.dumpException(tag, e);
 				inputValid = false;

@@ -10,6 +10,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
+import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
@@ -106,7 +107,8 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 			}
 			String challengeDec = new String(decrypted, 0, decryptedLength);
 			byteBufferPool.returnBuffer(decrypted);
-			String loginChallengeResponse = Utils.currentTimeSeconds() + "|login2|" + Vars.uname + "|" + challengeDec;
+			final String keepudp = (Vars.state == CallState.INCALL) ? "|keepudp" : "";
+			String loginChallengeResponse = Utils.currentTimeSeconds() + "|login2|" + Vars.uname + "|" + challengeDec + keepudp;
 			Vars.commandSocket.write(loginChallengeResponse);
 
 			//see if the server liked the challenge response

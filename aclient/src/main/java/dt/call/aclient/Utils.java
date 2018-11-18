@@ -304,16 +304,13 @@ public class Utils
 
 	public static void killSockets()
 	{
-		try
+		if(Vars.commandSocket != null)
 		{
-			if(Vars.commandSocket != null)
-			{
-				Vars.commandSocket.close();
-			}
-			Vars.mediaUdp.close();
+			Vars.commandSocket.close();
 		}
-		catch (Exception e)
+		if(Vars.mediaUdp != null)
 		{
+			Vars.mediaUdp.close();
 		}
 		Vars.commandSocket = null;
 	}
