@@ -5,6 +5,7 @@ import android.support.test.runner.AndroidJUnit4;
 import com.goterl.lazycode.lazysodium.interfaces.SecretBox;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -21,9 +22,17 @@ import dt.call.aclient.sodium.SodiumUtils;
 public class SimulatedVoiceCall
 {
 	private static final int WAVBUFFERSIZE = Opus.getWavFrameSize();
-	private Thread fakeDTOperatorThread;
 	private int txSeq = 0;
 	private int SIMULATED_PACKETS = 100000;
+	private Random r = new Random();
+
+	@Before
+	public void setupSodiumKey()
+	{
+		//doesn't have to be secure. just need something for testing
+		Vars.voiceSymmetricKey = new byte[SecretBox.KEYBYTES];
+		r.nextBytes(Vars.voiceSymmetricKey);
+	}
 
 	@Test
 	public void simulateLongCall()
@@ -36,91 +45,89 @@ public class SimulatedVoiceCall
 	public void simulateManyCalls()
 	{
 		final int ITERATIONS = 100;
-		SIMULATED_PACKETS = 100;
+		SIMULATED_PACKETS = 1000;
 		for(int i=0; i<ITERATIONS; i++)
 		{
 			System.out.println("simulating call #"+i);
+			txSeq = 0;
 			simulateVoiceCall();
 		}
 	}
 
 	private void simulateVoiceCall()
 	{
+		DatagramPacketPool ENCpacketPool = new DatagramPacketPool(Vars.callServer, Vars.mediaPort);
+		final byte[] ENCpacketBuffer = new byte[Const.SIZE_MEDIA];
+		final short[] ENCWavBuffer = new short[WAVBUFFERSIZE];
+		final byte[] ENCencodedBuffer = new byte[WAVBUFFERSIZE];
 
-		Vars.voiceSymmetricKey = new byte[SecretBox.KEYBYTES];
-		Random r = new Random();
-		r.nextBytes(Vars.voiceSymmetricKey);
-
-		DatagramPacketPool encoderPacketPool = new DatagramPacketPool(Vars.callServer, Vars.mediaPort);
-		final byte[] packetBuffer = new byte[Const.SIZE_MEDIA];
-		final short[] encoderWavBuffer = new short[WAVBUFFERSIZE];
-		final byte[] encoderEncodedBuffer = new byte[WAVBUFFERSIZE];
-
-		ByteBufferPool udpBufferPool = new ByteBufferPool(Const.SIZE_MAX_UDP);
-		DatagramPacketPool decoderPacketPool = new DatagramPacketPool();
-		final byte[] decoderEncbuffer = new byte[WAVBUFFERSIZE];
-		final short[] decoderWavbuffer = new short[WAVBUFFERSIZE];
-		final byte[] packetDecrypted = SodiumUtils.decryptionBuffers.getByteBuffer();
+		DatagramPacketPool DECpacketPool = new DatagramPacketPool();
+		final byte[] DECencbuffer = new byte[WAVBUFFERSIZE];
+		final short[] DECwavbuffer = new short[WAVBUFFERSIZE];
+		final byte[] packetDecrypted = new byte[Const.SIZE_MAX_UDP];
 
 		Opus.init();
 		for(int i=0; i<SIMULATED_PACKETS; i++)
 		{
-			Arrays.fill(encoderWavBuffer, (short)0);
-			for(int j=0; j<encoderWavBuffer.length; j++)
+			Arrays.fill(ENCWavBuffer, (short)0);
+			for(int j=0; j<ENCWavBuffer.length; j++)
 			{
-				encoderWavBuffer[j] = (short)r.nextInt(Short.MAX_VALUE+1);
+				ENCWavBuffer[j] = (short)r.nextInt(Short.MAX_VALUE+1);
 			}
 
-			Arrays.fill(encoderEncodedBuffer, (byte)0);
-			final int encoderEncodeLength = Opus.encode(encoderWavBuffer, encoderEncodedBuffer);
-			Assert.assertTrue(encoderEncodeLength > 0);
+			Arrays.fill(ENCencodedBuffer, (byte)0);
+			final int ENCencodeLength = Opus.encode(ENCWavBuffer, ENCencodedBuffer);
+			Assert.assertTrue(ENCencodeLength > 0);
 
-			//integer broken up as: 12,345,678: [12,34,56,78.....voice....]
-			Arrays.fill(packetBuffer, (byte)0);
-			final byte[] txSeqDisassembled = Utils.disassembleInt(txSeq, 4);
-			System.arraycopy(txSeqDisassembled, 0, packetBuffer, 0, 4);
+			Arrays.fill(ENCpacketBuffer, (byte)0);
+			final byte[] txSeqDisassembled = Utils.disassembleInt(txSeq);
+			System.arraycopy(txSeqDisassembled, 0, ENCpacketBuffer, 0, Const.SIZEOF_INT);
 			txSeq++;
-			System.arraycopy(encoderEncodedBuffer, 0 , packetBuffer, 4, encoderEncodeLength);
+			System.arraycopy(ENCencodedBuffer, 0 , ENCpacketBuffer, Const.SIZEOF_INT, ENCencodeLength);
 
-			final byte[] packetBufferEncrypted = SodiumUtils.encryptionBuffers.getByteBuffer();
-			final int packetBufferEncryptedLength = SodiumUtils.symmetricEncrypt(packetBuffer, 4+encoderEncodeLength, Vars.voiceSymmetricKey, packetBufferEncrypted);
+			final DatagramPacket ENCpacket = ENCpacketPool.getDatagramPacket();
+			final byte[] packetBufferEncrypted = ENCpacket.getData();
+			final int packetBufferEncryptedLength = SodiumUtils.symmetricEncrypt(ENCpacketBuffer, Const.SIZEOF_INT+ENCencodeLength, Vars.voiceSymmetricKey, packetBufferEncrypted);
 			Assert.assertTrue(packetBufferEncryptedLength > 0);
 
-			final DatagramPacket sending = encoderPacketPool.getDatagramPacket();
-			sending.setData(packetBufferEncrypted);
-			sending.setLength(packetBufferEncryptedLength);
+			ENCpacket.setLength(packetBufferEncryptedLength);
 
 			//////////////////////////////////////////////////////////////////////////////
-			final DatagramPacket received = decoderPacketPool.getDatagramPacket();
-			received.setData(udpBufferPool.getByteBuffer());
-			received.setLength(Const.SIZE_MAX_UDP);
-			System.arraycopy(sending.getData(), 0, received.getData(), 0, packetBufferEncryptedLength);
-			received.setLength(packetBufferEncryptedLength);
+			final DatagramPacket DECreceived = DECpacketPool.getDatagramPacket();
+			System.arraycopy(ENCpacket.getData(), 0, DECreceived.getData(), 0, packetBufferEncryptedLength);
+			DECreceived.setLength(packetBufferEncryptedLength);
 
 			Arrays.fill(packetDecrypted, (byte)0);
-			final int packetDecLength = SodiumUtils.symmetricDecrypt(received.getData(), received.getLength(), Vars.voiceSymmetricKey, packetDecrypted);
-			Assert.assertTrue(packetDecLength == (4+encoderEncodeLength));
+			final int packetDecLength = SodiumUtils.symmetricDecrypt(DECreceived.getData(), DECreceived.getLength(), Vars.voiceSymmetricKey, packetDecrypted);
+			DECpacketPool.returnDatagramPacket(DECreceived);
+			Assert.assertTrue(packetDecLength == (Const.SIZEOF_INT+ENCencodeLength));
 
-			final byte[] sequenceBytes = new byte[4];
-			System.arraycopy(packetDecrypted, 0, sequenceBytes, 0, 4);
+			//(original code not in CallMain.java: check encoder pre-encrypted and decoder post-encrypted contents)
+			byte[] DECdecryptedTrimmed = Utils.trimArray(packetDecrypted, packetDecLength);
+			byte[] ENCpacketBufferTrimmed = Utils.trimArray(ENCpacketBuffer, Const.SIZEOF_INT+ENCencodeLength);
+			Assert.assertArrayEquals(DECdecryptedTrimmed, ENCpacketBufferTrimmed);
+
+			final byte[] sequenceBytes = new byte[Const.SIZEOF_INT];
+			System.arraycopy(packetDecrypted, 0, sequenceBytes, 0, Const.SIZEOF_INT);
 			final int sequence = Utils.reassembleInt(sequenceBytes);
 			Assert.assertTrue(sequence == (txSeq-1));
 
 			//extract the opus chunk
-			Arrays.fill(decoderEncbuffer, (byte)0);
-			final int decoderEndoeLength = packetDecLength - 4;
-			System.arraycopy(packetDecrypted, 4, decoderEncbuffer, 0, decoderEndoeLength);
+			Arrays.fill(DECencbuffer, (byte)0);
+			final int DECencodedLength = packetDecLength - Const.SIZEOF_INT;
+			System.arraycopy(packetDecrypted, Const.SIZEOF_INT, DECencbuffer, 0, DECencodedLength);
 
 			//decode opus chunk
-			Arrays.fill(decoderWavbuffer, (short)0);
-			final int frames = Opus.decode(decoderEncbuffer, decoderEndoeLength, decoderWavbuffer);
+			Arrays.fill(DECwavbuffer, (short)0);
+			final int frames = Opus.decode(DECencbuffer, DECencodedLength, DECwavbuffer);
 			Assert.assertTrue(frames == WAVBUFFERSIZE);
 
 			if(i%1000 == 0)
 			{
 				System.out.println("iteration: " + i);
 			}
-			SodiumUtils.encryptionBuffers.returnBuffer(packetBufferEncrypted);
+
+			ENCpacketPool.returnDatagramPacket(ENCpacket);
 		}
 	}
 }
