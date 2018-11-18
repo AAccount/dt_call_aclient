@@ -665,7 +665,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						continue;
 					}
 
-					//integer broken up as: 12,345,678: [12,34,56,78.....voice....]
 					Arrays.fill(packetBuffer, (byte)0);
 					final byte[] txSeqDisassembled = Utils.disassembleInt(txSeq);
 					System.arraycopy(txSeqDisassembled, 0, packetBuffer, 0, Const.SIZEOF_INT);
