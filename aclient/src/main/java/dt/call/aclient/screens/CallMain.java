@@ -63,6 +63,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final int END_TONE_SIZE = 10858;
 	private static final int WAV_FILE_HEADER = 44; //.wav files actually have a 44 byte header
 
+	private static final int OORANGE_LIMIT = 100;
+
 	//ui stuff
 	private FloatingActionButton end, mic, speaker;
 	private Button stats;
@@ -77,8 +79,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private int min=0, sec=0;
 	private Timer counter = new Timer();
 	private BroadcastReceiver myReceiver;
-	private int garbage=0, txData=0, rxData=0, rxSeq=0, txSeq=0, skipped=0;
-	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel;
+	private int garbage=0, txData=0, rxData=0, rxSeq=0, txSeq=0, skipped=0, oorange=0;
+	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel, oorangeLabel;
 	private boolean showStats = false;
 
 	//proximity sensor stuff
@@ -185,10 +187,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						final int missing = txSeq-rxSeq;
 						statsBuilder.setLength(0);
 						statsBuilder
-								.append(missingLabel).append(":").append(missing > 0 ? missing : 0).append(" ").append(garbageLabel).append(":").append(garbage).append("\n")
+								.append(missingLabel).append(": ").append(missing > 0 ? missing : 0).append(" ").append(garbageLabel).append(": ").append(garbage).append("\n")
 								.append(rxLabel).append(":").append(rxDisp).append(" ").append(txLabel).append(":").append(txDisp).append("\n")
 								.append(rxSeqLabel).append(":").append(rxSeq).append(" ").append(txSeqLabel).append(":").append(txSeq).append("\n")
-								.append(skippedLabel).append(":").append(skipped);
+								.append(skippedLabel).append(":").append(skipped).append(" ").append(oorangeLabel).append(": ").append(oorange);
 						runOnUiThread(new Runnable()
 						{
 							@Override
@@ -211,6 +213,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		rxSeqLabel = getString(R.string.call_main_stat_rx_seq);
 		txSeqLabel = getString(R.string.call_main_stat_tx_seq);
 		skippedLabel = getString(R.string.call_main_stat_skipped);
+		oorangeLabel = getString(R.string.call_main_stat_oorange);
 
 		if(!Vars.SHOUDLOG)
 		{
@@ -741,14 +744,15 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					while(Vars.state == CallState.INCALL)
 					{
-						final DatagramPacket received = packetPool.getDatagramPacket();
 						try
 						{
+							final DatagramPacket received = packetPool.getDatagramPacket();
 							Vars.mediaUdp.receive(received);
 							receiveQ.put(received);
 						}
-						catch(InterruptedException e)
+						catch(InterruptedException | NullPointerException e)
 						{
+							//can get a null pointer if the connection dies, media decoder dies, but this network thread is still alive
 							return;
 						}
 						catch (IOException e)
@@ -815,7 +819,16 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							skipped++;
 							continue;
 						}
-						rxSeq = sequence;
+
+						//out of range receive sequences have happened before. still unexplained. log it as a stat
+						if(Math.abs(sequence - rxSeq) > OORANGE_LIMIT)
+						{
+							oorange++;
+						}
+						else
+						{
+							rxSeq = sequence;
+						}
 
 						//extract the opus chunk
 						Arrays.fill(encbuffer, (byte)0);
