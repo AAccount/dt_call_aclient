@@ -57,7 +57,7 @@ public class SimulatedVoiceCall
 	private void simulateVoiceCall()
 	{
 		DatagramPacketPool ENCpacketPool = new DatagramPacketPool(Vars.callServer, Vars.mediaPort);
-		final byte[] ENCpacketBuffer = new byte[Const.SIZE_MEDIA];
+		final byte[] ENCpacketBuffer = new byte[Const.SIZE_MAX_UDP];
 		final short[] ENCWavBuffer = new short[WAVBUFFERSIZE];
 		final byte[] ENCencodedBuffer = new byte[WAVBUFFERSIZE];
 

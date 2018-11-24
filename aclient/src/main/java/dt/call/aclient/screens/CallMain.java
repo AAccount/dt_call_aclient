@@ -49,6 +49,7 @@ import dt.call.aclient.sodium.SodiumUtils;
 
 public class CallMain extends AppCompatActivity implements View.OnClickListener, SensorEventListener
 {
+	private static final String WAKELOCK_INCALLA9 = "dt.call.aclient:incalla9";
 	private static final String tag = "CallMain";
 
 	private static final int HEADERS = 52;
@@ -287,7 +288,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
 		{
 			final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-			Vars.incallA9Workaround = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE, Const.WAKELOCK_INCALLA9);
+			Vars.incallA9Workaround = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE, WAKELOCK_INCALLA9);
 			Vars.incallA9Workaround.acquire();
 
 			//some kind of indication that the battery killing android 9 workaround is being used
@@ -612,7 +613,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				internalNetworkThread.setName("Media_Encoder_Network");
 				internalNetworkThread.start();
 
-				final byte[] packetBuffer = new byte[Const.SIZE_MEDIA];
+				final byte[] packetBuffer = new byte[Const.SIZE_MAX_UDP];
 				final short[] wavbuffer = new short[WAVBUFFERSIZE];
 				final byte[] encodedbuffer = new byte[WAVBUFFERSIZE];
 

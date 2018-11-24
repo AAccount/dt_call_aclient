@@ -34,7 +34,6 @@ public class Const
 	//heartbeat byte
 	public static final String JBYTE = "D";
 	public static final int SIZE_COMMAND = 2048;
-	public static final int SIZE_MEDIA = 1000;
 	public static final int SIZE_MAX_UDP = 1400;
 
 	//nobody: the default value for when not in a call
@@ -85,26 +84,9 @@ public class Const
 	//timeout (IN SECONDS) before giving up on calling someone
 	public static final int CALL_TIMEOUT = 20;
 
-	//wakelock tag
-	public static final String WAKELOCK_INCOMING = "dt.call.aclient:incoming";
-	public static final String WAKELOCK_INCALLA9 = "dt.call.aclient:incalla9";
-
-	//command maximum segments
-	public static final int COMMAND_MAX_SEGMENTS = 5;
-	public static final int LOGIN_MAX_SEGMENTS = 3;
-
-	//udp port related variables
-	public static final int UDP_RETRIES = 10;
-	public static final int UDP_ACK_TIMEOUT = 100; //in milliseconds
-	public static final int DSCP_EXPEDITED_FWD = (0x2E << 2);
-	public static final String SODIUM_PLACEHOLDER = "SODIUM_SETUP_PLACEHOLDER";
-
 	public static final int SIZEOF_INT = 4;
 	public static final int STRINGIFY_EXPANSION = 3;
 
-
-	public static final String SODIUM_PUBLIC_HEADER = "SODIUM PUBLIC KEY\n";
-	public static final String SODIUM_PRIVATE_HEADER = "SODIUM PRIVATE KEY\n";
 	public static final String EXTRA_UNAME = "user_name_extra";
 	public static final int UNSIGNED_CHAR_MAX = 0xff;
 }

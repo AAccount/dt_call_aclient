@@ -31,6 +31,7 @@ import dt.call.aclient.sodium.SodiumUtils;
  */
 public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 {
+	private static final int LOGIN_MAX_SEGMENTS = 3;
 	private static final String tag = "Login Async Task";
 	private static final Object loginLock = new Object();
 	private static ByteBufferPool byteBufferPool = new ByteBufferPool(Const.SIZE_COMMAND);
@@ -71,7 +72,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			//process login challenge response
 			String[] loginChallengeContents = loginChallenge.split("\\|");
-			if(loginChallengeContents.length != Const.LOGIN_MAX_SEGMENTS)
+			if(loginChallengeContents.length != LOGIN_MAX_SEGMENTS)
 			{
 				Utils.logcat(Const.LOGW, tag, "login1 response imporoperly formatted");
 				onPostExecute(false); //not a legitimate server response
@@ -116,7 +117,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			//check reaction response
 			String[] answerResponseContents = answerResponse.split("\\|");
-			if(answerResponseContents.length != Const.LOGIN_MAX_SEGMENTS)
+			if(answerResponseContents.length != LOGIN_MAX_SEGMENTS)
 			{
 				Utils.logcat(Const.LOGW, tag, "login2 response imporoperly formatted");
 				onPostExecute(false); //not a legitimate server response

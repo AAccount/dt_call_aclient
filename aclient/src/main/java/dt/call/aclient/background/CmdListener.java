@@ -37,11 +37,19 @@ import dt.call.aclient.sqlite.SQLiteDb;
  */
 public class CmdListener extends IntentService
 {
+	//wakelock tag
+	private static final String WAKELOCK_INCOMING = "dt.call.aclient:incoming";
+	private static final int COMMAND_MAX_SEGMENTS = 5;
 	private static final String tag = "CmdListener";
 	private static ByteBufferPool byteBufferPool = new ByteBufferPool(Const.SIZE_COMMAND);
 
-	//copied over from jclient
-	private boolean inputValid = true; //causes the thread to stop whether for technical or paranoia
+	//udp port related variables
+	private static final int UDP_RETRIES = 10;
+	private static final int UDP_ACK_TIMEOUT = 100; //in milliseconds
+	private static final int DSCP_EXPEDITED_FWD = (0x2E << 2);
+	private static final String SODIUM_PLACEHOLDER = "SODIUM_SETUP_PLACEHOLDER";
+
+	private boolean inputValid = true;
 
 	//for deciding when to send the ready command
 	private boolean haveAesKey = false;
@@ -86,7 +94,7 @@ public class CmdListener extends IntentService
 				logd = "Server response raw: " + fromServer + "\n";
 
 				//check for properly formatted command
-				if(respContents.length > Const.COMMAND_MAX_SEGMENTS)
+				if(respContents.length > COMMAND_MAX_SEGMENTS)
 				{
 					Utils.logcat(Const.LOGW, tag, logd+"command has too many segments to be valid");
 					continue;
@@ -109,7 +117,7 @@ public class CmdListener extends IntentService
 				{
 					//wake up the cell phone
 					final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-					Vars.incomingCallLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE, Const.WAKELOCK_INCOMING);
+					Vars.incomingCallLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE, WAKELOCK_INCOMING);
 					Vars.incomingCallLock.acquire();
 
 					//build the contacts list if it doesn't already exist
@@ -178,7 +186,7 @@ public class CmdListener extends IntentService
 							Utils.logcat(Const.LOGE, tag,
 									"Server sent a MISMATCHED public key for " + Vars.callWith +
 											" . It was:\n" + receivedKeyDump +
-											"\nBut expected: " + Const.SODIUM_PUBLIC_HEADER+Utils.stringify(expectedKey));
+											"\nBut expected: " + SodiumUtils.SODIUM_PUBLIC_HEADER+Utils.stringify(expectedKey));
 							giveUp();
 							continue;
 						}
@@ -207,7 +215,7 @@ public class CmdListener extends IntentService
 
 						//send the sodium key
 						final String passthrough = Utils.currentTimeSeconds() + "|passthrough|" + involved + "|" + finalEncryptedString + "|" + Vars.sessionKey;
-						logd = logd + "passthrough of sodium key " + passthrough.replace(finalEncryptedString, Const.SODIUM_PLACEHOLDER) + "\n";
+						logd = logd + "passthrough of sodium key " + passthrough.replace(finalEncryptedString, SODIUM_PLACEHOLDER) + "\n";
 						try
 						{
 							Vars.commandSocket.write(passthrough);
@@ -222,11 +230,11 @@ public class CmdListener extends IntentService
 					//setup the udp socket BEFORE using it
 					Vars.callServer = InetAddress.getByName(Vars.serverAddress);
 					Vars.mediaUdp = new DatagramSocket();
-					Vars.mediaUdp.setTrafficClass(Const.DSCP_EXPEDITED_FWD);
-					Vars.mediaUdp.setSoTimeout(Const.UDP_ACK_TIMEOUT);
+					Vars.mediaUdp.setTrafficClass(DSCP_EXPEDITED_FWD);
+					Vars.mediaUdp.setSoTimeout(UDP_ACK_TIMEOUT);
 
 					//try to register media port
-					int retries = Const.UDP_RETRIES;
+					int retries = UDP_RETRIES;
 					boolean gotAck = false;
 					while(!gotAck && retries > 0)
 					{
@@ -324,7 +332,7 @@ public class CmdListener extends IntentService
 						continue;
 					}
 
-					logd = "Server response raw: " + fromServer.replace(setupString, Const.SODIUM_PLACEHOLDER) + "\n";
+					logd = "Server response raw: " + fromServer.replace(setupString, SODIUM_PLACEHOLDER) + "\n";
 				}
 				else if(command.equals("invalid"))
 				{
@@ -339,13 +347,14 @@ public class CmdListener extends IntentService
 			}
 			catch (IOException e)
 			{
-				//when in a call, try to reestablish the command socket. don't drop the call
-				if(Vars.state == CallState.INCALL && Vars.commandSocket != null)
+				if(Vars.commandSocket != null)
 				{
 					Vars.commandSocket.close();
 					Vars.commandSocket = null;
 				}
-				else
+
+				//when in a call, try to reestablish the command socket. don't drop the call
+				if(Vars.state != CallState.INCALL)
 				{
 					Utils.killSockets();
 				}

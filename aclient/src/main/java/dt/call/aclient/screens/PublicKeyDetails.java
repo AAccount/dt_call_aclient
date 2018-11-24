@@ -48,7 +48,7 @@ public class PublicKeyDetails extends AppCompatActivity
 		}
 		else
 		{
-			final String publicKeyString = Const.SODIUM_PUBLIC_HEADER + Utils.stringify(publickey);
+			final String publicKeyString = SodiumUtils.SODIUM_PUBLIC_HEADER + Utils.stringify(publickey);
 			dumpArea.setText(publicKeyString);
 		}
 
@@ -193,7 +193,7 @@ public class PublicKeyDetails extends AppCompatActivity
 			}
 
 			//only update the viewing area when everything's ok
-			final String publicKeyString = Const.SODIUM_PUBLIC_HEADER + Utils.stringify(newPublicKey);
+			final String publicKeyString = SodiumUtils.SODIUM_PUBLIC_HEADER + Utils.stringify(newPublicKey);
 			dumpArea.setText(publicKeyString);
 		}
 	}

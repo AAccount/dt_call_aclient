@@ -20,6 +20,9 @@ import dt.call.aclient.Utils;
 
 public class SodiumUtils
 {
+	public static final String SODIUM_PUBLIC_HEADER = "SODIUM PUBLIC KEY\n";
+
+	private static final String SODIUM_PRIVATE_HEADER = "SODIUM PRIVATE KEY\n";
 	private static final LazySodiumAndroid lazySodium = new LazySodiumAndroid(new SodiumAndroid());
 	private static final String tag = "sodium_utils";
 	private static final ByteBufferPool encryptionBuffers = new ByteBufferPool(10000);
@@ -175,7 +178,7 @@ public class SodiumUtils
 	public static byte[] interpretKey(byte[] dump, boolean isPrivate)
 	{
 		//dump the file contents
-		final int headerLength = isPrivate ? Const.SODIUM_PRIVATE_HEADER.length() : Const.SODIUM_PUBLIC_HEADER.length();
+		final int headerLength = isPrivate ? SODIUM_PRIVATE_HEADER.length() : SODIUM_PUBLIC_HEADER.length();
 		final int expectedLength = headerLength + Box.PUBLICKEYBYTES*Const.STRINGIFY_EXPANSION;
 		if(dump == null || dump.length != expectedLength)
 		{
@@ -186,7 +189,7 @@ public class SodiumUtils
 		//see if the file has the correct header
 		final byte[] dumpHeader = new byte[headerLength];
 		System.arraycopy(dump, 0, dumpHeader, 0, dumpHeader.length);
-		final byte[] headerBytes = isPrivate ? Const.SODIUM_PRIVATE_HEADER.getBytes() : Const.SODIUM_PUBLIC_HEADER.getBytes();
+		final byte[] headerBytes = isPrivate ? SODIUM_PRIVATE_HEADER.getBytes() : SODIUM_PUBLIC_HEADER.getBytes();
 		if(!Arrays.equals(dumpHeader, headerBytes))
 		{
 			Utils.applyFiller(dump);
@@ -228,7 +231,7 @@ public class SodiumUtils
 			//read the public key and convert to a string
 			final ContentResolver resolver = context.getContentResolver();
 			final InputStream inputStream = resolver.openInputStream(uri);
-			final int longerHeader = Math.max(Const.SODIUM_PRIVATE_HEADER.length(), Const.SODIUM_PUBLIC_HEADER.length());
+			final int longerHeader = Math.max(SODIUM_PRIVATE_HEADER.length(), SODIUM_PUBLIC_HEADER.length());
 			final int maximumRead = longerHeader + Box.PUBLICKEYBYTES*Const.STRINGIFY_EXPANSION;
 			final byte[] fileBytes = new byte[maximumRead];
 			final int amountRead = inputStream.read(fileBytes);
