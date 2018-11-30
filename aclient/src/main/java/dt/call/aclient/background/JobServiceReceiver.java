@@ -26,7 +26,7 @@ public class JobServiceReceiver extends JobService
 		Utils.logcat(Const.LOGD, tag, "received job");
 		Vars.applicationContext = getApplicationContext();
 		final Intent hasInternet = new Intent(Const.BROADCAST_HAS_INTERNET);
-		hasInternet.setClass(Vars.applicationContext, BackgroundManager.class);
+		hasInternet.setClass(getApplicationContext(), BackgroundManager.class);
 		sendBroadcast(hasInternet);
 		return false;
 	}

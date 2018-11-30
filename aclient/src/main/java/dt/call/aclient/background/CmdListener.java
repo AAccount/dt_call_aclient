@@ -92,6 +92,7 @@ public class CmdListener extends IntentService
 				final String fromServer = Vars.commandSocket.readString(Const.SIZE_COMMAND);
 				final String[] respContents = fromServer.split("\\|");
 				logd = "Server response raw: " + fromServer + "\n";
+				Vars.applicationContext = getApplicationContext();
 
 				//check for properly formatted command
 				if(respContents.length > COMMAND_MAX_SEGMENTS)
@@ -123,8 +124,8 @@ public class CmdListener extends IntentService
 					//build the contacts list if it doesn't already exist
 					if(Vars.contactTable == null)
 					{
-						SQLiteDb.getInstance(getApplication()).populateContacts();
-						SQLiteDb.getInstance(getApplication()).populatePublicKeys();
+						SQLiteDb.getInstance(getApplicationContext()).populateContacts();
+						SQLiteDb.getInstance(getApplicationContext()).populatePublicKeys();
 					}
 
 					Vars.state = CallState.INIT;
@@ -197,7 +198,7 @@ public class CmdListener extends IntentService
 //						byte[] receivedUserKey = Utils.interpretSodiumPublicKey(receivedKeyDump);
 						Vars.publicSodiumTable.put(Vars.callWith, receivedKey);
 //						Vars.publicSodiumDumps.put(Vars.callWith, receivedKeyDump);
-						SQLiteDb.getInstance(getApplication()).insertPublicKey(Vars.callWith, receivedKey);
+						SQLiteDb.getInstance(getApplicationContext()).insertPublicKey(Vars.callWith, receivedKey);
 						expectedKey = receivedKey;
 					}
 
@@ -390,7 +391,7 @@ public class CmdListener extends IntentService
 
 		//cleanup the pending intents now that the sockets are unsable. also must do asap to prevent
 		//timing problems where socket close and pending intent happen at the same time.
-		final AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+		final AlarmManager manager = (AlarmManager) getApplicationContext().getSystemService(Context.ALARM_SERVICE);
 		try
 		{
 			manager.cancel(Vars.pendingHeartbeat);
@@ -404,7 +405,7 @@ public class CmdListener extends IntentService
 			//	just part of the normal shutdown procedure. no reason to panic
 		}
 		final Intent deadBroadcast = new Intent(Const.BROADCAST_RELOGIN);
-		deadBroadcast.setClass(Vars.applicationContext, BackgroundManager.class);
+		deadBroadcast.setClass(getApplicationContext(), BackgroundManager.class);
 		sendBroadcast(deadBroadcast);
 	}
 
