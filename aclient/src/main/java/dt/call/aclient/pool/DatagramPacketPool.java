@@ -2,12 +2,12 @@ package dt.call.aclient.pool;
 
 import java.net.DatagramPacket;
 import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 
 public class DatagramPacketPool
 {
-	private ArrayList<DatagramPacket> packets = new ArrayList<DatagramPacket>();
+	private LinkedList<DatagramPacket> packets = new LinkedList<DatagramPacket>();
 	private int size = 10;
 	private InetAddress defaultAddress = null;
 	private int defaultPort = 0;
@@ -37,9 +37,9 @@ public class DatagramPacketPool
 				packet.setAddress(defaultAddress);
 				packet.setPort(defaultPort);
 			}
-			packets.add(packet);
+			packets.push(packet);
 		}
-		size = size*2; //always double the buffer pool when it runs out
+		size = size*2; //always double the packet pool when it runs out
 	}
 
 	public DatagramPacket getDatagramPacket()
@@ -48,14 +48,13 @@ public class DatagramPacketPool
 		{
 			generatePackets();
 		}
-		DatagramPacket packet = packets.get(0);
-		packets.remove(0);
+		DatagramPacket packet = packets.pop();
 		Arrays.fill(packet.getData(), (byte)0);
 		return packet;
 	}
 
 	public void returnDatagramPacket(DatagramPacket datagramPacket)
 	{
-		packets.add(datagramPacket);
+		packets.push(datagramPacket);
 	}
 }

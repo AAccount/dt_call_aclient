@@ -2,12 +2,12 @@ package dt.call.aclient.pool;
 
 //Created November 8, 2018 22:55:10
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 
 public class ByteBufferPool
 {
-	private ArrayList<byte[]> buffers = new ArrayList<byte[]>();
+	private LinkedList<byte[]> buffers = new LinkedList<byte[]>();
 	private int size = 10;
 	private int bufferSize;
 
@@ -22,7 +22,7 @@ public class ByteBufferPool
 		for(int i=0; i<size; i++)
 		{
 			byte[] buffer = new byte[bufferSize];
-			buffers.add(buffer);
+			buffers.push(buffer);
 		}
 		size = size*2; //always double the buffer pool when it runs out
 	}
@@ -33,14 +33,13 @@ public class ByteBufferPool
 		{
 			generateBuffers();
 		}
-		byte[] buffer = buffers.get(0);
-		buffers.remove(0);
+		byte[] buffer = buffers.pop();
 		Arrays.fill(buffer, (byte)0);
 		return buffer;
 	}
 
 	public void returnBuffer(byte[] buffer)
 	{
-		buffers.add(buffer);
+		buffers.push(buffer);
 	}
 }
