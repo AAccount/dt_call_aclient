@@ -195,9 +195,7 @@ public class CmdListener extends IntentService
 					else
 					{
 						//with nothing else to go on, assume this really is the person's key
-//						byte[] receivedUserKey = Utils.interpretSodiumPublicKey(receivedKeyDump);
 						Vars.publicSodiumTable.put(Vars.callWith, receivedKey);
-//						Vars.publicSodiumDumps.put(Vars.callWith, receivedKeyDump);
 						SQLiteDb.getInstance(getApplicationContext()).insertPublicKey(Vars.callWith, receivedKey);
 						expectedKey = receivedKey;
 					}
@@ -235,66 +233,7 @@ public class CmdListener extends IntentService
 					Vars.mediaUdp.setSoTimeout(UDP_ACK_TIMEOUT);
 
 					//try to register media port
-					int retries = UDP_RETRIES;
-					boolean gotAck = false;
-					while(!gotAck && retries > 0)
-					{
-						final String registration = String.valueOf(Utils.currentTimeSeconds()) + "|" + Vars.sessionKey;
-						final byte[] sodiumSealedRegistration = new byte[Box.SEALBYTES + registration.length()];
-						lazySodium.cryptoBoxSeal(sodiumSealedRegistration, registration.getBytes(), registration.length(), Vars.serverPublicSodium);
-
-						//send the registration
-						final DatagramPacket registrationPacket = new DatagramPacket(sodiumSealedRegistration, sodiumSealedRegistration.length, Vars.callServer, Vars.mediaPort);
-						Vars.mediaUdp.send(registrationPacket);
-
-						//wait for media port registration ack
-						final byte[] ackBuffer = new byte[Const.SIZE_MAX_UDP];
-						final DatagramPacket ack = new DatagramPacket(ackBuffer, Const.SIZE_MAX_UDP);
-						try
-						{
-							Vars.mediaUdp.receive(ack);
-						}
-						catch (SocketTimeoutException t)
-						{
-							//not much you can do if it took too long
-							retries--;
-							continue; //no response to parse
-						}
-
-						//extract ack response
-//						final byte[] ackEncBytes = new byte[ack.getLength()];
-//						System.arraycopy(ack.getData(), 0, ackEncBytes, 0, ack.getLength());
-
-						//decrypt ack
-						final byte[] decAck = byteBufferPool.getByteBuffer();
-						final int decAckLength = SodiumUtils.symmetricDecrypt(ack.getData(), ack.getLength(), Vars.commandSocket.getTcpKey(), decAck);
-						if(decAckLength == 0)
-						{
-							gotAck = false;
-							byteBufferPool.returnBuffer(decAck);
-							break;
-						}
-						final String ackString = new String(decAck, 0, decAckLength);
-						byteBufferPool.returnBuffer(decAck);
-
-						//verify ack timestamp
-						long ackts = 0;
-						try
-						{
-							ackts = Long.valueOf(ackString);
-						}
-						catch(NumberFormatException n)
-						{
-							Utils.dumpException(tag, n);
-						}
-
-						if(Utils.validTS(ackts))
-						{
-							gotAck = true;
-							break; //udp media port established, no need to retry
-						}
-						retries--;
-					}
+					final boolean gotAck = registerVoiceUDP();
 
 					if(gotAck)
 					{
@@ -407,6 +346,75 @@ public class CmdListener extends IntentService
 		final Intent deadBroadcast = new Intent(Const.BROADCAST_RELOGIN);
 		deadBroadcast.setClass(getApplicationContext(), BackgroundManager.class);
 		sendBroadcast(deadBroadcast);
+	}
+
+	public static boolean registerVoiceUDP()
+	{
+		final LazySodium lazySodium = new LazySodiumAndroid(new SodiumAndroid());
+		int retries = UDP_RETRIES;
+		//boolean gotAck = false;
+		while(retries > 0)
+		{
+			final String registration = String.valueOf(Utils.currentTimeSeconds()) + "|" + Vars.sessionKey;
+			final byte[] sodiumSealedRegistration = new byte[Box.SEALBYTES + registration.length()];
+			lazySodium.cryptoBoxSeal(sodiumSealedRegistration, registration.getBytes(), registration.length(), Vars.serverPublicSodium);
+
+			//send the registration
+			final DatagramPacket registrationPacket = new DatagramPacket(sodiumSealedRegistration, sodiumSealedRegistration.length, Vars.callServer, Vars.mediaPort);
+			try
+			{
+				Vars.mediaUdp.send(registrationPacket);
+			}
+			catch (IOException e)
+			{
+				//couldn't send, nothing more you can do, try again
+				retries--;
+				continue;
+			}
+
+			//wait for media port registration ack
+			final byte[] ackBuffer = new byte[Const.SIZE_MAX_UDP];
+			final DatagramPacket ack = new DatagramPacket(ackBuffer, Const.SIZE_MAX_UDP);
+			try
+			{
+				Vars.mediaUdp.receive(ack);
+			}
+			catch (IOException t)
+			{
+				//not much you can do if it took too long
+				retries--;
+				continue; //no response to parse
+			}
+
+			//decrypt ack
+			final byte[] decAck = byteBufferPool.getByteBuffer();
+			final int decAckLength = SodiumUtils.symmetricDecrypt(ack.getData(), ack.getLength(), Vars.commandSocket.getTcpKey(), decAck);
+			if(decAckLength == 0)
+			{
+				byteBufferPool.returnBuffer(decAck);
+				return false;
+			}
+			final String ackString = new String(decAck, 0, decAckLength);
+			byteBufferPool.returnBuffer(decAck);
+
+			//verify ack timestamp
+			long ackts = 0;
+			try
+			{
+				ackts = Long.valueOf(ackString);
+			}
+			catch(NumberFormatException n)
+			{
+				Utils.dumpException(tag, n);
+			}
+
+			if(Utils.validTS(ackts))
+			{
+				return true; //udp media port established, no need to retry
+			}
+			retries--;
+		}
+		return false;
 	}
 
 	/**
