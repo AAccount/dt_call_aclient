@@ -23,6 +23,8 @@ import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
 import com.goterl.lazycode.lazysodium.SodiumAndroid;
 import com.goterl.lazycode.lazysodium.interfaces.Box;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -48,7 +50,7 @@ public class Utils
 {
 	private static final ByteOrder NETWORK_BYTEORDER = ByteOrder.BIG_ENDIAN;
 	private static final String tag = "Utils";
-	private static LazySodiumAndroid lazySodium = new LazySodiumAndroid(new SodiumAndroid());;
+	private static LazySodiumAndroid lazySodium = new LazySodiumAndroid(new SodiumAndroid());
 
 	//Linux time(NULL) system call automatically calculates GMT-0/UTC time
 	//so does currentTimeMillis. No need to do timezone conversions
@@ -133,42 +135,28 @@ public class Utils
 			Vars.go2CallIncomingPending = PendingIntent.getActivity(Vars.applicationContext, 0, go2CallIncoming, PendingIntent.FLAG_UPDATE_CURRENT);
 		}
 
-		//if the ongoing notification is not setup, then set it up first
-		if(Vars.stateNotificationBuilder == null || Vars.notificationManager == null)
-		{
-			Vars.stateNotificationBuilder = new NotificationCompat.Builder(Vars.applicationContext, Const.STATE_NOTIFICATION_CHANNEL)
-					.setContentTitle(Vars.applicationContext.getString(R.string.app_name))
-					.setContentText(Vars.applicationContext.getString(stringRes))
-					.setSmallIcon(R.drawable.ic_vpn_lock_white_48dp)
-					.setContentIntent(Vars.go2HomePending)
-					.setColor(ContextCompat.getColor(Vars.applicationContext, colorRes))
-					.setColorized(true)
-					.setOngoing(true)
-					.setChannelId(Const.STATE_NOTIFICATION_CHANNEL);
-			Vars.notificationManager = (NotificationManager) Vars.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE);
+		final NotificationManager notificationManager = (NotificationManager) Vars.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE);
+		notificationManager.cancelAll();
 
-			//setup channel for android 8.0+
-			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-			{
-				NotificationChannel stateNotificationChannel = new NotificationChannel(Const.STATE_NOTIFICATION_CHANNEL, Const.STATE_NOTIFICATION_NAME, NotificationManager.IMPORTANCE_DEFAULT);
-				stateNotificationChannel.setSound(null, null); //no sound when launching the app
-				stateNotificationChannel.setShowBadge(false);
-				Vars.notificationManager.createNotificationChannel(stateNotificationChannel);
-			}
-			Vars.stateNotification = Vars.stateNotificationBuilder.build();
-			Vars.notificationManager.notify(Const.STATE_NOTIFICATION_ID, Vars.stateNotification);
-		}
-		else
+		final NotificationCompat.Builder builder = new NotificationCompat.Builder(Vars.applicationContext, Const.STATE_NOTIFICATION_CHANNEL)
+				.setContentTitle(Vars.applicationContext.getString(R.string.app_name))
+				.setContentText(Vars.applicationContext.getString(stringRes))
+				.setSmallIcon(R.drawable.ic_vpn_lock_white_48dp)
+				.setContentIntent(go2)
+				.setColor(ContextCompat.getColor(Vars.applicationContext, colorRes))
+				.setColorized(true)
+				.setOngoing(true)
+				.setChannelId(Const.STATE_NOTIFICATION_CHANNEL);
+		Vars.stateNotification = builder.build();
+		notificationManager.notify(Const.STATE_NOTIFICATION_ID, Vars.stateNotification);
+
+		//setup channel for android 8.0+
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
 		{
-			Vars.notificationManager.cancel(Const.STATE_NOTIFICATION_ID);
-			Vars.stateNotificationBuilder
-					.setContentText(Vars.applicationContext.getString(stringRes))
-					.setColor(ContextCompat.getColor(Vars.applicationContext, colorRes))
-					.setColorized(true)
-					.setChannelId(Const.STATE_NOTIFICATION_CHANNEL)
-					.setContentIntent(go2);
-			Vars.stateNotification = Vars.stateNotificationBuilder.build();
-			Vars.notificationManager.notify(Const.STATE_NOTIFICATION_ID, Vars.stateNotification);
+			final NotificationChannel stateNotificationChannel = new NotificationChannel(Const.STATE_NOTIFICATION_CHANNEL, Const.STATE_NOTIFICATION_NAME, NotificationManager.IMPORTANCE_DEFAULT);
+			stateNotificationChannel.setSound(null, null); //no sound when launching the app
+			stateNotificationChannel.setShowBadge(false);
+			notificationManager.createNotificationChannel(stateNotificationChannel);
 		}
 	}
 
@@ -189,44 +177,36 @@ public class Utils
 	public static void initAlarmVars()
 	{
 		//setup the alarm intents and pending intents
-		if(Vars.retries == null || Vars.pendingRetries == null || Vars.heartbeat == null || Vars.pendingHeartbeat == null
+		if(Vars.pendingRetries == null || Vars.pendingHeartbeat == null
 				||Vars.pendingHeartbeat2ndary == null || Vars.pendingRetries2ndary == null)
 		{
-			Vars.retries = new Intent(Vars.applicationContext, BackgroundManager.class);
-			Vars.retries.setAction(Const.BROADCAST_RELOGIN);
-			Vars.pendingRetries = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_RETRY_ID, Vars.retries, PendingIntent.FLAG_UPDATE_CURRENT);
-			Vars.pendingRetries2ndary = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_RETRY_ID, Vars.retries, PendingIntent.FLAG_UPDATE_CURRENT);
+			final Intent retries = new Intent(Vars.applicationContext, BackgroundManager.class);
+			retries.setAction(Const.BROADCAST_RELOGIN);
+			Vars.pendingRetries = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_RETRY_ID, retries, PendingIntent.FLAG_UPDATE_CURRENT);
+			Vars.pendingRetries2ndary = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_RETRY_ID, retries, PendingIntent.FLAG_UPDATE_CURRENT);
 
-			Vars.heartbeat = new Intent(Vars.applicationContext, BackgroundManager.class);
-			Vars.heartbeat.setAction(Const.ALARM_ACTION_HEARTBEAT);
-			Vars.pendingHeartbeat = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_HEARTBEAT_ID, Vars.heartbeat, PendingIntent.FLAG_UPDATE_CURRENT);
-			Vars.pendingHeartbeat2ndary = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_HEARTBEAT_ID, Vars.heartbeat, PendingIntent.FLAG_UPDATE_CURRENT);
+			final Intent heartbeat = new Intent(Vars.applicationContext, BackgroundManager.class);
+			heartbeat.setAction(Const.ALARM_ACTION_HEARTBEAT);
+			Vars.pendingHeartbeat = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_HEARTBEAT_ID, heartbeat, PendingIntent.FLAG_UPDATE_CURRENT);
+			Vars.pendingHeartbeat2ndary = PendingIntent.getBroadcast(Vars.applicationContext, Const.ALARM_HEARTBEAT_ID, heartbeat, PendingIntent.FLAG_UPDATE_CURRENT);
 		}
 	}
 
 	public static void quit(AppCompatActivity caller)
 	{
-		//get rid of the status notification if it's running
-		if(Vars.notificationManager != null)
+		final NotificationManager notificationManager = (NotificationManager) Vars.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE);
+		notificationManager.cancelAll();
+
+		//clean up after itself
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
 		{
-			Vars.notificationManager.cancelAll();
-
-			//clean up after itself
-			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-			{
-				Vars.notificationManager.deleteNotificationChannel(Const.STATE_NOTIFICATION_CHANNEL);
-			}
+			notificationManager.deleteNotificationChannel(Const.STATE_NOTIFICATION_CHANNEL);
 		}
-
-		//surprisingly does not turn to null after quitting.
-		//"hand null" so that the notification channel is built when the app is launched again
-		Vars.stateNotificationBuilder = null;
-		Vars.notificationManager = null;
 
 		//Kill alarms
 		if(Vars.pendingHeartbeat != null && Vars.pendingRetries != null)
 		{
-			AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+			final AlarmManager manager = (AlarmManager) Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
 			manager.cancel(Vars.pendingHeartbeat);
 			manager.cancel(Vars.pendingHeartbeat2ndary);
 			manager.cancel(Vars.pendingRetries);
@@ -238,11 +218,11 @@ public class Utils
 		Vars.pendingRetries2ndary = null;
 
 		//prevent background manager from restarting command listener when sockets kill async is called
-		ComponentName backgroundManager = new ComponentName(Vars.applicationContext, BackgroundManager.class);
+		final ComponentName backgroundManager = new ComponentName(Vars.applicationContext, BackgroundManager.class);
 		Vars.applicationContext.getPackageManager().setComponentEnabledSetting(backgroundManager, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
 
 		//get rid of the sockets
-		Thread killSockets = new Thread(new Runnable()
+		final Thread killSockets = new Thread(new Runnable()
 		{
 			@Override
 			public void run()
@@ -285,16 +265,13 @@ public class Utils
 	//some cell phones are too aggressive with power saving and shut down the wifi when it looks like nothing is using it.
 	//this will kill the connection (sometimes silently) and cause calls not to come in but still make it look like you're signed on
 	//force the use of exact wakeup alarms to really check the connection regularly... and really schedule the next login when it says.
-	public static void setExactWakeup(PendingIntent operation, PendingIntent secondary)
+	public static void setExactWakeup(@NotNull PendingIntent operation, @NotNull PendingIntent secondary)
 	{
-		AlarmManager alarmManager = (AlarmManager)Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
+		final AlarmManager alarmManager = (AlarmManager)Vars.applicationContext.getSystemService(Context.ALARM_SERVICE);
 		if (Build.VERSION.SDK_INT >= 19)
 		{
 			alarmManager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + Const.STD_TIMEOUT, operation);
-			if(secondary != null)
-			{
-				alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + Const.STD_TIMEOUT, secondary);
-			}
+			alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + Const.STD_TIMEOUT, secondary);
 		}
 		else
 		{

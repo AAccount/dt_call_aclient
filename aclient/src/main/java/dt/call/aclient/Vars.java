@@ -54,8 +54,6 @@ public class Vars
 	public static byte[] selfPrivateSodium = null;
 
 	//Ongoing notification with state information
-	public static NotificationCompat.Builder stateNotificationBuilder = null;
-	public static NotificationManager notificationManager = null;
 	public static Notification stateNotification = null;
 	public static PendingIntent go2HomePending = null;
 	public static PendingIntent go2CallMainPending = null;
@@ -67,10 +65,8 @@ public class Vars
 	//alarm manager pending intents
 	//https://stackoverflow.com/questions/18649728/android-cannot-pass-intent-extras-though-alarmmanager
 	//http://javatechig.com/android/repeat-alarm-example-in-android
-	public static Intent retries = null;
 	public static PendingIntent pendingRetries = null;
 	public static PendingIntent pendingRetries2ndary = null;
-	public static Intent heartbeat = null;
 	public static PendingIntent pendingHeartbeat = null;
 	public static PendingIntent pendingHeartbeat2ndary = null;
 }
