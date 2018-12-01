@@ -352,7 +352,6 @@ public class CmdListener extends IntentService
 	{
 		final LazySodium lazySodium = new LazySodiumAndroid(new SodiumAndroid());
 		int retries = UDP_RETRIES;
-		//boolean gotAck = false;
 		while(retries > 0)
 		{
 			final String registration = String.valueOf(Utils.currentTimeSeconds()) + "|" + Vars.sessionKey;
