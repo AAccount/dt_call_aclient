@@ -39,6 +39,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
+import dt.call.aclient.background.CmdListener;
 import dt.call.aclient.pool.DatagramPacketPool;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
@@ -97,6 +98,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private final DecimalFormat decimalFormat = new DecimalFormat("#.###");
 	private final StringBuilder statsBuilder = new StringBuilder();
 	private final StringBuilder timeBuilder = new StringBuilder();
+
+	//reconnect udp variables
+	final private Object deadUDPLock = new Object();
+	private boolean reconnectionAttempted = false;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -561,21 +566,41 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					while(Vars.state == CallState.INCALL)
 					{
+						DatagramPacket packet = null;
 						try
 						{
-							final DatagramPacket packet = sendQ.take();
+							packet = sendQ.take();
 							Vars.mediaUdp.send(packet);
-							packetPool.returnDatagramPacket(packet);
 						}
 						catch (IOException e)
 						{
 							Utils.dumpException(tag, e);
-							endThread();
-							return;
+							synchronized(deadUDPLock)
+							{
+								if(reconnectionAttempted)
+								{
+									reconnectionAttempted = false;
+								}
+								else
+								{
+									boolean reconnected = CmdListener.registerVoiceUDP();
+									reconnectionAttempted = true;
+									if(!reconnected)
+									{
+										endThread();
+										return;
+									}
+								}
+							}
+							sendQ.clear(); //don't bother with the stored voice data
 						}
 						catch (InterruptedException e)
 						{
 							return;
+						}
+						finally
+						{
+							packetPool.returnDatagramPacket(packet);
 						}
 					}
 				}
@@ -743,33 +768,50 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					while(Vars.state == CallState.INCALL)
 					{
+						DatagramPacket received = null;
 						try
 						{
-							final DatagramPacket received = packetPool.getDatagramPacket();
+							received = packetPool.getDatagramPacket();
 							Vars.mediaUdp.receive(received);
-							receiveQ.put(received);
 						}
-						catch(InterruptedException | NullPointerException e)
+						catch(NullPointerException e)
 						{
 							//can get a null pointer if the connection dies, media decoder dies, but this network thread is still alive
 							return;
 						}
 						catch (IOException e)
 						{
-							//if the socket has problems, shouldn't continue the call.
 							Utils.dumpException(tag, e);
-							Vars.state = CallState.NONE;
-							Utils.killSockets();
-
+							synchronized(deadUDPLock)
+							{
+								if(reconnectionAttempted)
+								{
+									reconnectionAttempted = false;
+								}
+								else
+								{
+									boolean reconnected = CmdListener.registerVoiceUDP();
+									reconnectionAttempted = true;
+									if(!reconnected)
+									{
+										endThread();
+										return;
+									}
+								}
+							}
+							receiveQ.clear(); //don't bother with the stored voice data
+						}
+						finally
+						{
 							try
 							{
-								onStopWrapper();
+								receiveQ.put(received);
 							}
-							catch (Exception inner)
+							catch (InterruptedException e)
 							{
-								//see encoder thread for why onStop() is called in a try
+								Utils.dumpException(tag, e);
+								return;
 							}
-							return;
 						}
 					}
 				}
@@ -858,6 +900,24 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				Opus.closeDecoder();
 				networkThread.interrupt();
 				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has stopped, state:" + Vars.state);
+			}
+
+			private void endThread()
+			{
+				Vars.state = CallState.NONE;
+
+				//kill the socket in case it's the reason end thread is being called.
+				Utils.killSockets();
+
+				try
+				{
+					onStopWrapper();
+				}
+				catch (Exception e)
+				{
+					//don't know whether encode or decode will call onStop() first. the second one will get a null exception
+					//because the main ui thead will be gone after the first onStop() is called. catch the exception
+				}
 			}
 		});
 		playbackThread.setName("Media_Decoder");

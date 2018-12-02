@@ -17,7 +17,9 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 
 import dt.call.aclient.CallState;
@@ -226,18 +228,11 @@ public class CmdListener extends IntentService
 						}
 					}
 
-					//setup the udp socket BEFORE using it
-					Vars.callServer = InetAddress.getByName(Vars.serverAddress);
-					Vars.mediaUdp = new DatagramSocket();
-					Vars.mediaUdp.setTrafficClass(DSCP_EXPEDITED_FWD);
-					Vars.mediaUdp.setSoTimeout(UDP_ACK_TIMEOUT);
-
 					//try to register media port
-					final boolean gotAck = registerVoiceUDP();
+					final boolean registeredUDP = registerVoiceUDP();
 
-					if(gotAck)
+					if(registeredUDP)
 					{
-						Vars.mediaUdp.setSoTimeout(0);
 						preparationsComplete = true;
 						sendReady();
 					}
@@ -350,7 +345,22 @@ public class CmdListener extends IntentService
 
 	public static boolean registerVoiceUDP()
 	{
+
 		final LazySodium lazySodium = new LazySodiumAndroid(new SodiumAndroid());
+
+		//setup the udp socket BEFORE using it
+		try
+		{
+			Vars.callServer = InetAddress.getByName(Vars.serverAddress);
+			Vars.mediaUdp = new DatagramSocket();
+			Vars.mediaUdp.setTrafficClass(DSCP_EXPEDITED_FWD);
+		}
+		catch (Exception e)
+		{
+			Utils.dumpException(tag, e);
+			return false;
+		}
+
 		int retries = UDP_RETRIES;
 		while(retries > 0)
 		{
@@ -362,6 +372,7 @@ public class CmdListener extends IntentService
 			final DatagramPacket registrationPacket = new DatagramPacket(sodiumSealedRegistration, sodiumSealedRegistration.length, Vars.callServer, Vars.mediaPort);
 			try
 			{
+				Vars.mediaUdp.setSoTimeout(UDP_ACK_TIMEOUT);
 				Vars.mediaUdp.send(registrationPacket);
 			}
 			catch (IOException e)
@@ -409,6 +420,15 @@ public class CmdListener extends IntentService
 
 			if(Utils.validTS(ackts))
 			{
+				try
+				{
+					Vars.mediaUdp.setSoTimeout(0);
+				}
+				catch (SocketException e)
+				{
+					Utils.dumpException(tag, e);
+				}
+
 				return true; //udp media port established, no need to retry
 			}
 			retries--;
