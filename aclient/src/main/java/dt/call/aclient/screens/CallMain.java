@@ -773,8 +773,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						{
 							received = packetPool.getDatagramPacket();
 							Vars.mediaUdp.receive(received);
+							receiveQ.put(received);
 						}
-						catch(NullPointerException e)
+						catch(InterruptedException | NullPointerException e)
 						{
 							//can get a null pointer if the connection dies, media decoder dies, but this network thread is still alive
 							return;
@@ -782,6 +783,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						catch (IOException e)
 						{
 							Utils.dumpException(tag, e);
+							packetPool.returnDatagramPacket(received);
 							synchronized(deadUDPLock)
 							{
 								if(reconnectionAttempted)
@@ -800,18 +802,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 								}
 							}
 							receiveQ.clear(); //don't bother with the stored voice data
-						}
-						finally
-						{
-							try
-							{
-								receiveQ.put(received);
-							}
-							catch (InterruptedException e)
-							{
-								Utils.dumpException(tag, e);
-								return;
-							}
 						}
 					}
 				}
