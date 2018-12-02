@@ -40,6 +40,9 @@ public class ByteBufferPool
 
 	public void returnBuffer(byte[] buffer)
 	{
-		buffers.push(buffer);
+		if(buffer != null)
+		{
+			buffers.push(buffer);
+		}
 	}
 }

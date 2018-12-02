@@ -55,6 +55,9 @@ public class DatagramPacketPool
 
 	public void returnDatagramPacket(DatagramPacket datagramPacket)
 	{
-		packets.push(datagramPacket);
+		if(datagramPacket != null)
+		{
+			packets.push(datagramPacket);
+		}
 	}
 }
