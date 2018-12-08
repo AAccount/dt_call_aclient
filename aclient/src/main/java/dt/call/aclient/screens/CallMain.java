@@ -183,7 +183,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					final long A_SECOND = 1000L; //usual delay between receives is ~60.2milliseconds
 					final long now = System.currentTimeMillis();
 					final long btw = now - lastReceivedTimestamp;
-					if(btw > A_SECOND)
+					if(btw > A_SECOND && Vars.mediaUdp != null)
 					{
 						Utils.logcat(Const.LOGD, tag, "delay since last received more than 1s: " + btw);
 						Vars.mediaUdp.close();
