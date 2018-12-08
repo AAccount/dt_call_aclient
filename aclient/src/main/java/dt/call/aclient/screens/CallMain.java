@@ -100,8 +100,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private final StringBuilder timeBuilder = new StringBuilder();
 
 	//reconnect udp variables
-	final private Object deadUDPLock = new Object();
+	private final Object deadUDPLock = new Object();
 	private boolean reconnectionAttempted = false;
+	private long lastReceivedTimestamp = System.currentTimeMillis();
+	private final Object rxtsLock = new Object();
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -174,6 +176,18 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					new CommandEndAsync().execute();
 					Vars.state = CallState.NONE; //guarantee state == NONE. don't leave it to chance
 					onStopWrapper();
+				}
+
+				synchronized (rxtsLock)
+				{
+					final long A_SECOND = 1000L; //usual delay between receives is ~60.2milliseconds
+					final long now = System.currentTimeMillis();
+					final long btw = now - lastReceivedTimestamp;
+					if(btw > A_SECOND)
+					{
+						Utils.logcat(Const.LOGD, tag, "delay since last received more than 1s: " + btw);
+						Vars.mediaUdp.close();
+					}
 				}
 
 				if(screenShowing)
@@ -572,27 +586,30 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							packet = sendQ.take();
 							Vars.mediaUdp.send(packet);
 						}
-						catch (IOException e)
+						catch (IOException e) //this will happen at the end of a call, no need to reconnect.
 						{
-							Utils.dumpException(tag, e);
-							synchronized(deadUDPLock)
+							if(Vars.state == CallState.INCALL)
 							{
-								if(reconnectionAttempted)
+								Utils.dumpException(tag, e);
+								synchronized(deadUDPLock)
 								{
-									reconnectionAttempted = false;
-								}
-								else
-								{
-									boolean reconnected = CmdListener.registerVoiceUDP();
-									reconnectionAttempted = true;
-									if(!reconnected)
+									if(reconnectionAttempted)
 									{
-										endThread();
-										return;
+										reconnectionAttempted = false;
+									}
+									else
+									{
+										boolean reconnected = CmdListener.registerVoiceUDP();
+										reconnectionAttempted = true;
+										if(!reconnected)
+										{
+											endThread();
+											return;
+										}
 									}
 								}
+								sendQ.clear(); //don't bother with the stored voice data
 							}
-							sendQ.clear(); //don't bother with the stored voice data
 						}
 						catch (InterruptedException e)
 						{
@@ -773,6 +790,12 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						{
 							received = packetPool.getDatagramPacket();
 							Vars.mediaUdp.receive(received);
+							long now = System.currentTimeMillis();
+							synchronized (rxtsLock)
+							{
+								lastReceivedTimestamp = now;
+							}
+
 							receiveQ.put(received);
 						}
 						catch(InterruptedException | NullPointerException e)
@@ -780,28 +803,31 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							//can get a null pointer if the connection dies, media decoder dies, but this network thread is still alive
 							return;
 						}
-						catch (IOException e)
+						catch (IOException e) //this will happen at the end of a call, no need to reconnect.
 						{
-							Utils.dumpException(tag, e);
-							packetPool.returnDatagramPacket(received);
-							synchronized(deadUDPLock)
+							if (Vars.state == CallState.INCALL)
 							{
-								if(reconnectionAttempted)
+								Utils.dumpException(tag, e);
+								packetPool.returnDatagramPacket(received);
+								synchronized(deadUDPLock)
 								{
-									reconnectionAttempted = false;
-								}
-								else
-								{
-									boolean reconnected = CmdListener.registerVoiceUDP();
-									reconnectionAttempted = true;
-									if(!reconnected)
+									if(reconnectionAttempted)
 									{
-										endThread();
-										return;
+										reconnectionAttempted = false;
+									}
+									else
+									{
+										boolean reconnected = CmdListener.registerVoiceUDP();
+										reconnectionAttempted = true;
+										if(!reconnected)
+										{
+											endThread();
+											return;
+										}
 									}
 								}
+								receiveQ.clear(); //don't bother with the stored voice data
 							}
-							receiveQ.clear(); //don't bother with the stored voice data
 						}
 					}
 				}
