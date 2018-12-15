@@ -148,7 +148,6 @@ public class SodiumUtils
 		//get the cipher text
 		final byte[] cipherText = decryptionBuffers.getByteBuffer();
 		System.arraycopy(setup, nonceLength+Const.SIZEOF_INT, cipherText, 0, cipherLength);
-//		final byte[] messageStorage= new byte[cipherLength];//store the message in somewhere it is guaranteed to fit in case messageLength is bogus/malicious
 
 		boolean libsodiumOK = false;
 		if(asym)
@@ -167,11 +166,6 @@ public class SodiumUtils
 			Utils.logcat(Const.LOGE, tag, "sodium decryption failed, asym: " + asym + " return code: " + libsodiumOK);;
 			return 0;
 		}
-
-		//now that the message has been successfully decrypted, take in on blind faith messageLength was ok
-		//	up to the next function to make sure the decryption contents aren't truncated by a malicious messageLength
-//		final byte[] message = new byte[messageLength];
-//		System.arraycopy(messageStorage, 0, message, 0, messageLength);
 		return messageLength;
 	}
 
