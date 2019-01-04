@@ -159,7 +159,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			@Override
 			public void run()
 			{
-
+				//TODO: should this be moved to update time like the c++ version?
 				if(sec == 59)
 				{//seconds should never hit 60. 60 is time to regroup into minutes
 					sec = 0;
@@ -178,15 +178,18 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					onStopWrapper();
 				}
 
-				synchronized (rxtsLock)
+				if(Vars.state == CallState.INCALL)
 				{
-					final long A_SECOND = 1000L; //usual delay between receives is ~60.2milliseconds
-					final long now = System.currentTimeMillis();
-					final long btw = now - lastReceivedTimestamp;
-					if(btw > A_SECOND && Vars.mediaUdp != null)
+					synchronized(rxtsLock)
 					{
-						Utils.logcat(Const.LOGD, tag, "delay since last received more than 1s: " + btw);
-						Vars.mediaUdp.close();
+						final long A_SECOND = 1000L; //usual delay between receives is ~60.2milliseconds
+						final long now = System.currentTimeMillis();
+						final long btw = now - lastReceivedTimestamp;
+						if(btw > A_SECOND && Vars.mediaUdp != null)
+						{
+							Utils.logcat(Const.LOGD, tag, "delay since last received more than 1s: " + btw);
+							Vars.mediaUdp.close();
+						}
 					}
 				}
 
@@ -200,7 +203,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							updateTime();
 						}
 					});
-					if(showStats)
+					if(showStats) //TODO: should this be moved to its own function like the c++ version?
 					{
 						final String rxDisp=formatInternetMeteric(rxData), txDisp=formatInternetMeteric(txData);
 						final int missing = txSeq-rxSeq;
@@ -370,7 +373,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		 */
 		if(Vars.state == CallState.NONE)
 		{
-			new CommandEndAsync().execute();
+			new CommandEndAsync().execute(); //TODO: send this on call end button clicked??
 
 			//for cases when you make a call but decide you don't want to anymore
 			try
