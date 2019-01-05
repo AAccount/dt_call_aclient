@@ -105,7 +105,7 @@
         Forces TLS 1.2, trusting only the supplied certificate regardless of its certificate chain.\n
         Uses libsodium for udp voice encryption.</string>
     <string name="about_compile_label">Git:</string>
-    <string name="about_compile_revision">(FILL IN GIT REVISION HERE)</string>
+    <string name="about_compile_revision">d3803db8752ef882c34c261b4651f3c3d7592cc8</string>
     <string name="about_version_label">Version:</string>
     <string name="about_version_number" translatable="false">1.9</string>
     <string name="about_by_label">Credits:</string>

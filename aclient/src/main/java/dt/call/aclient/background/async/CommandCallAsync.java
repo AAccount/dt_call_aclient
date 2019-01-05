@@ -17,13 +17,11 @@ public class CommandCallAsync extends AsyncTask<String, String, Boolean>
 	@Override
 	protected Boolean doInBackground(String... params)
 	{
-		String who = params[0];
-		String request = Utils.currentTimeSeconds() + "|call|" + who + "|" + Vars.sessionKey;
+		String request = Utils.currentTimeSeconds() + "|call|" + Vars.callWith + "|" + Vars.sessionKey;
 		Utils.logcat(Const.LOGD, tag, "Call request: " + request);
 		try
 		{
 			Vars.commandSocket.write(request);
-			Vars.callWith = who;
 			return true;
 		}
 		catch (Exception e)

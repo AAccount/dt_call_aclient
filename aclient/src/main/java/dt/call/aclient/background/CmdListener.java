@@ -18,8 +18,6 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 
 import dt.call.aclient.CallState;
@@ -54,7 +52,7 @@ public class CmdListener extends IntentService
 	private boolean inputValid = true;
 
 	//for deciding when to send the ready command
-	private boolean haveAesKey = false;
+	private boolean haveVoiceKey = false;
 	private boolean preparationsComplete = false;
 	private boolean isCallInitiator = false;
 
@@ -86,6 +84,8 @@ public class CmdListener extends IntentService
 			//timestamp|prepare|public key|other_person
 			//timestamp|direct|(encrypted aes key)|other_person
 			//timestamp|invalid
+
+			//TODO: address the logd system. the log gets lost for incoming commands
 
 			String logd = ""; //accumulate all the diagnostic message together to prevent multiple entries of diagnostics in log ui just for cmd listener
 			try
@@ -132,7 +132,8 @@ public class CmdListener extends IntentService
 
 					Vars.state = CallState.INIT;
 					isCallInitiator = false;
-					haveAesKey = false;
+					haveVoiceKey = false;
+					preparationsComplete = false;
 					Vars.callWith = involved;
 
 					//launch the incoming call screen
@@ -140,6 +141,7 @@ public class CmdListener extends IntentService
 					final Intent showIncoming = new Intent(getApplicationContext(), CallIncoming.class);
 					showIncoming.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK); //needed to start activity from background
 					startActivity(showIncoming);
+					Utils.logcat(Const.LOGD, tag, logd);
 					continue;
 				}
 
@@ -155,7 +157,8 @@ public class CmdListener extends IntentService
 				{
 					Vars.state = CallState.INIT;
 					isCallInitiator = true;
-					haveAesKey = true; //person who makes the call gets to choose the key
+					haveVoiceKey = true; //person who makes the call gets to choose the key //TODO:move this to the prepare command when the key actually gets randomly generated like the c++?
+					preparationsComplete = false;
 					notifyCallStateChange(Const.BROADCAST_CALL_TRY);
 					Utils.setNotification(R.string.state_popup_init, R.color.material_light_blue, Vars.go2CallMainPending);
 				}
@@ -257,7 +260,7 @@ public class CmdListener extends IntentService
 
 					if(Vars.voiceSymmetricKey != null)
 					{
-						haveAesKey = true;
+						haveVoiceKey = true;
 						sendReady();
 					}
 					else
@@ -282,17 +285,7 @@ public class CmdListener extends IntentService
 			}
 			catch (IOException e)
 			{
-				if(Vars.commandSocket != null)
-				{
-					Vars.commandSocket.close();
-					Vars.commandSocket = null;
-				}
-
-				//when in a call, try to reestablish the command socket. don't drop the call
-				if(Vars.state != CallState.INCALL)
-				{
-					Utils.killSockets();
-				}
+				Utils.killSockets();
 				Utils.logcat(Const.LOGE, tag, logd+"Command socket closed...");
 				Utils.dumpException(tag, e);
 				inputValid = false;
@@ -463,8 +456,8 @@ public class CmdListener extends IntentService
 	 */
 	private void sendReady()
 	{
-		Utils.logcat(Const.LOGD, tag, "key, prep " + haveAesKey + ","+preparationsComplete);
-		if(haveAesKey && preparationsComplete)
+		Utils.logcat(Const.LOGD, tag, "key, prep " + haveVoiceKey + ","+preparationsComplete);
+		if(haveVoiceKey && preparationsComplete)
 		{
 			final String ready = Utils.currentTimeSeconds() + "|ready|" + Vars.callWith + "|" + Vars.sessionKey;
 			Utils.logcat(Const.LOGD, tag, ready);

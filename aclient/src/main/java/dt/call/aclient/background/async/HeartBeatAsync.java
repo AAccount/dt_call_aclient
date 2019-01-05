@@ -34,7 +34,6 @@ public class HeartBeatAsync extends AsyncTask<String, String, Boolean>
 		{
 			Utils.logcat(Const.LOGE, tag, "heart beat failed");
 			Utils.dumpException(tag, e);
-
 			Utils.killSockets();
 
 			//if idling for a long time, killing sockets will not trigger command listener to broadcast a (formerly) command listener dead

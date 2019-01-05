@@ -290,7 +290,8 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 				return;
 			}
 
-			new CommandCallAsync().execute(who);
+			Vars.callWith = who;
+			new CommandCallAsync().execute();
 		}
 	}
 
