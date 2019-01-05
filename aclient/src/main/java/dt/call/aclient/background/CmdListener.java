@@ -85,8 +85,6 @@ public class CmdListener extends IntentService
 			//timestamp|direct|(encrypted aes key)|other_person
 			//timestamp|invalid
 
-			//TODO: address the logd system. the log gets lost for incoming commands
-
 			String logd = ""; //accumulate all the diagnostic message together to prevent multiple entries of diagnostics in log ui just for cmd listener
 			try
 			{//the async magic here... it will patiently wait until something comes in
@@ -157,7 +155,6 @@ public class CmdListener extends IntentService
 				{
 					Vars.state = CallState.INIT;
 					isCallInitiator = true;
-					haveVoiceKey = true; //person who makes the call gets to choose the key //TODO:move this to the prepare command when the key actually gets randomly generated like the c++?
 					preparationsComplete = false;
 					notifyCallStateChange(Const.BROADCAST_CALL_TRY);
 					Utils.setNotification(R.string.state_popup_init, R.color.material_light_blue, Vars.go2CallMainPending);
@@ -189,7 +186,7 @@ public class CmdListener extends IntentService
 						{
 							//if the server presented a mismatched key stop the process.
 							//either you didn't know about the key change or something is very wrong
-							Utils.logcat(Const.LOGE, tag,
+							Utils.logcat(Const.LOGE, tag, logd +
 									"Server sent a MISMATCHED public key for " + Vars.callWith +
 											" . It was:\n" + receivedKeyDump +
 											"\nBut expected: " + SodiumUtils.SODIUM_PUBLIC_HEADER+Utils.stringify(expectedKey));
@@ -210,6 +207,7 @@ public class CmdListener extends IntentService
 					{
 						//choose sodium key
 						Vars.voiceSymmetricKey = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
+						haveVoiceKey = true; //person who makes the call gets to choose the key
 
 						//have sodium encrypt its key
 						final byte[] sodiumAsymEncrypted = byteBufferPool.getByteBuffer();
@@ -226,8 +224,9 @@ public class CmdListener extends IntentService
 						}
 						catch (Exception e)
 						{
+							Utils.logcat(Const.LOGD, tag, logd);
 							Utils.dumpException(tag, e);
-							new CommandEndAsync().doInForeground(); //can't send aes key, nothing left to continue
+							new CommandEndAsync().doInForeground(); //can't send voice key, nothing left to continue
 						}
 					}
 
@@ -243,6 +242,7 @@ public class CmdListener extends IntentService
 					{
 						logd = logd + "call preparations cannot complete\n";
 						giveUp();
+						Utils.logcat(Const.LOGE, tag, logd);
 						continue;
 					}
 				}
@@ -265,7 +265,8 @@ public class CmdListener extends IntentService
 					}
 					else
 					{
-						Utils.logcat(Const.LOGE, tag, "Passthrough of sodium symmetric key failed");
+						logd = logd + "\nPassthrough of sodium symmetric key failed";
+						Utils.logcat(Const.LOGE, tag, logd);
 						giveUp();
 						continue;
 					}
