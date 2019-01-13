@@ -6,10 +6,10 @@
 #include <string.h>
 #include <android/log.h>
 #include <stdbool.h>
-#include <alloca.h>
 #include <opus-1.3/include/opus.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <malloc.h>
 
 OpusEncoder* enc = NULL;
 OpusDecoder* dec = NULL;
@@ -74,7 +74,7 @@ Java_dt_call_aclient_codec_Opus_encode(JNIEnv* env, jclass type, jshortArray wav
 	const jsize wavSamplesPerChannel = (*env)->GetArrayLength(env, wav_)/STEREO2CH;
 
 	const int RECOMMENDED_BUFFER_SIZE = 4000;
-	unsigned char* output = (unsigned char*)alloca(RECOMMENDED_BUFFER_SIZE);
+	unsigned char* output = (unsigned char*)malloc(RECOMMENDED_BUFFER_SIZE);
 	const int length = opus_encode(enc, wav, wavSamplesPerChannel, output, RECOMMENDED_BUFFER_SIZE);
 	if(length > 0)
 	{
@@ -92,6 +92,7 @@ Java_dt_call_aclient_codec_Opus_encode(JNIEnv* env, jclass type, jshortArray wav
 		memset(output, 0, RECOMMENDED_BUFFER_SIZE);
 	}
 	(*env)->ReleaseShortArrayElements(env, wav_, wav, 0);
+	free(output);
 	return length;
 }
 
@@ -113,7 +114,7 @@ Java_dt_call_aclient_codec_Opus_decode(JNIEnv* env, jclass type, jbyteArray opus
 	jbyte* opus = (*env)->GetByteArrayElements(env, opus_, NULL);
 
 	const jsize totalSamples = (*env)->GetArrayLength(env, wav_);
-	jshort* output = (jshort*)alloca(totalSamples*sizeof(jshort));
+	jshort* output = (jshort*)malloc(totalSamples*sizeof(jshort));
 
 	const int decodedSamples = opus_decode(dec, (unsigned char*)opus, opusSize, output, totalSamples/STEREO2CH, false)*STEREO2CH;
 	if(decodedSamples > 0)
@@ -132,6 +133,7 @@ Java_dt_call_aclient_codec_Opus_decode(JNIEnv* env, jclass type, jbyteArray opus
 		memset(output, 0, totalSamples*sizeof(jshort));
 	}
 	(*env)->ReleaseByteArrayElements(env, opus_, opus, 0);
+	free(output);
 	return decodedSamples;
 }
 
