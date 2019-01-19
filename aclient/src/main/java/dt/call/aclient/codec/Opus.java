@@ -21,6 +21,22 @@ public class Opus
 
 	public static native void init();
 
+	private static native void close();
+	final private static Object lock = new Object();
+	private static int closeCount = 0;
+	public static void closeOpus()
+	{
+		synchronized(lock)
+		{
+			closeCount++;
+			if(closeCount == 2)
+			{
+				close();
+				closeCount = 0;
+			}
+		}
+	}
+
 	/**
 	 * Encode raw wav into opus
 	 * @param wav Raw wave audio. MUST be in stereo 24000Hz. In addition, the "correct" array size should be found out by getWavFrameSize()
@@ -28,7 +44,6 @@ public class Opus
 	 * @return Actual size of the encoded audio.
 	 */
 	public static native int encode(short[] wav, byte[] opus);
-	public static native void closeEncoder();
 
 	/**
 	 * Decode opus audio into raw wave
@@ -38,7 +53,7 @@ public class Opus
 	 * @return Decoder errors (if there are any). Otherwise 0
 	 */
 	public static native int decode(byte[] opus, int opusSize, short[] wav);
-	public static native void closeDecoder();
+
 
 	public static String getError(int error)
 	{

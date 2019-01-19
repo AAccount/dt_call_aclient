@@ -740,7 +740,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				Utils.applyFiller(packetBuffer);
 				Utils.applyFiller(encodedbuffer);
 				Utils.applyFiller(wavbuffer);
-				Opus.closeEncoder();
+				Opus.closeOpus();
 				wavRecorder.stop();
 				wavRecorder.release();
 				internalNetworkThread.interrupt();
@@ -916,7 +916,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				wavPlayer.stop();
 				wavPlayer.flush();
 				wavPlayer.release();
-				Opus.closeDecoder();
+				Opus.closeOpus();
 				networkThread.interrupt();
 				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has stopped, state:" + Vars.state);
 			}
