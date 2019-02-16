@@ -16,8 +16,6 @@ For debugging purposes, the client does its own internal adb style logging acces
 
 As a footnote: functionality is heavily stressed over fashionability. The client doesn't look that great and the color scheme, and launcher icon are all android studio's default picks. The icons are Google's freely available material design stock pack. Please don't bash unless you have suggestions or better graphics files. Graphics design, UI and design in general are not my specialty. My art skills have not advanced beyond the grade 3 level.
 
-End note: there are no plans to make an iOS client because there are no good resources for learning how to make and use raw TLS sockets as seen on in AClient in swift3. (Not https connections.) If you have a good tutorial please email danieltjandra@gmail.com. If you have a big book along the lines of "iOS programming from scratch" or "learn iOS programming" or "the definitive guide to swift for iOS", please don't suggest it. I find programming to be hands on approach. Reading thick explanation books with a skeleton example every few pages is tedious and not fruitful.
-
 ## Screenshots
 ![Server Information](https://github.com/AAccount/dt_call_aclient/blob/master/screenshots/Server%20Info.png)
 ![User Login](https://github.com/AAccount/dt_call_aclient/blob/master/screenshots/User%20Login.png)
