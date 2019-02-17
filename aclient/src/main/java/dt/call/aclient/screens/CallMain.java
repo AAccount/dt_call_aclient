@@ -591,28 +591,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						}
 						catch (IOException e) //this will happen at the end of a call, no need to reconnect.
 						{
-							if(Vars.state == CallState.INCALL)
+							Utils.dumpException(tag, e);
+							if(!reconnectUDP())
 							{
-								Utils.dumpException(tag, e);
-								synchronized(deadUDPLock)
-								{
-									if(reconnectionAttempted)
-									{
-										reconnectionAttempted = false;
-									}
-									else
-									{
-										boolean reconnected = CmdListener.registerVoiceUDP();
-										reconnectionAttempted = true;
-										if(!reconnected)
-										{
-											endThread();
-											return;
-										}
-									}
-								}
-								sendQ.clear(); //don't bother with the stored voice data
+								endThread();
+								return;
 							}
+							sendQ.clear(); //don't bother with the stored voice data
 						}
 						catch (InterruptedException e)
 						{
@@ -808,29 +793,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						}
 						catch (IOException e) //this will happen at the end of a call, no need to reconnect.
 						{
-							if (Vars.state == CallState.INCALL)
+							Utils.dumpException(tag, e);
+							if(!reconnectUDP())
 							{
-								Utils.dumpException(tag, e);
-								packetPool.returnDatagramPacket(received);
-								synchronized(deadUDPLock)
-								{
-									if(reconnectionAttempted)
-									{
-										reconnectionAttempted = false;
-									}
-									else
-									{
-										boolean reconnected = CmdListener.registerVoiceUDP();
-										reconnectionAttempted = true;
-										if(!reconnected)
-										{
-											endThread();
-											return;
-										}
-									}
-								}
-								receiveQ.clear(); //don't bother with the stored voice data
+								endThread();
+								return;
 							}
+							receiveQ.clear(); //don't bother with the stored voice data
 						}
 					}
 				}
@@ -941,6 +910,30 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		});
 		playbackThread.setName("Media_Decoder");
 		playbackThread.start();
+	}
+
+	public synchronized boolean reconnectUDP()
+	{
+		if(Vars.state == CallState.INCALL)
+		{
+			if(reconnectionAttempted)
+			{
+				reconnectionAttempted = false;
+				return true;
+			}
+			else
+			{
+				boolean reconnected = CmdListener.registerVoiceUDP();
+				reconnectionAttempted = true;
+				if(!reconnected)
+				{
+					return false;
+				}
+				return true;
+			}
+
+		}
+		return false;
 	}
 
 	@Override
