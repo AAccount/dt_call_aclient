@@ -34,8 +34,8 @@ import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-import dt.call.aclient.Log.LogEntry;
-import dt.call.aclient.Log.Logger;
+import dt.call.aclient.log.LogEntry;
+import dt.call.aclient.log.Logger;
 import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.screens.CallIncoming;
 import dt.call.aclient.screens.CallMain;
