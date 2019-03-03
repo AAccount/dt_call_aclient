@@ -345,7 +345,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 		switch(item.getItemId())
 		{
 			case R.id.menu_main_dblogs:
-				startActivity(new Intent(this, LogViewer.class));
+				startActivity(new Intent(this, LogViewer2.class));
 				return true;
 			case R.id.menu_main_exit:
 				AlertDialog.Builder mkDialog = new AlertDialog.Builder(UserHome.this);

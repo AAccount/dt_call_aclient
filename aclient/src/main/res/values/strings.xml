@@ -87,27 +87,15 @@
     <!-- Incoming call screen -->
     <string name="call_incoming_title">Incoming Call</string>
 
-    <!-- Logs screen -->
-    <string name="log_viewer_title">Log Viewer</string>
-    <string name="log_viewer_reset">Clear Logs</string>
-    <string name="log_viewer_enable">Enable DB logs</string>
-    <string name="log_viewer_more">+Logs</string>
-
-    <!-- Log details screen -->
-    <string name="log_details_title">Log Details</string>
-    <string name="log_details_date_label"><b>Date:</b></string>
-    <string name="log_details_tag_label"><b>Tag:</b></string>
-    <string name="log_details_label_time"><b>Time:</b></string>
-
     <!-- About this app screen -->
     <string name="about_title">App Info</string>
     <string name="about_desc">Android client for Daniel Tjandra call server.\n
-        Forces TLS 1.2, trusting only the supplied certificate regardless of its certificate chain.\n
-        Uses libsodium for udp voice encryption.</string>
+        Uses libsodium asymmetric, then symmetric encryption or commands\n
+        Uses libsodium symmetric encryption for udp voice encryption.</string>
     <string name="about_compile_label">Git:</string>
-    <string name="about_compile_revision">d3803db8752ef882c34c261b4651f3c3d7592cc8</string>
+    <string name="about_compile_revision">ec59a1aec476934ddf82773a6851239407d0bf07</string>
     <string name="about_version_label">Version:</string>
-    <string name="about_version_number" translatable="false">1.9</string>
+    <string name="about_version_number" translatable="false">1.10</string>
     <string name="about_by_label">Credits:</string>
     <string name="about_people">
         Daniel Tjandra (main)\n
@@ -120,7 +108,7 @@
     <!-- Menu items that don't have an icon -->
     <string name="menu_main_exit">Sign Out</string>
     <string name="menu_main_settings">Settings</string>
-    <string name="menu_main_dblogs">DB Logs</string>
+    <string name="menu_main_logs">Logs</string>
     <string name="menu_main_about">App Info</string>
     <string name="menu_main_key_mgmt">Public Keys</string>
 
@@ -148,4 +136,10 @@
     <string name="public_key_details_choose_cert">\'s public key</string>
     <string name="public_key_details_confirm_delete">Do you really want to permanently remove DISPLAYNAME\'s public key from the program?</string>
 
+    <!-- Log viewer 2-->
+    <string name="log_viewer2_title">Log Viewer 2</string>
+    <string name="log_viewer2_loga">Log A</string>
+    <string name="log_viewer2_logb">Log B</string>
+    <string name="log_viewer2_enable">Enable logs</string>
+    <string name="log_viewer2_refresh">Refresh</string>
 </resources>

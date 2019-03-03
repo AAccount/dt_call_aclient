@@ -19,6 +19,9 @@ public class Const
 	public static final String PREF_MEDIAPORT = "media_port";
 	public static final String PREF_UNAME = "username";
 	public static final String PREF_LOG = "log";
+	public static final String PREF_LOGFILE = "log_file";
+	public static final String PREF_LOGFILE_A = "log_a";
+	public static final String PREF_LOGFILE_B = "log_b";
 	public static final String INTERNAL_PRIVATEKEY_FILE = "user_privatekey_binary";
 	public static final String INTERNAL_SERVER_PUBLICKEY_FILE = "server_publickey_binary";
 

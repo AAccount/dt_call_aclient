@@ -34,12 +34,12 @@ import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+import dt.call.aclient.Log.LogEntry;
+import dt.call.aclient.Log.Logger;
 import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.screens.CallIncoming;
 import dt.call.aclient.screens.CallMain;
 import dt.call.aclient.screens.UserHome;
-import dt.call.aclient.sqlite.DBLog;
-import dt.call.aclient.sqlite.SQLiteDb;
 
 /**
  * Created by Daniel on 1/18/16.
@@ -51,6 +51,7 @@ public class Utils
 	private static final ByteOrder NETWORK_BYTEORDER = ByteOrder.BIG_ENDIAN;
 	private static final String tag = "Utils";
 	private static LazySodiumAndroid lazySodium = new LazySodiumAndroid(new SodiumAndroid());
+	private static Logger logger = Logger.getInstance();
 
 	//Linux time(NULL) system call automatically calculates GMT-0/UTC time
 	//so does currentTimeMillis. No need to do timezone conversions
@@ -85,15 +86,7 @@ public class Utils
 				Log.w(tag, message);
 			}
 
-			try
-			{
-				SQLiteDb sqLiteDb = SQLiteDb.getInstance(Vars.applicationContext);
-				sqLiteDb.insertLog(new DBLog(tag, message));
-			}
-			catch(Exception e)
-			{
-				Log.e("dblog","database not writeable");
-			}
+			logger.writeLog(new LogEntry(tag, message));
 		}
 	}
 

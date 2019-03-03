@@ -10,7 +10,7 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/> <!-- switch ear piece/speaker phone -->
     <uses-permission android:name="android.permission.VIBRATE"/> <!-- vibrate when in silent mode -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/> <!-- immediately flash the incoming call screen. also android 9+ MUST keep the screen on in call because when the screen is off network io dies (another stupid "battery savings") -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/> <!-- another stupid "battery savings" workaround: command listener must be run as foreground -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
     <!-- turn on the screen after the cell phone hasn't been used in a while -->
     <!-- allowBackup=false to prevent automatic cloud backup which will unknowingly leak your information. -->
@@ -98,24 +98,14 @@
             android:screenOrientation="portrait">
         </activity>
 
-        <!-- Database debug logs listing -->
+        <!-- File based logging viewer -->
         <activity
-            android:name=".screens.LogViewer"
-            android:label="@string/log_viewer_title"
+            android:name=".screens.LogViewer2"
+            android:label="@string/log_viewer2_title"
             android:launchMode="singleTop">
             <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value=".screens.UserHome"/>
-        </activity>
-
-        <!-- Database debug log details -->
-        <activity
-            android:name=".screens.LogDetails"
-            android:label="@string/log_details_title"
-            android:launchMode="singleTop">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value=".screens.LogViewer"/>
+            android:name="android.support.PARENT_ACTIVITY"
+            android:value=".screens.UserHome"/>
         </activity>
 
         <!-- About this app screen -->
@@ -142,14 +132,14 @@
         <activity
             android:name=".screens.PublicKeyDetails"
             android:label="@string/public_key_deatils_title"
-            android:parentActivityName=".screens.PublicKeyManagement"
-            android:launchMode="singleTop">
+            android:launchMode="singleTop"
+            android:parentActivityName=".screens.PublicKeyManagement">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="dt.call.aclient.screens.PublicKeyManagement"/>
         </activity>
 
-        <!-- DTSettings screen -->
+        <!-- Settings screen -->
         <activity
             android:name=".screens.DTSettings"
             android:label="@string/settings_title"
@@ -158,7 +148,6 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="dt.call.aclient.screens.UserHome"/>
         </activity>
-
     </application>
 
 </manifest>

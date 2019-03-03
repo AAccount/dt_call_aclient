@@ -25,6 +25,8 @@ As a footnote: functionality is heavily stressed over fashionability. The client
 ![In Call Screen](https://github.com/AAccount/dt_call_aclient/blob/master/screenshots/Main%20Call.png)
 
 ## Changelog
+**V 1.10:** use file based logging like the C++ components instead of the original December 2015 clunky postgresql logging
+
 **V 1.9:** use Opus codec for encoding/decoding voice.
 
 **V 1.8:** use mutable arrays ONLY when handling sodium keys so they can be easily cleared from memory
