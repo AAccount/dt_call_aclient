@@ -134,7 +134,7 @@ public class LogViewer2 extends AppCompatActivity implements View.OnClickListene
 			}
 			else
 			{
-				fileName = Const.PREF_COMMANDPORT;
+				fileName = Const.PREF_LOGFILE_B;
 			}
 			ArrayList<String> lines = new ArrayList<>();
 			File logFile = new File(getFilesDir(), fileName);

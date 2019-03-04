@@ -73,7 +73,7 @@ public class Logger
 							}
 							final SharedPreferences sharedPreferences = Vars.applicationContext.getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
 							final SharedPreferences.Editor editor = sharedPreferences.edit();
-							editor.putString(Const.PREF_LOG, outputFileName);
+							editor.putString(Const.PREF_LOGFILE, outputFileName);
 							editor.apply();
 							outputFile = new File(Vars.applicationContext.getFilesDir(), outputFileName);
 							fileOutputStream = new FileOutputStream(outputFile, false); //erase old logEntry contents
