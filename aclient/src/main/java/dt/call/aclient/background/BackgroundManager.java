@@ -134,7 +134,6 @@ public class BackgroundManager extends BroadcastReceiver
 		{
 			if (Utils.hasInternet())
 			{
-				Utils.logcat(Const.LOGD, tag, "sending heart beat");
 				new HeartBeatAsync().execute();
 			}
 			else
