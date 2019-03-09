@@ -95,7 +95,7 @@
     <string name="about_compile_label">Git:</string>
     <string name="about_compile_revision">ec59a1aec476934ddf82773a6851239407d0bf07</string>
     <string name="about_version_label">Version:</string>
-    <string name="about_version_number" translatable="false">1.10</string>
+    <string name="about_version_number" translatable="false">1.11</string>
     <string name="about_by_label">Credits:</string>
     <string name="about_people">
         Daniel Tjandra (main)\n

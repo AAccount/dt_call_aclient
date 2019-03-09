@@ -11,6 +11,7 @@ import java.util.Arrays;
 
 import dt.call.aclient.Const;
 import dt.call.aclient.Utils;
+import dt.call.aclient.Vars;
 
 public class SodiumSocket
 {
@@ -27,8 +28,10 @@ public class SodiumSocket
 		lazySodium.cryptoBoxKeypair(tempPublic, tempPrivate);
 
 		//setup tcp connection
+		final byte[] encTempPublic = new byte[Box.SEALBYTES + Box.PUBLICKEYBYTES];
+		lazySodium.cryptoBoxSeal(encTempPublic, tempPublic, tempPublic.length, Vars.serverPublicSodium);
 		socket = new Socket(host, port);
-		socket.getOutputStream().write(tempPublic);
+		socket.getOutputStream().write(encTempPublic);
 
 		//establish tcp symmetric encryption key
 		final int read = socket.getInputStream().read(encryptionBuffer);
