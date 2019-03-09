@@ -47,7 +47,7 @@ public class CmdListener extends IntentService
 	private static final int UDP_RETRIES = 10;
 	private static final int UDP_ACK_TIMEOUT = 100; //in milliseconds
 	private static final int DSCP_EXPEDITED_FWD = (0x2E << 2);
-	private static final String SODIUM_PLACEHOLDER = "SODIUM_SETUP_PLACEHOLDER";
+	private static final String SODIUM_PLACEHOLDER = "...";
 
 	private boolean inputValid = true;
 
@@ -85,19 +85,18 @@ public class CmdListener extends IntentService
 			//timestamp|direct|(encrypted aes key)|other_person
 			//timestamp|invalid
 
-			String logd = ""; //accumulate all the diagnostic message together to prevent multiple entries of diagnostics in log ui just for cmd listener
 			try
 			{//the async magic here... it will patiently wait until something comes in
 
 				final String fromServer = Vars.commandSocket.readString(Const.SIZE_COMMAND);
 				final String[] respContents = fromServer.split("\\|");
-				logd = "Server response raw: " + fromServer + "\n";
+				Utils.logcat(Const.LOGD, tag, censorIncomingCmd(respContents));
 				Vars.applicationContext = getApplicationContext();
 
 				//check for properly formatted command
 				if(respContents.length > COMMAND_MAX_SEGMENTS)
 				{
-					Utils.logcat(Const.LOGW, tag, logd+"command has too many segments to be valid");
+					Utils.logcat(Const.LOGW, tag, "command has too many segments to be valid");
 					continue;
 				}
 
@@ -105,7 +104,7 @@ public class CmdListener extends IntentService
 				final long ts = Long.valueOf(respContents[0]);
 				if(!Utils.validTS(ts))
 				{
-					Utils.logcat(Const.LOGW, tag, logd+"Rejecting server response for bad timestamp");
+					Utils.logcat(Const.LOGW, tag, "Rejecting server response for bad timestamp");
 					continue;
 				}
 
@@ -139,7 +138,6 @@ public class CmdListener extends IntentService
 					final Intent showIncoming = new Intent(getApplicationContext(), CallIncoming.class);
 					showIncoming.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK); //needed to start activity from background
 					startActivity(showIncoming);
-					Utils.logcat(Const.LOGD, tag, logd);
 					continue;
 				}
 
@@ -147,7 +145,7 @@ public class CmdListener extends IntentService
 				//	is really the other person you're in a call with
 				if (!involved.equals(Vars.callWith))
 				{
-					Utils.logcat(Const.LOGW, tag, logd+"Erroneous command involving: " + involved + " instead of: " + Vars.callWith);
+					Utils.logcat(Const.LOGW, tag, "Erroneous command involving: " + involved + " instead of: " + Vars.callWith);
 					continue;
 				}
 
@@ -186,7 +184,7 @@ public class CmdListener extends IntentService
 						{
 							//if the server presented a mismatched key stop the process.
 							//either you didn't know about the key change or something is very wrong
-							Utils.logcat(Const.LOGE, tag, logd +
+							Utils.logcat(Const.LOGE, tag,
 									"Server sent a MISMATCHED public key for " + Vars.callWith +
 											" . It was:\n" + receivedKeyDump +
 											"\nBut expected: " + SodiumUtils.SODIUM_PUBLIC_HEADER+Utils.stringify(expectedKey));
@@ -217,14 +215,13 @@ public class CmdListener extends IntentService
 
 						//send the sodium key
 						final String passthrough = Utils.currentTimeSeconds() + "|passthrough|" + involved + "|" + finalEncryptedString + "|" + Vars.sessionKey;
-						logd = logd + "passthrough of sodium key " + passthrough.replace(finalEncryptedString, SODIUM_PLACEHOLDER) + "\n";
+						Utils.logcat(Const.LOGD, tag,"passthrough of sodium key " + passthrough.replace(finalEncryptedString, SODIUM_PLACEHOLDER));
 						try
 						{
 							Vars.commandSocket.write(passthrough);
 						}
 						catch (Exception e)
 						{
-							Utils.logcat(Const.LOGD, tag, logd);
 							Utils.dumpException(tag, e);
 							new CommandEndAsync().doInForeground(); //can't send voice key, nothing left to continue
 						}
@@ -240,10 +237,8 @@ public class CmdListener extends IntentService
 					}
 					else
 					{
-						logd = logd + "call preparations cannot complete\n";
 						giveUp();
-						Utils.logcat(Const.LOGE, tag, logd);
-						continue;
+						Utils.logcat(Const.LOGE, tag, "call preparations cannot complete");
 					}
 				}
 				else if(command.equals("direct"))
@@ -265,48 +260,18 @@ public class CmdListener extends IntentService
 					}
 					else
 					{
-						logd = logd + "\nPassthrough of sodium symmetric key failed";
-						Utils.logcat(Const.LOGE, tag, logd);
+						Utils.logcat(Const.LOGE, tag, "Passthrough of sodium symmetric key failed");
 						giveUp();
-						continue;
 					}
-
-					logd = "Server response raw: " + fromServer.replace(setupString, SODIUM_PLACEHOLDER) + "\n";
 				}
-				else if(command.equals("invalid"))
-				{
-					logd = logd + "android app sent an invalid command??!!\n";
-				}
-				else
-				{
-					logd = logd + "Unknown command\n";
-				}
-
-				Utils.logcat(Const.LOGD, tag, logd);
-			}
-			catch (IOException e)
-			{
-				Utils.killSockets();
-				Utils.logcat(Const.LOGE, tag, logd+"Command socket closed...");
-				Utils.dumpException(tag, e);
-				inputValid = false;
 			}
 			catch(NumberFormatException n)
 			{
-				Utils.logcat(Const.LOGE, tag, logd+"string --> # error: ");
 				Utils.dumpException(tag, n);
-			}
-			catch(NullPointerException n)
-			{
-				Utils.killSockets();
-				Utils.logcat(Const.LOGE, tag, logd+"Command socket null pointer exception");
-				Utils.dumpException(tag, n);
-				inputValid = false;
 			}
 			catch(Exception e)
 			{
 				Utils.killSockets();
-				Utils.logcat(Const.LOGE, tag, logd+"Other exception");
 				Utils.dumpException(tag, e);
 				inputValid = false;
 			}
@@ -335,6 +300,37 @@ public class CmdListener extends IntentService
 		final Intent deadBroadcast = new Intent(Const.BROADCAST_RELOGIN);
 		deadBroadcast.setClass(getApplicationContext(), BackgroundManager.class);
 		sendBroadcast(deadBroadcast);
+	}
+
+	private String censorIncomingCmd(String[] parsed)
+	{
+		if(parsed.length < 1)
+		{
+			return "";
+		}
+
+		try
+		{
+			if(parsed[1].equals("direct"))
+			{//timestamp|direct|(encrypted aes key)|other_person
+				return parsed[0] + "|" + parsed[1] + "|"+SODIUM_PLACEHOLDER+"|" + parsed[3];
+			}
+			else
+			{
+				String result = "";
+				for(int i=0; i<parsed.length; i++)
+				{
+					result = result + parsed[i] + "|";
+				}
+				result = result.substring(0, result.length()-1);
+				return result;
+			}
+		}
+		catch(Exception e)
+		{
+			Utils.dumpException(tag, e);
+			return "(censoring error)";
+		}
 	}
 
 	public static boolean registerVoiceUDP()
