@@ -47,7 +47,7 @@ public class BackgroundManager extends BroadcastReceiver
 		}
 
 		final String action = intent.getAction();
-		Utils.logcat(Const.LOGD, tag, "background manager received: " + action);
+		Utils.logcat(Const.LOGD, tag, "received: " + action);
 
 		//to prevent timing problems, if android's connectivity_action AND workaround HAS_INTERNET broadcast are available
 		//to signal return of internet connectivity, only listen for one of them.
