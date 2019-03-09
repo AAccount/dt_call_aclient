@@ -32,7 +32,7 @@ import dt.call.aclient.sodium.SodiumUtils;
 public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 {
 	private static final int LOGIN_MAX_SEGMENTS = 3;
-	private static final String tag = "Login Async Task";
+	private static final String tag = "Login";
 	private static final Object loginLock = new Object();
 	private static ByteBufferPool byteBufferPool = new ByteBufferPool(Const.SIZE_COMMAND);
 
@@ -178,8 +178,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		Vars.applicationContext.sendBroadcast(loginResult);
 
 		//update the persistent notification with the login results
-		SimpleDateFormat ts = new SimpleDateFormat("HH:mm:ss.SSSS",Locale.US);
-		Utils.logcat(Const.LOGD, tag, "Result of login: " + result + " @" + ts.format(new Date()));
+		Utils.logcat(Const.LOGD, tag, "Result of login: " + result);
 		if(!result && !noNotificationOnFail) //don't show the notification for initial login fails
 		{
 			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);

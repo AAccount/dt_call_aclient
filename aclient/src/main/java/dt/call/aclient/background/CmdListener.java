@@ -71,7 +71,7 @@ public class CmdListener extends IntentService
 			startForeground(Const.STATE_NOTIFICATION_ID, Vars.stateNotification);
 		}
 
-		Utils.logcat(Const.LOGD, tag, "command listener INTENT SERVICE started");
+		Utils.logcat(Const.LOGD, tag, "command listener started");
 		final LazySodium lazySodium = new LazySodiumAndroid(new SodiumAndroid());
 
 		while(inputValid)

@@ -13,7 +13,7 @@ public class LogEntry
 	private final String message;
 	private final String tag;
 	private final Date now = new Date();
-	private static final SimpleDateFormat shortFormat = new SimpleDateFormat("MMM dd @ HH:mm", Locale.US);
+	private static final SimpleDateFormat shortFormat = new SimpleDateFormat("MMM dd;HH:mm", Locale.US);
 
 	public LogEntry(String ctag, String cmessage)
 	{
