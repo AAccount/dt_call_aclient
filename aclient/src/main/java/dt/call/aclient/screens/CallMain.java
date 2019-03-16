@@ -179,16 +179,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			@Override
 			public void run()
 			{
-				//TODO: should this be moved to update time like the c++ version?
-				if(sec == 59)
-				{//seconds should never hit 60. 60 is time to regroup into minutes
-					sec = 0;
-					min++;
-				}
-				else
-				{
-					sec++;
-				}
 
 				//if the person hasn't answered after 60 seconds give up. it's probably not going to happen.
 				if((Vars.state == CallState.INIT) && (sec == Const.CALL_TIMEOUT))
@@ -213,36 +203,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					}
 				}
 
-				if(screenShowing)
-				{
-					runOnUiThread(new Runnable()
-					{
-						@Override
-						public void run()
-						{
-							updateTime();
-						}
-					});
-					if(showStats) //TODO: should this be moved to its own function like the c++ version?
-					{
-						final String rxDisp=formatInternetMeteric(rxData), txDisp=formatInternetMeteric(txData);
-						final int missing = txSeq-rxSeq;
-						statsBuilder.setLength(0);
-						statsBuilder
-								.append(missingLabel).append(": ").append(missing > 0 ? missing : 0).append(" ").append(garbageLabel).append(": ").append(garbage).append("\n")
-								.append(rxLabel).append(":").append(rxDisp).append(" ").append(txLabel).append(":").append(txDisp).append("\n")
-								.append(rxSeqLabel).append(":").append(rxSeq).append(" ").append(txSeqLabel).append(":").append(txSeq).append("\n")
-								.append(skippedLabel).append(":").append(skipped).append(" ").append(oorangeLabel).append(": ").append(oorange);
-						runOnUiThread(new Runnable()
-						{
-							@Override
-							public void run()
-							{
-								callerid.setText(statsBuilder.toString());
-							}
-						});
-					}
-				}
+				updateTime();
+				updateStats();
 			}
 		};
 		counter.schedule(counterTask, 0, 1000);
@@ -256,11 +218,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		txSeqLabel = getString(R.string.call_main_stat_tx_seq);
 		skippedLabel = getString(R.string.call_main_stat_skipped);
 		oorangeLabel = getString(R.string.call_main_stat_oorange);
-
-		if(!Vars.SHOUDLOG)
-		{
-			stats.setVisibility(View.INVISIBLE);
-		}
 
 		//listen for call accepted or rejected
 		myReceiver = new BroadcastReceiver()
@@ -411,7 +368,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		 */
 		if(Vars.state == CallState.NONE)
 		{
-			new CommandEndAsync().execute(); //TODO: send this on call end button clicked??
+			new CommandEndAsync().execute();
 
 			//for cases when you make a call but decide you don't want to anymore
 			try
@@ -481,13 +438,12 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			}
 
 			//overwrite the voice sodium symmetric key memory contents
-			Utils.applyFiller(Vars.voiceSymmetricKey);
+			SodiumUtils.applyFiller(Vars.voiceSymmetricKey);
 			if(Vars.mediaUdp != null && !Vars.mediaUdp.isClosed())
 			{
 				Vars.mediaUdp.close();
 				Vars.mediaUdp = null;
 			}
-
 
 			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && Vars.incallA9Workaround != null)
 			{
@@ -559,14 +515,56 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private void updateTime()
 	{
-		timeBuilder.setLength(0);
-		if(sec < 10)
-		{
-			time.setText(timeBuilder.append(min).append(":0").append(sec).toString());
+		if(sec == 59)
+		{//seconds should never hit 60. 60 is time to regroup into minutes
+			sec = 0;
+			min++;
 		}
 		else
 		{
-			time.setText(timeBuilder.append(min).append(":").append(sec).toString());
+			sec++;
+		}
+		if(screenShowing)
+		{
+			runOnUiThread(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					timeBuilder.setLength(0);
+					if(sec < 10)
+					{
+						time.setText(timeBuilder.append(min).append(":0").append(sec).toString());
+					}
+					else
+					{
+						time.setText(timeBuilder.append(min).append(":").append(sec).toString());
+					}
+				}
+			});
+		}
+	}
+
+	private void updateStats()
+	{
+		if(screenShowing && showStats)
+		{
+			final String rxDisp=formatInternetMeteric(rxData), txDisp=formatInternetMeteric(txData);
+			final int missing = txSeq-rxSeq;
+			statsBuilder.setLength(0);
+			statsBuilder
+					.append(missingLabel).append(": ").append(missing > 0 ? missing : 0).append(" ").append(garbageLabel).append(": ").append(garbage).append("\n")
+					.append(rxLabel).append(":").append(rxDisp).append(" ").append(txLabel).append(":").append(txDisp).append("\n")
+					.append(rxSeqLabel).append(":").append(rxSeq).append(" ").append(txSeqLabel).append(":").append(txSeq).append("\n")
+					.append(skippedLabel).append(":").append(skipped).append(" ").append(oorangeLabel).append(": ").append(oorange);
+			runOnUiThread(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					callerid.setText(statsBuilder.toString());
+				}
+			});
 		}
 	}
 
@@ -789,9 +787,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						txData = txData + packetBufferEncryptedLength + HEADERS;
 					}
 				}
-				Utils.applyFiller(packetBuffer);
-				Utils.applyFiller(encodedbuffer);
-				Utils.applyFiller(wavbuffer);
+				SodiumUtils.applyFiller(packetBuffer);
+				SodiumUtils.applyFiller(encodedbuffer);
+				SodiumUtils.applyFiller(wavbuffer);
 				Opus.closeOpus();
 				wavRecorder.stop();
 				wavRecorder.release();
@@ -946,9 +944,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						Utils.dumpException(tag, i);
 					}
 				}
-				Utils.applyFiller(packetDecrypted);
-				Utils.applyFiller(encbuffer);
-				Utils.applyFiller(wavbuffer);
+				SodiumUtils.applyFiller(packetDecrypted);
+				SodiumUtils.applyFiller(encbuffer);
+				SodiumUtils.applyFiller(wavbuffer);
 				wavPlayer.stop();
 				wavPlayer.flush();
 				wavPlayer.release();

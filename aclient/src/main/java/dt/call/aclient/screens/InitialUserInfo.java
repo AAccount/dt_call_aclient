@@ -159,7 +159,7 @@ public class InitialUserInfo extends AppCompatActivity implements View.OnClickLi
 		//	It won't have stuff in it if the user just clicks back.
 		if(requestCode == Const.SELECT_SELF_PRIVATE_SODIUM && data != null)
 		{
-			Utils.applyFiller(Vars.selfPrivateSodium); //clear out the old one now that you have a new private key
+			SodiumUtils.applyFiller(Vars.selfPrivateSodium); //clear out the old one now that you have a new private key
 			final Uri uri = data.getData();
 			final byte[] keybytes = SodiumUtils.readKeyFileBytes(uri, this);
 			Vars.selfPrivateSodium = SodiumUtils.interpretKey(keybytes, true);

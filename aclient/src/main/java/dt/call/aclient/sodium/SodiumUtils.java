@@ -12,6 +12,8 @@ import com.goterl.lazycode.lazysodium.interfaces.Box;
 import com.goterl.lazycode.lazysodium.interfaces.SecretBox;
 
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 
 import dt.call.aclient.pool.ByteBufferPool;
@@ -176,7 +178,7 @@ public class SodiumUtils
 		final int expectedLength = headerLength + Box.PUBLICKEYBYTES*Const.STRINGIFY_EXPANSION;
 		if(dump == null || dump.length != expectedLength)
 		{
-			Utils.applyFiller(dump);
+			applyFiller(dump);
 			return null;
 		}
 
@@ -186,19 +188,19 @@ public class SodiumUtils
 		final byte[] headerBytes = isPrivate ? SODIUM_PRIVATE_HEADER.getBytes() : SODIUM_PUBLIC_HEADER.getBytes();
 		if(!Arrays.equals(dumpHeader, headerBytes))
 		{
-			Utils.applyFiller(dump);
+			applyFiller(dump);
 			return null;
 		}
 
 
 		final byte[] keyStringified = new byte[Box.PUBLICKEYBYTES*Const.STRINGIFY_EXPANSION];
 		System.arraycopy(dump, headerLength, keyStringified, 0, keyStringified.length);
-		Utils.applyFiller(dump);
+		applyFiller(dump);
 
 		//check if the stringified key length makes sense
 		if((keyStringified.length % Const.STRINGIFY_EXPANSION) != 0)
 		{
-			Utils.applyFiller(keyStringified);
+			applyFiller(keyStringified);
 			return null;
 		}
 
@@ -214,7 +216,7 @@ public class SodiumUtils
 			result[i/Const.STRINGIFY_EXPANSION] = (byte)(actual & Const.UNSIGNED_CHAR_MAX);
 			hundreds = tens = ones = 0;
 		}
-		Utils.applyFiller(keyStringified);
+		applyFiller(keyStringified);
 		return result;
 	}
 
@@ -233,7 +235,7 @@ public class SodiumUtils
 
 			final byte[] result = new byte[amountRead];
 			System.arraycopy(fileBytes, 0, result, 0, amountRead);
-			Utils.applyFiller(fileBytes);
+			applyFiller(fileBytes);
 
 			return result;
 		}
@@ -242,5 +244,26 @@ public class SodiumUtils
 			Utils.dumpException(tag, e);
 			return null;
 		}
+	}
+
+	public static void applyFiller(byte[] sensitiveStuff)
+	{
+		if(sensitiveStuff == null)
+		{
+			return;
+		}
+		final byte[] filler = lazySodium.randomBytesBuf(sensitiveStuff.length);
+		System.arraycopy(filler, 0, sensitiveStuff, 0, sensitiveStuff.length);
+	}
+
+	public static void applyFiller(short[] sensitiveStuff)
+	{
+		if(sensitiveStuff == null)
+		{
+			return;
+		}
+
+		final byte[] filler = lazySodium.randomBytesBuf(sensitiveStuff.length*2);
+		ByteBuffer.wrap(filler).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(sensitiveStuff);
 	}
 }

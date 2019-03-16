@@ -112,7 +112,7 @@ public class DTSettings extends AppCompatActivity
 				final byte[] key = SodiumUtils.interpretKey(keybytes, true);
 				if(key != null)
 				{
-					Utils.applyFiller(Vars.selfPrivateSodium); //clear out the old one now that a new one has key has been chosen
+					SodiumUtils.applyFiller(Vars.selfPrivateSodium); //clear out the old one now that a new one has key has been chosen
 					Vars.selfPrivateSodium = key;
 					final boolean writeok = Utils.writeDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Vars.selfPrivateSodium, getActivity());
 					if(!writeok)

@@ -39,6 +39,7 @@ import dt.call.aclient.log.Logger;
 import dt.call.aclient.background.BackgroundManager;
 import dt.call.aclient.screens.CallMain;
 import dt.call.aclient.screens.UserHome;
+import dt.call.aclient.sodium.SodiumUtils;
 
 /**
  * Created by Daniel on 1/18/16.
@@ -49,7 +50,6 @@ public class Utils
 {
 	private static final ByteOrder NETWORK_BYTEORDER = ByteOrder.BIG_ENDIAN;
 	private static final String tag = "Utils";
-	private static LazySodiumAndroid lazySodium = new LazySodiumAndroid(new SodiumAndroid());
 	private static Logger logger = Logger.getInstance();
 
 	//Linux time(NULL) system call automatically calculates GMT-0/UTC time
@@ -221,7 +221,7 @@ public class Utils
 		killSockets.start();
 
 		//overwrite private key memory
-		Utils.applyFiller(Vars.selfPrivateSodium);
+		SodiumUtils.applyFiller(Vars.selfPrivateSodium);
 
 		//properly kill the app
 		caller.finishAffinity();
@@ -284,8 +284,6 @@ public class Utils
 	//for cases when Vars.(shared prefs variable) goes missing or the initial load
 	public static void loadPrefs()
 	{
-		lazySodium = new LazySodiumAndroid(new SodiumAndroid());
-
 		SharedPreferences sharedPreferences = Vars.applicationContext.getSharedPreferences(Const.PREFSFILE, Context.MODE_PRIVATE);
 		Vars.uname = sharedPreferences.getString(Const.PREF_UNAME, "");
 		Vars.serverAddress = sharedPreferences.getString(Const.PREF_ADDR, "");
@@ -306,27 +304,6 @@ public class Utils
 		Vars.selfPrivateSodium = readDataDataFile(Const.INTERNAL_PRIVATEKEY_FILE, Box.SECRETKEYBYTES, Vars.applicationContext);
 	}
 
-	public static void applyFiller(byte[] sensitiveStuff)
-	{
-		if(sensitiveStuff == null)
-		{
-			return;
-		}
-		final byte[] filler = lazySodium.randomBytesBuf(sensitiveStuff.length);
-		System.arraycopy(filler, 0, sensitiveStuff, 0, sensitiveStuff.length);
-	}
-
-	public static void applyFiller(short[] sensitiveStuff)
-	{
-		if(sensitiveStuff == null)
-		{
-			return;
-		}
-
-		final byte[] filler = lazySodium.randomBytesBuf(sensitiveStuff.length*2);
-		ByteBuffer.wrap(filler).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(sensitiveStuff);
-	}
-
 	public static byte[] readDataDataFile(String fileName, int length, Context context) //so named because files are in /data/data/dt.call.aclient
 	{
 		File file = new File(context.getFilesDir(), fileName);
@@ -339,7 +316,7 @@ public class Utils
 				int read = fileInputStream.read(contents);
 				if(read != length)
 				{
-					Utils.applyFiller(contents);
+					SodiumUtils.applyFiller(contents);
 					return null;
 				}
 				return contents;
@@ -347,7 +324,7 @@ public class Utils
 			catch (Exception e)
 			{
 				Utils.dumpException(tag, e);
-				applyFiller(contents);
+				SodiumUtils.applyFiller(contents);
 				return null;
 			}
 		}

@@ -36,7 +36,7 @@ public class SodiumSocket
 		//establish tcp symmetric encryption key
 		final int read = socket.getInputStream().read(encryptionBuffer);
 		final int tempKeyResponseDecLength = SodiumUtils.asymmetricDecrypt(encryptionBuffer, read, hostPublicSodium, tempPrivate, decryptionBuffer);
-		Utils.applyFiller(tempPrivate);
+		SodiumUtils.applyFiller(tempPrivate);
 		if(tempKeyResponseDecLength == 0)
 		{
 			throw new SodiumException("sodium decryption of the TCP key failed");
@@ -59,8 +59,8 @@ public class SodiumSocket
 		{
 			e.printStackTrace();
 		}
-		Utils.applyFiller(tcpKey);
-		Utils.applyFiller(decryptionBuffer);
+		SodiumUtils.applyFiller(tcpKey);
+		SodiumUtils.applyFiller(decryptionBuffer);
 	}
 
 	public String readString(int max) throws IOException, SodiumException
