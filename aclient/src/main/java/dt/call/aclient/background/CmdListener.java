@@ -27,7 +27,7 @@ import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.async.CommandEndAsync;
 import dt.call.aclient.pool.ByteBufferPool;
-import dt.call.aclient.screens.CallIncoming;
+import dt.call.aclient.screens.CallMain;
 import dt.call.aclient.sodium.SodiumUtils;
 import dt.call.aclient.sqlite.SQLiteDb;
 
@@ -134,8 +134,9 @@ public class CmdListener extends IntentService
 					Vars.callWith = involved;
 
 					//launch the incoming call screen
-					Utils.setNotification(R.string.state_popup_incoming, R.color.material_light_blue, Vars.go2CallIncomingPending);
-					final Intent showIncoming = new Intent(getApplicationContext(), CallIncoming.class);
+					Utils.setNotification(R.string.state_popup_incoming, R.color.material_light_blue, Vars.go2CallMainPending);
+					final Intent showIncoming = new Intent(getApplicationContext(), CallMain.class);
+					showIncoming.putExtra(CallMain.DIALING_MODE, false);
 					showIncoming.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK); //needed to start activity from background
 					startActivity(showIncoming);
 					continue;

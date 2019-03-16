@@ -14,9 +14,13 @@ import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
+import android.os.Vibrator;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -40,6 +44,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
 import dt.call.aclient.background.CmdListener;
+import dt.call.aclient.background.async.CommandAcceptAsync;
 import dt.call.aclient.pool.DatagramPacketPool;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
@@ -52,6 +57,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 {
 	private static final String WAKELOCK_INCALLA9 = "dt.call.aclient:incalla9";
 	private static final String tag = "CallMain";
+	public static final String DIALING_MODE = "DIALING_MODE";
 
 	private static final int HEADERS = 52;
 
@@ -67,22 +73,21 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private static final int OORANGE_LIMIT = 100;
 
 	//ui stuff
-	private FloatingActionButton end, mic, speaker;
+	private FloatingActionButton end, mic, speaker, accept;
 	private Button stats;
 	private volatile boolean micMute = false;
 	private boolean micStatusNew = false;
 	private boolean onSpeaker = false;
 	private boolean screenShowing;
 	private ImageView userImage;
-	private TextView status;
-	private TextView time;
-	private TextView callerid;
+	private TextView status, time, callerid;
 	private int min=0, sec=0;
 	private Timer counter = new Timer();
 	private BroadcastReceiver myReceiver;
 	private int garbage=0, txData=0, rxData=0, rxSeq=0, txSeq=0, skipped=0, oorange=0;
 	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel, oorangeLabel;
 	private boolean showStats = false;
+	private boolean isDialing;
 
 	//proximity sensor stuff
 	private SensorManager sensorManager;
@@ -100,10 +105,12 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private final StringBuilder timeBuilder = new StringBuilder();
 
 	//reconnect udp variables
-	private final Object deadUDPLock = new Object();
 	private boolean reconnectionAttempted = false;
 	private long lastReceivedTimestamp = System.currentTimeMillis();
 	private final Object rxtsLock = new Object();
+
+	private Ringtone ringtone = null;
+	private Vibrator vibrator = null;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -111,10 +118,20 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_call_main);
 
+		isDialing = getIntent().getBooleanExtra(DIALING_MODE, true);
+
 		//allow this screen to show even when there is a password/pattern lock screen
 		Window window = this.getWindow();
 		window.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);
 		window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
+		window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+
+		//cell phone now awake. release the wakelock
+		if(Vars.incomingCallLock != null)
+		{
+			Vars.incomingCallLock.release();
+			Vars.incomingCallLock = null;
+		}
 
 		end = findViewById(R.id.call_main_end_call);
 		end.setOnClickListener(this);
@@ -124,12 +141,15 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		speaker = findViewById(R.id.call_main_spk);
 		speaker.setOnClickListener(this);
 		speaker.setEnabled(false);
+		accept = findViewById(R.id.call_main_accept);
+		accept.setOnClickListener(this);
+		accept.setEnabled(!isDialing);
 		stats = findViewById(R.id.call_main_stats);
 		stats.setOnClickListener(this);
 		status = findViewById(R.id.call_main_status); //by default ringing. change it when in a call
 		callerid = findViewById(R.id.call_main_callerid);
-		time = findViewById(R.id.call_main_time);
 		callerid.setText(Utils.getCallerID(Vars.callWith));
+		time = findViewById(R.id.call_main_time);
 		userImage = findViewById(R.id.call_main_user_image);
 
 		/**
@@ -251,8 +271,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				String response = intent.getStringExtra(Const.BROADCAST_CALL_RESP);
 				if(response.equals(Const.BROADCAST_CALL_START))
 				{
-					min = 0;
-					sec = 0;
+					min = sec = 0;
 					changeToCallMode();
 				}
 				else if(response.equals(Const.BROADCAST_CALL_END))
@@ -280,11 +299,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 		//now that the setup has been complete:
 		//set the ui to call mode: if you got to this screen after accepting an incoming call
-		if(Vars.state == CallState.INCALL)
-		{
-			changeToCallMode();
-		}
-		else //otherwise you're the one placing a call. play a dial tone for user feedback
+		if(isDialing && Vars.state == CallState.INIT)
 		{
 			byte[] dialToneDump = new byte[DIAL_TONE_SIZE]; //right click the file and get the exact size
 			try
@@ -326,6 +341,29 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		if(proximity != null)
 		{
 			sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_NORMAL);
+		}
+
+		if(!isDialing && Vars.state == CallState.INIT)
+		{
+			//safety checks before making a big scene
+			stopRingtone();
+
+			//now time to make a scene
+			AudioManager audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+			switch(audioManager.getRingerMode())
+			{
+				case AudioManager.RINGER_MODE_NORMAL:
+					Uri ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+					ringtone = RingtoneManager.getRingtone(getApplicationContext(), ringtoneUri);
+					ringtone.play();
+					break;
+				case AudioManager.RINGER_MODE_VIBRATE:
+					vibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
+					final long[] vibratePattern = new long[] {0, 400, 200};
+					vibrator.vibrate(vibratePattern, 0);
+					break;
+				//no need for the dead silent case. if it is dead silent just light up the screen with no nothing
+			}
 		}
 	}
 
@@ -386,10 +424,17 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				//will happen if you're on the receiving end or if the call has been connected
 			}
 
+			stopRingtone();
+
 			//no longer in a call
 			audioManager.setMode(AudioManager.MODE_NORMAL);
-			counter.cancel();
 
+			//double check the counter to timeout is stopped or it will leak and crash when it's supposed to stop and this screen is gone
+			if(counter != null)
+			{
+				counter.cancel();
+				counter.purge();
+			}
 			try
 			{
 				unregisterReceiver(myReceiver);
@@ -506,6 +551,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				userImage.setVisibility(View.VISIBLE);
 			}
 		}
+		else if(v == accept)
+		{
+			new CommandAcceptAsync().execute();
+		}
 	}
 
 	private void updateTime()
@@ -521,8 +570,26 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		}
 	}
 
+	private void stopRingtone()
+	{
+		//stop the show
+		if(ringtone != null && ringtone.isPlaying())
+		{
+			ringtone.stop();
+			ringtone = null;
+		}
+
+		if(vibrator != null)
+		{
+			vibrator.cancel();
+			vibrator = null;
+		}
+	}
+
 	private void changeToCallMode()
 	{
+		accept.setEnabled(false);
+		stopRingtone();
 		try
 		{
 			dialTone.stop();

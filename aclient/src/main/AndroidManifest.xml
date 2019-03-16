@@ -87,17 +87,6 @@
             android:screenOrientation="portrait">
         </activity>
 
-        <!-- Incoming call screen -->
-        <!-- Orientation change doesn't look right. Also causes a crash with the vibrator and ringtone objects disappearing -->
-        <!-- and reappearing while the old ones were still doing something. -->
-        <activity
-            android:name=".screens.CallIncoming"
-            android:configChanges="orientation|keyboardHidden"
-            android:label="@string/call_incoming_title"
-            android:launchMode="singleTop"
-            android:screenOrientation="portrait">
-        </activity>
-
         <!-- File based logging viewer -->
         <activity
             android:name=".screens.LogViewer2"

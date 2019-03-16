@@ -57,7 +57,6 @@ public class Vars
 	public static Notification stateNotification = null;
 	public static PendingIntent go2HomePending = null;
 	public static PendingIntent go2CallMainPending = null;
-	public static PendingIntent go2CallIncomingPending = null;
 
 	//for every little annoying thing that needs a context... here's one
 	public static Context applicationContext = null;

@@ -109,5 +109,21 @@
                 android:src="@drawable/ic_phone_in_talk_white_48dp"
                 app:rippleColor="@android:color/white"/>
         </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <android.support.design.widget.FloatingActionButton
+                android:id="@+id/call_main_accept"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:clickable="false"
+                android:src="@drawable/ic_done_white_48dp"
+                app:rippleColor="@android:color/white"/>
+        </LinearLayout>
     </LinearLayout>
 </RelativeLayout>

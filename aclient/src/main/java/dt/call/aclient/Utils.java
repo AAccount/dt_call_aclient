@@ -37,7 +37,6 @@ import java.nio.ByteOrder;
 import dt.call.aclient.log.LogEntry;
 import dt.call.aclient.log.Logger;
 import dt.call.aclient.background.BackgroundManager;
-import dt.call.aclient.screens.CallIncoming;
 import dt.call.aclient.screens.CallMain;
 import dt.call.aclient.screens.UserHome;
 
@@ -121,11 +120,6 @@ public class Utils
 		{
 			Intent go2CallMain = new Intent(Vars.applicationContext, CallMain.class);
 			Vars.go2CallMainPending = PendingIntent.getActivity(Vars.applicationContext, 0, go2CallMain, PendingIntent.FLAG_UPDATE_CURRENT);
-		}
-		if(Vars.go2CallIncomingPending == null)
-		{
-			Intent go2CallIncoming = new Intent(Vars.applicationContext, CallIncoming.class);
-			Vars.go2CallIncomingPending = PendingIntent.getActivity(Vars.applicationContext, 0, go2CallIncoming, PendingIntent.FLAG_UPDATE_CURRENT);
 		}
 
 		final NotificationManager notificationManager = (NotificationManager) Vars.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE);

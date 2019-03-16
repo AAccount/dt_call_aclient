@@ -96,6 +96,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 					if(response.equals(Const.BROADCAST_CALL_TRY))
 					{
 						Intent startCall = new Intent(UserHome.this, CallMain.class);
+						startCall.putExtra(CallMain.DIALING_MODE, true);
 						startActivity(startCall);
 					}
 					else
