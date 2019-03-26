@@ -250,8 +250,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 		//now that the setup has been complete:
 		//set the ui to call mode: if you got to this screen after accepting an incoming call
+		audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
 		if(isDialing && Vars.state == CallState.INIT)
 		{
+			audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+			audioManager.setSpeakerphoneOn(false);
 			byte[] dialToneDump = new byte[DIAL_TONE_SIZE]; //right click the file and get the exact size
 			try
 			{
@@ -328,20 +331,27 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	protected void onStopWrapper()
 	{
-		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+		try
 		{
-			runOnUiThread(new Runnable()
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
 			{
-				@Override
-				public void run()
+				runOnUiThread(new Runnable()
 				{
-					onStop();
-				}
-			});
+					@Override
+					public void run()
+					{
+						onStop();
+					}
+				});
+			}
+			else
+			{
+				onStop();
+			}
 		}
-		else
+		catch(Exception e)
 		{
-			onStop();
+			//if the screen is already gone and this is the second time it's being called, not much you can do
 		}
 	}
 
@@ -617,7 +627,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 		//now that the call is ACTUALLY starting put android into communications mode
 		//communications mode will prevent the ringtone from playing
-		audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
 		audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
 		audioManager.setSpeakerphoneOn(false);
 
@@ -673,6 +682,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							packetPool.returnDatagramPacket(packet);
 						}
 					}
+					Utils.logcat(Const.LOGD, tag, "encoder network thread stopped");
 				}
 			});
 
@@ -854,7 +864,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						catch(InterruptedException | NullPointerException e)
 						{
 							//can get a null pointer if the connection dies, media decoder dies, but this network thread is still alive
-							return;
+							break;
 						}
 						catch (IOException e) //this will happen at the end of a call, no need to reconnect.
 						{
@@ -862,11 +872,12 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							if(!reconnectUDP())
 							{
 								endThread();
-								return;
+								break;
 							}
 							receiveQ.clear(); //don't bother with the stored voice data
 						}
 					}
+					Utils.logcat(Const.LOGD, tag, "decoder network thread stopped");
 				}
 			});
 
