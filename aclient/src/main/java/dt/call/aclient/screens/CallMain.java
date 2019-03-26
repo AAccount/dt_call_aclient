@@ -248,12 +248,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		 * Audio setup from here
 		 */
 
-		//https://stackoverflow.com/questions/12857817/how-to-play-audio-via-ear-phones-only-using-mediaplayer-android
-		//make it possible to use the earpiece and to switch back and forth
-		audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
-		audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
-		audioManager.setSpeakerphoneOn(false);
-
 		//now that the setup has been complete:
 		//set the ui to call mode: if you got to this screen after accepting an incoming call
 		if(isDialing && Vars.state == CallState.INIT)
@@ -620,6 +614,12 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		status.setText(getString(R.string.call_main_status_incall));
 		mic.setEnabled(true);
 		speaker.setEnabled(true);
+
+		//https://stackoverflow.com/questions/12857817/how-to-play-audio-via-ear-phones-only-using-mediaplayer-android
+		//make it possible to use the earpiece and to switch back and forth
+		audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+		audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+		audioManager.setSpeakerphoneOn(false);
 
 		//initialize the opus library before creating the threads so it will be ready when the threads start
 		Opus.init();
