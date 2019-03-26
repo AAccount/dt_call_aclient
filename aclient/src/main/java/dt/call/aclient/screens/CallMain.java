@@ -615,8 +615,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		mic.setEnabled(true);
 		speaker.setEnabled(true);
 
-		//https://stackoverflow.com/questions/12857817/how-to-play-audio-via-ear-phones-only-using-mediaplayer-android
-		//make it possible to use the earpiece and to switch back and forth
+		//now that the call is ACTUALLY starting put android into communications mode
+		//communications mode will prevent the ringtone from playing
 		audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
 		audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
 		audioManager.setSpeakerphoneOn(false);
