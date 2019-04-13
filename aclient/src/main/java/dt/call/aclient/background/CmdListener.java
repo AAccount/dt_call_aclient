@@ -413,7 +413,8 @@ public class CmdListener extends IntentService
 			{
 				try
 				{
-					Vars.mediaUdp.setSoTimeout(0);
+					final int A_SECOND = 1000;
+					Vars.mediaUdp.setSoTimeout(A_SECOND);
 				}
 				catch (SocketException e)
 				{

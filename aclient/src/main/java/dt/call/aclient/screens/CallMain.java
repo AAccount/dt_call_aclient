@@ -35,6 +35,7 @@ import android.widget.Toast;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.DatagramPacket;
+import java.net.SocketTimeoutException;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Timer;
@@ -89,6 +90,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private boolean showStats = false;
 	private boolean isDialing;
 
+	private Thread playbackThread = null, recordThread = null;
+
 	//proximity sensor stuff
 	private SensorManager sensorManager;
 	private Sensor proximity = null;
@@ -97,7 +100,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private AudioManager audioManager;
 
 	//for dial tone when initiating a call
-	final private AudioTrack dialTone = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, S16, DIAL_TONE_SIZE, AudioTrack.MODE_STATIC);
+	private AudioTrack dialTone = null;
 	private boolean playedEndTone=false;
 
 	private final DecimalFormat decimalFormat = new DecimalFormat("#.###");
@@ -108,6 +111,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private boolean reconnectionAttempted = false;
 	private long lastReceivedTimestamp = System.currentTimeMillis();
 	private final Object rxtsLock = new Object();
+	private int reconenctTries = 0;
+	private static int MAX_UDP_RECONNECTS = 10;
 
 	private Ringtone ringtone = null;
 	private Vibrator vibrator = null;
@@ -258,14 +263,18 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			byte[] dialToneDump = new byte[DIAL_TONE_SIZE]; //right click the file and get the exact size
 			try
 			{
-				InputStream dialToneStream = getResources().openRawResource(R.raw.dialtone8000);
-				int amount = dialToneStream.read(dialToneDump);
-				int actualSize = amount-WAV_FILE_HEADER;
+				final InputStream dialToneStream = getResources().openRawResource(R.raw.dialtone8000);
+				final int amount = dialToneStream.read(dialToneDump);
+				final int actualSize = amount-WAV_FILE_HEADER;
+				dialToneStream.close();
+
+				//only create the dial tone audio track if it's needed. otherwise it leaks resources if you create but never use it
+				dialTone = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, S16, DIAL_TONE_SIZE, AudioTrack.MODE_STATIC);
 				dialTone.write(dialToneDump, WAV_FILE_HEADER, actualSize);
 				dialTone.setLoopPoints(0, actualSize/2, -1);
 				dialTone.play();
 			}
-			catch (Exception e)
+			catch(Exception e)
 			{
 				Utils.dumpException(tag, e);
 			}
@@ -333,7 +342,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	{
 		try
 		{
-			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
 			{
 				runOnUiThread(new Runnable()
 				{
@@ -377,10 +386,12 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			//for cases when you make a call but decide you don't want to anymore
 			try
 			{
+				dialTone.pause();
+				dialTone.flush();
 				dialTone.stop();
 				dialTone.release();
 			}
-			catch (Exception e)
+			catch(Exception e)
 			{
 				//will happen if you're on the receiving end or if the call has been connected
 			}
@@ -400,7 +411,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			{
 				unregisterReceiver(myReceiver);
 			}
-			catch (IllegalArgumentException i)
+			catch(IllegalArgumentException i)
 			{
 				Utils.logcat(Const.LOGW, tag, "don't unregister you get a leak, do unregister you get an exception... ");
 			}
@@ -411,31 +422,26 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				playedEndTone = true; //actually played twice: once for each media send and once for media receive's call to onStop
 				try
 				{
-					final AudioTrack endTonePlayer = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, S16, 100, AudioTrack.MODE_STREAM);
-					byte[] endToneDump = new byte[END_TONE_SIZE]; //right click the file and get the exact size
-					InputStream endToneStream = getResources().openRawResource(R.raw.end8000);
-					int amount = endToneStream.read(endToneDump);
-					int actualSize = amount - WAV_FILE_HEADER;
-					endTonePlayer.setNotificationMarkerPosition(actualSize / 2);
-					endTonePlayer.setPlaybackPositionUpdateListener(new AudioTrack.OnPlaybackPositionUpdateListener()
-					{
-						@Override
-						public void onMarkerReached(AudioTrack track)
-						{//self release after finishing: don't leak memory, don't spin lock wait, and don't sleep on the main thread
-							endTonePlayer.stop();
-							endTonePlayer.release();
-						}
+					final byte[] endToneDump = new byte[END_TONE_SIZE]; //right click the file and get the exact size
+					final InputStream endToneStream = getResources().openRawResource(R.raw.end8000);
+					final int amount = endToneStream.read(endToneDump);
+					final int actualSize = amount - WAV_FILE_HEADER;
+					endToneStream.close();
 
-						@Override
-						public void onPeriodicNotification(AudioTrack track)
-						{
-
-						}
-					});
+					final AudioTrack endTonePlayer = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, S16, actualSize, AudioTrack.MODE_STATIC);
 					endTonePlayer.write(endToneDump, WAV_FILE_HEADER, actualSize);
 					endTonePlayer.play();
+					int playbackPos = endTonePlayer.getPlaybackHeadPosition();
+					while(playbackPos < actualSize/2)
+					{
+						playbackPos = endTonePlayer.getPlaybackHeadPosition();
+					}
+					endTonePlayer.pause();
+					endTonePlayer.flush();
+					endTonePlayer.stop();
+					endTonePlayer.release();
 				}
-				catch (Exception e)
+				catch(Exception e)
 				{
 					//nothing useful you can do if the notification end tone fails to play
 				}
@@ -447,6 +453,17 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			{
 				Vars.mediaUdp.close();
 				Vars.mediaUdp = null;
+			}
+
+			//might be stuck in the blocking queue if the connection dies
+			if(playbackThread != null)
+			{
+				playbackThread.interrupt();
+			}
+
+			if(recordThread != null)
+			{
+				recordThread.interrupt();
 			}
 
 			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && Vars.incallA9Workaround != null)
@@ -594,10 +611,12 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		stopRingtone();
 		try
 		{
+			dialTone.pause();
+			dialTone.flush();
 			dialTone.stop();
 			dialTone.release();
 		}
-		catch (Exception e)
+		catch(Exception e)
 		{
 			//will happen when you're on the receiving end and the dial tone was never played
 		}
@@ -615,7 +634,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				window.setStatusBarColor(ContextCompat.getColor(CallMain.this, R.color.material_dark_green));
 				window.setNavigationBarColor(ContextCompat.getColor(CallMain.this, R.color.material_dark_green));
 			}
-			catch (NullPointerException n)
+			catch(NullPointerException n)
 			{
 				Utils.dumpException(tag, n);
 			}
@@ -638,7 +657,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private void startMediaEncodeThread()
 	{
-		Thread recordThread = new Thread(new Runnable()
+		recordThread = new Thread(new Runnable()
 		{
 			private static final String tag = "EncodingThread";
 
@@ -648,7 +667,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			private final LinkedBlockingQueue<DatagramPacket> sendQ = new LinkedBlockingQueue<DatagramPacket>();
 			private DatagramPacketPool packetPool = new DatagramPacketPool(Vars.callServer, Vars.mediaPort);
 
-			private Thread internalNetworkThread = new Thread(new Runnable()
+			private final Thread internalNetworkThread = new Thread(new Runnable()
 			{
 				private static final String tag = "EncodeNetwork";
 
@@ -663,19 +682,19 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 							packet = sendQ.take();
 							Vars.mediaUdp.send(packet);
 						}
-						catch (IOException e) //this will happen at the end of a call, no need to reconnect.
+						catch(IOException e) //this will happen at the end of a call, no need to reconnect.
 						{
 							Utils.dumpException(tag, e);
 							if(!reconnectUDP())
 							{
 								endThread();
-								return;
+								break;
 							}
 							sendQ.clear(); //don't bother with the stored voice data
 						}
-						catch (InterruptedException e)
+						catch(InterruptedException e)
 						{
-							return;
+							break;
 						}
 						finally
 						{
@@ -790,7 +809,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						{
 							sendQ.put(packet);
 						}
-						catch (InterruptedException e)
+						catch(InterruptedException e)
 						{
 							Utils.dumpException(tag, e);
 						}
@@ -818,7 +837,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					onStopWrapper();
 				}
-				catch (Exception e)
+				catch(Exception e)
 				{
 					//don't know whether encode or decode will call onStop() first. the second one will get a null exception
 					//because the main ui thead will be gone after the first onStop() is called. catch the exception
@@ -831,7 +850,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private void startMediaDecodeThread()
 	{
-		Thread playbackThread = new Thread(new Runnable()
+		playbackThread = new Thread(new Runnable()
 		{
 			private static final String tag = "DecodingThread";
 			private static final int STEREO = AudioFormat.CHANNEL_OUT_STEREO;
@@ -839,7 +858,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			private final LinkedBlockingQueue<DatagramPacket> receiveQ = new LinkedBlockingQueue<DatagramPacket>();
 			private DatagramPacketPool packetPool = new DatagramPacketPool();
 
-			private Thread networkThread = new Thread(new Runnable()
+			private final Thread networkThread = new Thread(new Runnable()
 			{
 				private static final String tag = "DecodeNetwork";
 
@@ -861,12 +880,16 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 							receiveQ.put(received);
 						}
+						catch(SocketTimeoutException e)
+						{//to prevent this thread from hanging forever, there is now a udp read timeout during calls
+							Utils.dumpException(tag, e);
+						}
 						catch(InterruptedException | NullPointerException e)
 						{
 							//can get a null pointer if the connection dies, media decoder dies, but this network thread is still alive
 							break;
 						}
-						catch (IOException e) //this will happen at the end of a call, no need to reconnect.
+						catch(IOException e) //this will happen at the end of a call, no need to reconnect.
 						{
 							Utils.dumpException(tag, e);
 							if(!reconnectUDP())
@@ -950,7 +973,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						}
 						wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
 					}
-					catch (Exception i)
+					catch(Exception i)
 					{
 						Utils.dumpException(tag, i);
 					}
@@ -958,8 +981,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				SodiumUtils.applyFiller(packetDecrypted);
 				SodiumUtils.applyFiller(encbuffer);
 				SodiumUtils.applyFiller(wavbuffer);
-				wavPlayer.stop();
+				wavPlayer.pause();
 				wavPlayer.flush();
+				wavPlayer.stop();
 				wavPlayer.release();
 				Opus.closeOpus();
 				networkThread.interrupt();
@@ -977,7 +1001,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					onStopWrapper();
 				}
-				catch (Exception e)
+				catch(Exception e)
 				{
 					//don't know whether encode or decode will call onStop() first. the second one will get a null exception
 					//because the main ui thead will be gone after the first onStop() is called. catch the exception
@@ -992,6 +1016,12 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	{
 		if(Vars.state == CallState.INCALL)
 		{
+			if(reconenctTries > MAX_UDP_RECONNECTS)
+			{
+				return false;
+			}
+
+			reconenctTries ++;
 			if(reconnectionAttempted)
 			{
 				reconnectionAttempted = false;
@@ -1007,7 +1037,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				}
 				return true;
 			}
-
 		}
 		return false;
 	}
