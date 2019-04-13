@@ -112,7 +112,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private long lastReceivedTimestamp = System.currentTimeMillis();
 	private final Object rxtsLock = new Object();
 	private int reconenctTries = 0;
-	private static int MAX_UDP_RECONNECTS = 10;
 
 	private Ringtone ringtone = null;
 	private Vibrator vibrator = null;
@@ -1016,6 +1015,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	{
 		if(Vars.state == CallState.INCALL)
 		{
+			final int MAX_UDP_RECONNECTS = 10;
 			if(reconenctTries > MAX_UDP_RECONNECTS)
 			{
 				return false;
