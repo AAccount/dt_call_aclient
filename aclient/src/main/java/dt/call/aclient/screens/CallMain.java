@@ -92,14 +92,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private Thread playbackThread = null, recordThread = null;
 
-	//proximity sensor stuff
 	private SensorManager sensorManager;
 	private Sensor proximity = null;
 
-	//related to audio playback and recording
 	private AudioManager audioManager;
 
-	//for dial tone when initiating a call
 	private AudioTrack dialTone = null;
 	private boolean playedEndTone=false;
 
@@ -156,28 +153,16 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		time = findViewById(R.id.call_main_time);
 		userImage = findViewById(R.id.call_main_user_image);
 
-		/*
-		 * The stuff under here might look like a lot which has the potential to seriously slow down onCreate()
-		 * but it's really just long because defining some of the setup is long (like encode feed, decode feed
-		 * broadcast receiver etc...)
-		 *
-		 * It's not as bad as it looks
-		 */
-
-		//proximity sensor
 		sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 		proximity = sensorManager != null ? sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY) : null;
 
-
-		//Start showing the counter for how long it's taking to answer the call or how long
-		//	the call has been going for
 		TimerTask counterTask = new TimerTask()
 		{
 			@Override
 			public void run()
 			{
 
-				//if the person hasn't answered after 60 seconds give up. it's probably not going to happen.
+				//if the person hasn't answered after 20 seconds give up. it's probably not going to happen.
 				if((Vars.state == CallState.INIT) && (sec == Const.CALL_TIMEOUT))
 				{
 					new CommandEndAsync().execute();
@@ -205,7 +190,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		};
 		counter.schedule(counterTask, 0, 1000);
 
-		//Setup the strings for displaying tx rx skip stats
 		missingLabel = getString(R.string.call_main_stat_mia);
 		txLabel = getString(R.string.call_main_stat_tx);
 		rxLabel = getString(R.string.call_main_stat_rx);
@@ -215,7 +199,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		skippedLabel = getString(R.string.call_main_stat_skipped);
 		oorangeLabel = getString(R.string.call_main_stat_oorange);
 
-		//listen for call accepted or rejected
 		myReceiver = new BroadcastReceiver()
 		{
 			@Override
@@ -240,12 +223,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		};
 		registerReceiver(myReceiver, new IntentFilter(Const.BROADCAST_CALL));
 
-		/*
-		 * Audio setup from here
-		 */
-
-		//now that the setup has been complete:
-		//set the ui to call mode: if you got to this screen after accepting an incoming call
 		audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
 		if(isDialing && Vars.state == CallState.INIT)
 		{
@@ -299,11 +276,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 		if(!isDialing && Vars.state == CallState.INIT)
 		{
-			//safety checks before making a big scene
 			stopRingtone();
-
-			//now time to make a scene
-			AudioManager audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
 			switch(audioManager.getRingerMode())
 			{
 				case AudioManager.RINGER_MODE_NORMAL:
@@ -389,7 +362,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 			stopRingtone();
 
-			//no longer in a call
 			audioManager.setMode(AudioManager.MODE_NORMAL);
 
 			//double check the counter to timeout is stopped or it will leak and crash when it's supposed to stop and this screen is gone
@@ -460,8 +432,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				Vars.incallA9Workaround = null;
 			}
 
-			//go back to the home screen and clear the back history so there is no way to come back to
-			//call main
+			//go back to the home screen and clear the back history so there is no way to come back
 			Intent goHome = new Intent(this, UserHome.class);
 			goHome.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 			startActivity(goHome);
@@ -482,7 +453,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 			//update the mic icon in the encoder thread when the actual mute/unmute happens.
 			//it can take up to 1 second to change the status because of the sleep when going from mute-->unmute
-			//notify the user of this so their "dirty laundry" doesn't unintentionally get aired
 			Toast checkMic = Toast.makeText(this, getString(R.string.call_main_toast_micstatus), Toast.LENGTH_LONG);
 			checkMic.show();
 		}
@@ -524,7 +494,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private void updateTime()
 	{
 		if(sec == 59)
-		{//seconds should never hit 60. 60 is time to regroup into minutes
+		{
 			sec = 0;
 			min++;
 		}
@@ -578,7 +548,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private void stopRingtone()
 	{
-		//stop the show
 		if(ringtone != null && ringtone.isPlaying())
 		{
 			ringtone.stop();
@@ -694,7 +663,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			{
 				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has started");
 
-				//setup the wave audio recorder. since it is released and restarted, it needs to be setup here and not onCreate
 				AudioRecord wavRecorder = new AudioRecord(MIC, SAMPLES, STEREO, S16, WAVBUFFERSIZE);
 				wavRecorder.startRecording();
 
@@ -710,8 +678,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					recorderRetries--;
 				}
 
-				//if the wav recorder can't be initialized hang up and try again
-				//nothing i can do when the cell phone itself has problems
 				if(recorderRetries == 0)
 				{
 					Utils.logcat(Const.LOGE, tag, "couldn't get the microphone from the cell phone. hanging up");
@@ -751,7 +717,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					Arrays.fill(wavbuffer, (short)0);
 					int totalRead = 0, dataRead;
 					while (totalRead < WAVBUFFERSIZE)
-					{//although unlikely to be necessary, bufferSize the mic input
+					{
 						dataRead = wavRecorder.read(wavbuffer, totalRead, WAVBUFFERSIZE - totalRead);
 						totalRead = totalRead + dataRead;
 					}
@@ -762,7 +728,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 						//need to record during mute because a cell phone can generate zeros faster than real time talking
 						//	so you can't just skip the recording and send placeholder zeros in a loop
 						Arrays.fill(wavbuffer, (short)0);
-						//continue;
 					}
 
 					Arrays.fill(encodedbuffer, (byte)0);
@@ -888,7 +853,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			{
 				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has started");
 
-				//setup the wave audio track with enhancements if available
 				final AudioTrack wavPlayer = new AudioTrack(STREAMCALL, SAMPLES, STEREO, S16, WAVBUFFERSIZE, AudioTrack.MODE_STREAM);
 				wavPlayer.play();
 
@@ -1012,9 +976,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	@Override
 	public void onBackPressed()
 	{
-		/*
-		 * Do nothing. If you're in a call then there's no reason to go back to the User Home
-		 */
+		// Do nothing. If you're in a call then there's no reason to go back to the User Home
 	}
 
 	@Override
