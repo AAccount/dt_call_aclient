@@ -156,7 +156,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		time = findViewById(R.id.call_main_time);
 		userImage = findViewById(R.id.call_main_user_image);
 
-		/**
+		/*
 		 * The stuff under here might look like a lot which has the potential to seriously slow down onCreate()
 		 * but it's really just long because defining some of the setup is long (like encode feed, decode feed
 		 * broadcast receiver etc...)
@@ -166,15 +166,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 		//proximity sensor
 		sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-		try
-		{
-			proximity = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
-		}
-		catch(NullPointerException n)
-		{
-			Utils.logcat(Const.LOGE, tag, "CallMain get proximity sensor null");
-			Utils.dumpException(tag, n);
-		}
+		proximity = sensorManager != null ? sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY) : null;
+
 
 		//Start showing the counter for how long it's taking to answer the call or how long
 		//	the call has been going for
@@ -188,7 +181,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				if((Vars.state == CallState.INIT) && (sec == Const.CALL_TIMEOUT))
 				{
 					new CommandEndAsync().execute();
-					Vars.state = CallState.NONE; //guarantee state == NONE. don't leave it to chance
 					onStopWrapper();
 				}
 
@@ -248,7 +240,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		};
 		registerReceiver(myReceiver, new IntentFilter(Const.BROADCAST_CALL));
 
-		/**
+		/*
 		 * Audio setup from here
 		 */
 
@@ -321,6 +313,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					break;
 				case AudioManager.RINGER_MODE_VIBRATE:
 					vibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
+					if(vibrator == null) break;
 					final long[] vibratePattern = new long[] {0, 400, 200};
 					vibrator.vibrate(vibratePattern, 0);
 					break;
@@ -341,6 +334,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	{
 		try
 		{
+			//onStop() is only ever manually called when the call ends and you want to leave this screen
+			Vars.state = CallState.NONE;
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
 			{
 				runOnUiThread(new Runnable()
@@ -369,7 +364,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		super.onStop();
 		screenShowing = false;
 
-		/**
+		/*
 		 * onStop() is called when the CallMain screen isn't visible anymore. Either from ending a call
 		 * or from going to another app during a call. To make sure the call doesn't stop, only do the
 		 * cleanup if you're leaving the screen because the call ended.
@@ -385,10 +380,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			//for cases when you make a call but decide you don't want to anymore
 			try
 			{
-				dialTone.pause();
-				dialTone.flush();
-				dialTone.stop();
-				dialTone.release();
+				stopAudioTrack(dialTone);
 			}
 			catch(Exception e)
 			{
@@ -435,10 +427,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 					{
 						playbackPos = endTonePlayer.getPlaybackHeadPosition();
 					}
-					endTonePlayer.pause();
-					endTonePlayer.flush();
-					endTonePlayer.stop();
-					endTonePlayer.release();
+					stopAudioTrack(endTonePlayer);
 				}
 				catch(Exception e)
 				{
@@ -484,7 +473,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	{
 		if(v == end)
 		{
-			Vars.state = CallState.NONE; //guarantee onStop sees state == NONE
 			onStopWrapper();
 		}
 		else if (v == mic)
@@ -610,10 +598,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		stopRingtone();
 		try
 		{
-			dialTone.pause();
-			dialTone.flush();
-			dialTone.stop();
-			dialTone.release();
+			stopAudioTrack(dialTone);
 		}
 		catch(Exception e)
 		{
@@ -663,7 +648,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			private static final int STEREO = AudioFormat.CHANNEL_IN_STEREO;
 			private static final int MIC = MediaRecorder.AudioSource.DEFAULT;
 
-			private final LinkedBlockingQueue<DatagramPacket> sendQ = new LinkedBlockingQueue<DatagramPacket>();
+			private final LinkedBlockingQueue<DatagramPacket> sendQ = new LinkedBlockingQueue<>();
 			private DatagramPacketPool packetPool = new DatagramPacketPool(Vars.callServer, Vars.mediaPort);
 
 			private final Thread internalNetworkThread = new Thread(new Runnable()
@@ -827,11 +812,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 			private void endThread()
 			{
-				Vars.state = CallState.NONE;
-
-				//kill the socket in case it's the reason end thread is being called.
-				Utils.killSockets();
-
 				try
 				{
 					onStopWrapper();
@@ -854,7 +834,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			private static final String tag = "DecodingThread";
 			private static final int STEREO = AudioFormat.CHANNEL_OUT_STEREO;
 
-			private final LinkedBlockingQueue<DatagramPacket> receiveQ = new LinkedBlockingQueue<DatagramPacket>();
+			private final LinkedBlockingQueue<DatagramPacket> receiveQ = new LinkedBlockingQueue<>();
 			private DatagramPacketPool packetPool = new DatagramPacketPool();
 
 			private final Thread networkThread = new Thread(new Runnable()
@@ -866,7 +846,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					while(Vars.state == CallState.INCALL)
 					{
-						DatagramPacket received = null;
+						DatagramPacket received;
 						try
 						{
 							received = packetPool.getDatagramPacket();
@@ -980,10 +960,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				SodiumUtils.applyFiller(packetDecrypted);
 				SodiumUtils.applyFiller(encbuffer);
 				SodiumUtils.applyFiller(wavbuffer);
-				wavPlayer.pause();
-				wavPlayer.flush();
-				wavPlayer.stop();
-				wavPlayer.release();
+				stopAudioTrack(wavPlayer);
 				Opus.closeOpus();
 				networkThread.interrupt();
 				Utils.logcat(Const.LOGD, tag, "MediaCodec decoder thread has stopped, state:" + Vars.state);
@@ -991,11 +968,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 			private void endThread()
 			{
-				Vars.state = CallState.NONE;
-
-				//kill the socket in case it's the reason end thread is being called.
-				Utils.killSockets();
-
 				try
 				{
 					onStopWrapper();
@@ -1003,7 +975,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				catch(Exception e)
 				{
 					//don't know whether encode or decode will call onStop() first. the second one will get a null exception
-					//because the main ui thead will be gone after the first onStop() is called. catch the exception
+					//because the main ui thread will be gone after the first onStop() is called. catch the exception
 				}
 			}
 		});
@@ -1031,11 +1003,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			{
 				boolean reconnected = CmdListener.registerVoiceUDP();
 				reconnectionAttempted = true;
-				if(!reconnected)
-				{
-					return false;
-				}
-				return true;
+				return reconnected;
 			}
 		}
 		return false;
@@ -1095,5 +1063,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		{
 			return Integer.toString(n);
 		}
+	}
+
+	private void stopAudioTrack(AudioTrack audioTrack)
+	{
+		audioTrack.pause();
+		audioTrack.flush();
+		audioTrack.stop();
+		audioTrack.release();
 	}
 }
