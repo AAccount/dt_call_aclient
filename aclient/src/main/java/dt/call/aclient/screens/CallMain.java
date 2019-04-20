@@ -23,12 +23,14 @@ import android.os.PowerManager;
 import android.os.Vibrator;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -73,7 +75,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private static final int OORANGE_LIMIT = 100;
 
-	//ui stuff
+	private LinearLayout micContainer, spkContainer, acceptContainer;
 	private FloatingActionButton end, mic, speaker, accept;
 	private Button stats;
 	private volatile boolean micMute = false;
@@ -136,12 +138,15 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 		end = findViewById(R.id.call_main_end_call);
 		end.setOnClickListener(this);
+		micContainer = findViewById(R.id.call_main_mic_container);
 		mic = findViewById(R.id.call_main_mic);
 		mic.setOnClickListener(this);
 		mic.setEnabled(false);
+		spkContainer = findViewById(R.id.call_main_spk_container);
 		speaker = findViewById(R.id.call_main_spk);
 		speaker.setOnClickListener(this);
 		speaker.setEnabled(false);
+		acceptContainer = findViewById(R.id.call_main_accept_container);
 		accept = findViewById(R.id.call_main_accept);
 		accept.setOnClickListener(this);
 		accept.setEnabled(!isDialing);
@@ -226,6 +231,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
 		if(isDialing && Vars.state == CallState.INIT)
 		{
+			acceptContainer.setVisibility(View.GONE);
+
 			audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
 			audioManager.setSpeakerphoneOn(false);
 			byte[] dialToneDump = new byte[DIAL_TONE_SIZE]; //right click the file and get the exact size
@@ -276,6 +283,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 		if(!isDialing && Vars.state == CallState.INIT)
 		{
+			spkContainer.setVisibility(View.GONE);
+			micContainer.setVisibility(View.GONE);
+
 			stopRingtone();
 			switch(audioManager.getRingerMode())
 			{
@@ -563,7 +573,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 
 	private void changeToCallMode()
 	{
+		micContainer.setVisibility(View.VISIBLE);
+		spkContainer.setVisibility(View.VISIBLE);
+		acceptContainer.setVisibility(View.GONE);
 		accept.setEnabled(false);
+
 		stopRingtone();
 		try
 		{
@@ -578,19 +592,15 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		//results in a weird blue/green look. only change the look for >= 5.0
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
 		{
-			try
-			{//apparently this line has the possibility of a null pointer exception as warned by android studio...???
-				getSupportActionBar().setBackgroundDrawable(new ColorDrawable(ContextCompat.getColor(CallMain.this, R.color.material_green)));
-
-				Window window = getWindow();
-				window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-				window.setStatusBarColor(ContextCompat.getColor(CallMain.this, R.color.material_dark_green));
-				window.setNavigationBarColor(ContextCompat.getColor(CallMain.this, R.color.material_dark_green));
-			}
-			catch(NullPointerException n)
+			final ActionBar actionBar = getSupportActionBar();
+			if(actionBar != null)
 			{
-				Utils.dumpException(tag, n);
+				actionBar.setBackgroundDrawable(new ColorDrawable(ContextCompat.getColor(CallMain.this, R.color.material_green)));
 			}
+			Window window = getWindow();
+			window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+			window.setStatusBarColor(ContextCompat.getColor(CallMain.this, R.color.material_dark_green));
+			window.setNavigationBarColor(ContextCompat.getColor(CallMain.this, R.color.material_dark_green));
 		}
 
 		status.setText(getString(R.string.call_main_status_incall));
