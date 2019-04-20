@@ -6,7 +6,7 @@
 #include <string.h>
 #include <android/log.h>
 #include <stdbool.h>
-#include <opus-1.3/include/opus.h>
+#include <opus-1.3.1/include/opus.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <malloc.h>
