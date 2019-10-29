@@ -47,12 +47,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
 import dt.call.aclient.background.CmdListener;
-import dt.call.aclient.background.async.CommandAcceptAsync;
+import dt.call.aclient.background.async.OperatorCommand;
 import dt.call.aclient.pool.DatagramPacketPool;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.background.async.CommandEndAsync;
 import dt.call.aclient.codec.Opus;
 import dt.call.aclient.sodium.SodiumUtils;
 
@@ -170,7 +169,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				//if the person hasn't answered after 20 seconds give up. it's probably not going to happen.
 				if((Vars.state == CallState.INIT) && (sec == Const.CALL_TIMEOUT))
 				{
-					new CommandEndAsync().execute();
+					new OperatorCommand().execute(OperatorCommand.END);
 					onStopWrapper();
 				}
 
@@ -358,7 +357,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		 */
 		if(Vars.state == CallState.NONE)
 		{
-			new CommandEndAsync().execute();
+			new OperatorCommand().execute(OperatorCommand.END);
 
 			//for cases when you make a call but decide you don't want to anymore
 			try
@@ -497,7 +496,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		}
 		else if(v == accept)
 		{
-			new CommandAcceptAsync().execute();
+			new OperatorCommand().execute(OperatorCommand.ACCEPT);
 		}
 	}
 

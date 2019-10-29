@@ -25,7 +25,7 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.background.async.CommandEndAsync;
+import dt.call.aclient.background.async.OperatorCommand;
 import dt.call.aclient.pool.ByteBufferPool;
 import dt.call.aclient.screens.CallMain;
 import dt.call.aclient.sodium.SodiumUtils;
@@ -224,7 +224,7 @@ public class CmdListener extends IntentService
 						catch (Exception e)
 						{
 							Utils.dumpException(tag, e);
-							new CommandEndAsync().doInForeground(); //can't send voice key, nothing left to continue
+							new OperatorCommand().doInForeground(OperatorCommand.END); //can't send voice key, nothing left to continue
 						}
 					}
 
@@ -478,7 +478,7 @@ public class CmdListener extends IntentService
 	 */
 	private void giveUp()
 	{
-		new CommandEndAsync().doInForeground();
+		new OperatorCommand().doInForeground(OperatorCommand.END);
 		notifyCallStateChange(Const.BROADCAST_CALL_END);
 	}
 }

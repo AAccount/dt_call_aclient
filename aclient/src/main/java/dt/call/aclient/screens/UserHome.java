@@ -31,8 +31,8 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.background.async.CommandCallAsync;
 import dt.call.aclient.background.async.LoginAsync;
+import dt.call.aclient.background.async.OperatorCommand;
 import dt.call.aclient.sqlite.SQLiteDb;
 
 public class UserHome extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener
@@ -292,7 +292,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			}
 
 			Vars.callWith = who;
-			new CommandCallAsync().execute();
+			new OperatorCommand().execute(OperatorCommand.CALL);
 		}
 	}
 
