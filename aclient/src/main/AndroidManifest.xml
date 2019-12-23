@@ -50,7 +50,8 @@
         <!-- First run server information screen -->
         <activity
             android:name=".screens.InitialServer"
-            android:label="@string/app_name">
+            android:label="@string/app_name"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 
@@ -62,7 +63,8 @@
         <activity
             android:name=".screens.InitialUserInfo"
             android:label="@string/initial_user_title"
-            android:parentActivityName=".screens.InitialServer">
+            android:parentActivityName=".screens.InitialServer"
+            android:launchMode="singleTop">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".screens.InitialServer"/>
@@ -93,8 +95,8 @@
             android:label="@string/log_viewer2_title"
             android:launchMode="singleTop">
             <meta-data
-            android:name="android.support.PARENT_ACTIVITY"
-            android:value=".screens.UserHome"/>
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".screens.UserHome"/>
         </activity>
 
         <!-- About this app screen -->
@@ -132,7 +134,8 @@
         <activity
             android:name=".screens.DTSettings"
             android:label="@string/settings_title"
-            android:parentActivityName=".screens.UserHome">
+            android:parentActivityName=".screens.UserHome"
+            android:launchMode="singleTop">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="dt.call.aclient.screens.UserHome"/>
