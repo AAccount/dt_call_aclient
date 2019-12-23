@@ -19,8 +19,6 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
-import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
-import com.goterl.lazycode.lazysodium.SodiumAndroid;
 import com.goterl.lazycode.lazysodium.interfaces.Box;
 
 import org.jetbrains.annotations.NotNull;
@@ -114,11 +112,17 @@ public class Utils
 		if(Vars.go2HomePending == null)
 		{
 			Intent go2Home = new Intent(Vars.applicationContext, UserHome.class);
+			go2Home.setFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+			go2Home.setAction(Intent.ACTION_MAIN);
+			go2Home.addCategory(Intent.CATEGORY_LAUNCHER);
 			Vars.go2HomePending = PendingIntent.getActivity(Vars.applicationContext, 0, go2Home, PendingIntent.FLAG_UPDATE_CURRENT);
 		}
 		if(Vars.go2CallMainPending == null)
 		{
 			Intent go2CallMain = new Intent(Vars.applicationContext, CallMain.class);
+			go2CallMain.setFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+			go2CallMain.setAction(Intent.ACTION_MAIN);
+			go2CallMain.addCategory(Intent.CATEGORY_LAUNCHER);
 			Vars.go2CallMainPending = PendingIntent.getActivity(Vars.applicationContext, 0, go2CallMain, PendingIntent.FLAG_UPDATE_CURRENT);
 		}
 
