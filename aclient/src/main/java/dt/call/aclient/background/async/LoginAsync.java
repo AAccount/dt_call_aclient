@@ -141,7 +141,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 
 			//must set the notification right away because the stupid foreground service workaround needs it ASAP
 			noNotificationOnFail = false;
-			Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
+			Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Utils.GO_HOME);
 
 			Intent cmdListenerIntent = new Intent(Vars.applicationContext, CmdListener.class);
 			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -181,7 +181,7 @@ public class LoginAsync extends AsyncTask<Boolean, String, Boolean>
 		Utils.logcat(Const.LOGD, tag, "Result of login: " + result);
 		if(!result && !noNotificationOnFail) //don't show the notification for initial login fails
 		{
-			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
+			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Utils.GO_HOME);
 			Utils.setExactWakeup(Vars.pendingRetries, Vars.pendingRetries2ndary);
 			//background manager will check if there is internet or not when the retry kicks in and will act accordingly
 

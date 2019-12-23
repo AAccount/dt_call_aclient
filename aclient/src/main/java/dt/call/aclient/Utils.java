@@ -46,9 +46,14 @@ import dt.call.aclient.sodium.SodiumUtils;
  */
 public class Utils
 {
+	public static final int GO_HOME = 1;
+	public static final int GO_CALL = 2;
+
 	private static final ByteOrder NETWORK_BYTEORDER = ByteOrder.BIG_ENDIAN;
 	private static final String tag = "Utils";
 	private static Logger logger = Logger.getInstance();
+	private static PendingIntent go2HomePending = null;
+	private static PendingIntent go2CallMainPending = null;
 
 	//Linux time(NULL) system call automatically calculates GMT-0/UTC time
 	//so does currentTimeMillis. No need to do timezone conversions
@@ -106,29 +111,38 @@ public class Utils
 	}
 
 	//sets the ongoing notification message and color. also initializes any notification related variables if they're not setup
-	public static void setNotification(int stringRes, int colorRes, PendingIntent go2)
+	public static void setNotification(int stringRes, int colorRes, int goWhere)
 	{
 		//first make sure all the pending intents are useable
-		if(Vars.go2HomePending == null)
+		if(go2HomePending == null)
 		{
 			Intent go2Home = new Intent(Vars.applicationContext, UserHome.class);
 			go2Home.setFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 			go2Home.setAction(Intent.ACTION_MAIN);
 			go2Home.addCategory(Intent.CATEGORY_LAUNCHER);
-			Vars.go2HomePending = PendingIntent.getActivity(Vars.applicationContext, 0, go2Home, PendingIntent.FLAG_UPDATE_CURRENT);
+			go2HomePending = PendingIntent.getActivity(Vars.applicationContext, 0, go2Home, PendingIntent.FLAG_UPDATE_CURRENT);
 		}
-		if(Vars.go2CallMainPending == null)
+		if(go2CallMainPending == null)
 		{
 			Intent go2CallMain = new Intent(Vars.applicationContext, CallMain.class);
 			go2CallMain.setFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 			go2CallMain.setAction(Intent.ACTION_MAIN);
 			go2CallMain.addCategory(Intent.CATEGORY_LAUNCHER);
-			Vars.go2CallMainPending = PendingIntent.getActivity(Vars.applicationContext, 0, go2CallMain, PendingIntent.FLAG_UPDATE_CURRENT);
+			go2CallMainPending = PendingIntent.getActivity(Vars.applicationContext, 0, go2CallMain, PendingIntent.FLAG_UPDATE_CURRENT);
 		}
 
 		final NotificationManager notificationManager = (NotificationManager) Vars.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE);
 		notificationManager.cancelAll();
 
+		final PendingIntent go2;
+		if(goWhere == GO_HOME)
+		{
+			go2 = go2HomePending;
+		}
+		else //if(goWhere == GO_CALL)
+		{
+			go2 = go2CallMainPending;
+		}
 		final NotificationCompat.Builder builder = new NotificationCompat.Builder(Vars.applicationContext, Const.STATE_NOTIFICATION_CHANNEL)
 				.setContentTitle(Vars.applicationContext.getString(R.string.app_name))
 				.setContentText(Vars.applicationContext.getString(stringRes))

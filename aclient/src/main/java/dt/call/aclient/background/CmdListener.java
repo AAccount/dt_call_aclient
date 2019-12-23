@@ -134,7 +134,7 @@ public class CmdListener extends IntentService
 					Vars.callWith = involved;
 
 					//launch the incoming call screen
-					Utils.setNotification(R.string.state_popup_incoming, R.color.material_light_blue, Vars.go2CallMainPending);
+					Utils.setNotification(R.string.state_popup_incoming, R.color.material_light_blue, Utils.GO_CALL);
 					final Intent showIncoming = new Intent(getApplicationContext(), CallMain.class);
 					showIncoming.putExtra(CallMain.DIALING_MODE, false);
 					showIncoming.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK); //needed to start activity from background
@@ -156,20 +156,20 @@ public class CmdListener extends IntentService
 					isCallInitiator = true;
 					preparationsComplete = false;
 					notifyCallStateChange(Const.BROADCAST_CALL_TRY);
-					Utils.setNotification(R.string.state_popup_init, R.color.material_light_blue, Vars.go2CallMainPending);
+					Utils.setNotification(R.string.state_popup_init, R.color.material_light_blue, Utils.GO_CALL);
 				}
 				else if (command.equals("start"))
 				{
 					Vars.state = CallState.INCALL;
 					notifyCallStateChange(Const.BROADCAST_CALL_START);
-					Utils.setNotification(R.string.state_popup_incall, R.color.material_light_blue, Vars.go2CallMainPending);
+					Utils.setNotification(R.string.state_popup_incall, R.color.material_light_blue, Utils.GO_CALL);
 				}
 				else if (command.equals("end"))
 				{
 					Vars.state = CallState.NONE;
 					Vars.callWith = Const.nobody;
 					notifyCallStateChange(Const.BROADCAST_CALL_END);
-					Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
+					Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Utils.GO_HOME);
 				}
 				else if(command.equals("prepare"))
 				{

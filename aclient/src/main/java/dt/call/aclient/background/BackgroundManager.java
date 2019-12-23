@@ -115,7 +115,7 @@ public class BackgroundManager extends BroadcastReceiver
 		if (action.equals(Const.BROADCAST_RELOGIN))
 		{
 			//set persistent notification as offline for now while reconnect is trying
-			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Vars.go2HomePending);
+			Utils.setNotification(R.string.state_popup_offline, R.color.material_grey, Utils.GO_HOME);
 
 			//pending intents cancelled by command listener to prevent a timing problem where sockets are closed at the same
 			//time a heart beat pending intent is fired.

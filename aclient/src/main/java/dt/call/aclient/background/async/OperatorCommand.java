@@ -57,7 +57,7 @@ public class OperatorCommand extends AsyncTask<Integer, String, Boolean>
 		if(intCommand == END)
 		{
 			cleanup();
-			Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Vars.go2HomePending);
+			Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Utils.GO_HOME);
 		}
 		return true;
 	}

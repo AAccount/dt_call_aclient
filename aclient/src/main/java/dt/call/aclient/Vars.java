@@ -55,8 +55,6 @@ public class Vars
 
 	//Ongoing notification with state information
 	public static Notification stateNotification = null;
-	public static PendingIntent go2HomePending = null;
-	public static PendingIntent go2CallMainPending = null;
 
 	//for every little annoying thing that needs a context... here's one
 	public static Context applicationContext = null;
