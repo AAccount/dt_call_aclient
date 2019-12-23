@@ -99,4 +99,10 @@ public class SodiumSocket
 		}
 		socket.getOutputStream().write(encryptionBuffer, 0, bytesencLength);
 	}
+
+	@Override
+	public String toString()
+	{
+		return socket.getInetAddress().toString() + ":" + socket.getPort();
+	}
 }
