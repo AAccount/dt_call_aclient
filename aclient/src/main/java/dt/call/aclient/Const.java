@@ -59,6 +59,7 @@ public class Const
 	public static final String BROADCAST_CALL_TRY = "try";
 	public static final String BROADCAST_CALL_START = "start";
 	public static final String BROADCAST_CALL_END = "end";
+	public static final String BROADCAST_CALL_MIC = "mic";
 
 	//broadcasting login result
 	public static final String BROADCAST_LOGIN = "dt.call.aclient.broadcast_login";
