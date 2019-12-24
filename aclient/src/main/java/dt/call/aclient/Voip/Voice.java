@@ -12,7 +12,6 @@ import android.media.AudioTrack;
 import android.media.MediaRecorder;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.DatagramPacket;
 import java.net.SocketTimeoutException;
 import java.util.Arrays;
@@ -22,7 +21,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
-import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.CmdListener;
@@ -50,7 +48,7 @@ public class Voice
 
 	//reconnect udp variables
 	private boolean reconnectionAttempted = false;
-	private long lastReceivedTimestamp = System.currentTimeMillis();
+	private long lastReceivedTimestamp = 0;
 	private final Object rxtsLock = new Object();
 	private int reconenctTries = 0;
 
@@ -86,7 +84,7 @@ public class Voice
 						final long A_SECOND = 1000L; //usual delay between receives is ~60.2milliseconds
 						final long now = System.currentTimeMillis();
 						final long btw = now - lastReceivedTimestamp;
-						if(btw > A_SECOND && Vars.mediaUdp != null)
+						if((lastReceivedTimestamp > 0) && (btw > A_SECOND) && (Vars.mediaUdp != null))
 						{
 							Utils.logcat(Const.LOGD, tag, "delay since last received more than 1s: " + btw);
 							Vars.mediaUdp.close();
@@ -148,13 +146,14 @@ public class Voice
 			private final LinkedBlockingQueue<DatagramPacket> sendQ = new LinkedBlockingQueue<>();
 			private DatagramPacketPool packetPool = new DatagramPacketPool(Vars.callServer, Vars.mediaPort);
 
-			private final Thread internalNetworkThread = new Thread(new Runnable()
+			private final Thread networkThread = new Thread(new Runnable()
 			{
 				private static final String tag = "EncodeNetwork";
 
 				@Override
 				public void run()
 				{
+					Utils.logcat(Const.LOGD, tag, "encoder network thread started");
 					while(Vars.state == CallState.INCALL)
 					{
 						DatagramPacket packet = null;
@@ -213,8 +212,8 @@ public class Voice
 					return;
 				}
 
-				internalNetworkThread.setName("Media_Encoder_Network");
-				internalNetworkThread.start();
+				networkThread.setName("Media_Encoder_Network");
+				networkThread.start();
 
 				final byte[] packetBuffer = new byte[Const.SIZE_MAX_UDP];
 				final short[] wavbuffer = new short[WAVBUFFERSIZE];
@@ -268,7 +267,7 @@ public class Voice
 						}
 						catch(InterruptedException e)
 						{
-							Utils.dumpException(tag, e);
+							break;
 						}
 						txData = txData + packetBufferEncryptedLength + HEADERS;
 					}
@@ -279,7 +278,7 @@ public class Voice
 				Opus.closeOpus();
 				wavRecorder.stop();
 				wavRecorder.release();
-				internalNetworkThread.interrupt();
+				networkThread.interrupt();
 				Utils.logcat(Const.LOGD, tag, "MediaCodec encoder thread has stopped");
 			}
 		});
@@ -304,6 +303,7 @@ public class Voice
 				@Override
 				public void run()
 				{
+					Utils.logcat(Const.LOGD, tag, "decoder network thread started");
 					while(Vars.state == CallState.INCALL)
 					{
 						DatagramPacket received;
@@ -334,7 +334,7 @@ public class Voice
 							if(!reconnectUDP())
 							{
 								stopOnError();
-								return;
+								break;
 							}
 							receiveQ.clear(); //don't bother with the stored voice data
 						}
