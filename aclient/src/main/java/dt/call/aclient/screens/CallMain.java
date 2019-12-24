@@ -59,6 +59,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel, oorangeLabel;
 	private boolean showStats = false;
 	private boolean isDialing;
+	private boolean selfEndedCall = false;
 
 	private AudioManager audioManager;
 	private SensorManager sensorManager;
@@ -275,7 +276,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		 */
 		if(Vars.state == CallState.NONE)
 		{
-			new OperatorCommand().execute(OperatorCommand.END);
+			if(selfEndedCall) //don't send call end to the server if you were told by the server to stop.
+			{
+				new OperatorCommand().execute(OperatorCommand.END);
+			}
 
 			//for cases when you make a call but decide you don't want to anymore
 			SoundEffects.getInstance().stopDialtone();
@@ -317,6 +321,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	{
 		if(v == end)
 		{
+			selfEndedCall = true;
 			onStopWrapper();
 		}
 		else if (v == mic)
