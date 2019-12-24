@@ -10,7 +10,6 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
-import android.media.AudioTrack;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
@@ -60,6 +59,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private boolean showStats = false;
 	private boolean isDialing;
 	private boolean selfEndedCall = false;
+	private boolean finalStopRan = false;
 
 	private AudioManager audioManager;
 	private SensorManager sensorManager;
@@ -274,8 +274,9 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		 * the call state as none. The 2 async calls: end, timeout will set state = NONE, BUT BECAUSE they're
 		 * async there is a chance that onStop() is called before the async is. Don't leave it to dumb luck.
 		 */
-		if(Vars.state == CallState.NONE)
+		if(Vars.state == CallState.NONE && !finalStopRan)
 		{
+			finalStopRan = true;
 			if(selfEndedCall) //don't send call end to the server if you were told by the server to stop.
 			{
 				new OperatorCommand().execute(OperatorCommand.END);
