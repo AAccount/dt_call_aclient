@@ -13,7 +13,10 @@ import android.net.Uri;
 import android.os.Vibrator;
 
 import java.io.InputStream;
+import java.util.Timer;
+import java.util.TimerTask;
 
+import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
@@ -89,6 +92,7 @@ public class SoundEffects
 
 	public void playRingtone()
 	{
+		Utils.logcat(Const.LOGD, tag, "playing ringtone");
 		switch(audioManager.getRingerMode())
 		{
 			case AudioManager.RINGER_MODE_NORMAL:
@@ -107,10 +111,22 @@ public class SoundEffects
 				break;
 			//no need for the dead silent case. if it is dead silent just light up the screen with no nothing
 		}
+
+		//safety auto shutoff since it is being called from anywhere
+		final TimerTask task = new TimerTask() {
+			@Override
+			public void run() {
+				stopRingtone();
+			}
+		};
+		final Timer timer = new Timer();
+		timer.schedule(task, Const.CALL_TIMEOUT*1000L);
+
 	}
 
 	public void stopRingtone()
 	{
+		Utils.logcat(Const.LOGD, tag, "stopping ringtone");
 		if(ringtone != null && ringtone.isPlaying())
 		{
 			ringtone.stop();

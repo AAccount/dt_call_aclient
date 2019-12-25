@@ -1,6 +1,5 @@
 package dt.call.aclient.screens;
 
-import android.app.KeyguardManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;

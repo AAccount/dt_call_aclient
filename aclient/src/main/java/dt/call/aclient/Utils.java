@@ -14,9 +14,9 @@ import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
+import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
 
 import com.goterl.lazycode.lazysodium.interfaces.Box;
@@ -48,6 +48,7 @@ public class Utils
 {
 	public static final int GO_HOME = 1;
 	public static final int GO_CALL = 2;
+	public static final int GO_A10_INCOMING = 3;
 
 	private static final ByteOrder NETWORK_BYTEORDER = ByteOrder.BIG_ENDIAN;
 	private static final String tag = "Utils";
@@ -129,9 +130,13 @@ public class Utils
 			go2CallMain.setFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 			go2CallMain.setAction(Intent.ACTION_MAIN);
 			go2CallMain.addCategory(Intent.CATEGORY_LAUNCHER);
+			if(goWhere == GO_A10_INCOMING)
+			{
+				go2CallMain.putExtra(CallMain.DIALING_MODE, false);
+			}
 			go2 = PendingIntent.getActivity(Vars.applicationContext, 0, go2CallMain, PendingIntent.FLAG_UPDATE_CURRENT);
 		}
-		final NotificationCompat.Builder builder = new NotificationCompat.Builder(Vars.applicationContext, Const.STATE_NOTIFICATION_CHANNEL)
+		NotificationCompat.Builder builder = new NotificationCompat.Builder(Vars.applicationContext, Const.STATE_NOTIFICATION_CHANNEL)
 				.setContentTitle(Vars.applicationContext.getString(R.string.app_name))
 				.setContentText(Vars.applicationContext.getString(stringRes))
 				.setSmallIcon(R.drawable.ic_vpn_lock_white_48dp)
@@ -140,6 +145,14 @@ public class Utils
 				.setColorized(true)
 				.setOngoing(true)
 				.setChannelId(Const.STATE_NOTIFICATION_CHANNEL);
+		if(goWhere == GO_A10_INCOMING)
+		{
+			builder = builder.setContentText(Vars.callWith)
+					.setPriority(NotificationCompat.PRIORITY_HIGH)
+					.setFullScreenIntent(go2, true)
+					.setCategory(NotificationCompat.CATEGORY_CALL)
+					.setChannelId(Const.INCOMING_NOTIFICATION_CHANNEL);
+		}
 		Vars.stateNotification = builder.build();
 		notificationManager.notify(Const.STATE_NOTIFICATION_ID, Vars.stateNotification);
 
@@ -150,6 +163,13 @@ public class Utils
 			stateNotificationChannel.setSound(null, null); //no sound when launching the app
 			stateNotificationChannel.setShowBadge(false);
 			notificationManager.createNotificationChannel(stateNotificationChannel);
+		}
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) //used for the "high priority notification" as incoming call workaround for android q
+		{
+			final NotificationChannel incomingNotificationChannel = new NotificationChannel(Const.INCOMING_NOTIFICATION_CHANNEL, Const.INCOMING_NOTIFICATION_NAME, NotificationManager.IMPORTANCE_HIGH);
+			incomingNotificationChannel.setSound(null, null); //no sound when launching the app
+			incomingNotificationChannel.setShowBadge(false);
+			notificationManager.createNotificationChannel(incomingNotificationChannel);
 		}
 	}
 

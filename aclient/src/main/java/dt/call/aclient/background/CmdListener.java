@@ -25,6 +25,7 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
+import dt.call.aclient.Voip.SoundEffects;
 import dt.call.aclient.background.async.OperatorCommand;
 import dt.call.aclient.pool.ByteBufferPool;
 import dt.call.aclient.screens.CallMain;
@@ -134,11 +135,19 @@ public class CmdListener extends IntentService
 					Vars.callWith = involved;
 
 					//launch the incoming call screen
-					Utils.setNotification(R.string.state_popup_incoming, R.color.material_light_blue, Utils.GO_CALL);
-					final Intent showIncoming = new Intent(getApplicationContext(), CallMain.class);
-					showIncoming.putExtra(CallMain.DIALING_MODE, false);
-					showIncoming.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK); //needed to start activity from background
-					startActivity(showIncoming);
+					SoundEffects.getInstance().playRingtone();
+					if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+					{
+						Utils.setNotification(R.string.state_popup_incoming, R.color.material_light_blue, Utils.GO_A10_INCOMING);
+					}
+					else
+					{
+						Utils.setNotification(R.string.state_popup_incoming, R.color.material_light_blue, Utils.GO_CALL);
+						final Intent showIncoming = new Intent(getApplicationContext(), CallMain.class);
+						showIncoming.putExtra(CallMain.DIALING_MODE, false);
+						showIncoming.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK); //needed to start activity from background
+						startActivity(showIncoming);
+					}
 					continue;
 				}
 
@@ -166,6 +175,7 @@ public class CmdListener extends IntentService
 				}
 				else if (command.equals("end"))
 				{
+					SoundEffects.getInstance().stopRingtone();
 					Vars.state = CallState.NONE;
 					Vars.callWith = Const.nobody;
 					notifyCallStateChange(Const.BROADCAST_CALL_END);
