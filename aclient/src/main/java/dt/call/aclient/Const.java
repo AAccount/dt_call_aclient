@@ -77,7 +77,6 @@ public class Const
 	public static final String STATE_NOTIFICATION_CHANNEL = "dt.call.aclient.state";
 	public static final String STATE_NOTIFICATION_NAME = "App State";
 
-	public static final int INCOMING_NOTIFICATION_ID = 2;
 	public static final String INCOMING_NOTIFICATION_CHANNEL = "dt.call.aclient.incoming";
 	public static final String INCOMING_NOTIFICATION_NAME = "Incoming Calls";
 

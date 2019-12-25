@@ -113,6 +113,21 @@ public class Utils
 	public static void setNotification(int stringRes, int colorRes, int goWhere)
 	{
 		final NotificationManager notificationManager = (NotificationManager) Vars.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE);
+		//setup channel for android 8.0+
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+		{
+			final NotificationChannel stateNotificationChannel = new NotificationChannel(Const.STATE_NOTIFICATION_CHANNEL, Const.STATE_NOTIFICATION_NAME, NotificationManager.IMPORTANCE_DEFAULT);
+			stateNotificationChannel.setSound(null, null); //no sound when launching the app
+			stateNotificationChannel.setShowBadge(false);
+			notificationManager.createNotificationChannel(stateNotificationChannel);
+		}
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) //used for the "high priority notification" as incoming call workaround for android q
+		{
+			final NotificationChannel incomingNotificationChannel = new NotificationChannel(Const.INCOMING_NOTIFICATION_CHANNEL, Const.INCOMING_NOTIFICATION_NAME, NotificationManager.IMPORTANCE_HIGH);
+			incomingNotificationChannel.setSound(null, null); //no sound when launching the app
+			incomingNotificationChannel.setShowBadge(false);
+			notificationManager.createNotificationChannel(incomingNotificationChannel);
+		}
 		notificationManager.cancelAll();
 
 		final PendingIntent go2;
@@ -155,22 +170,6 @@ public class Utils
 		}
 		Vars.stateNotification = builder.build();
 		notificationManager.notify(Const.STATE_NOTIFICATION_ID, Vars.stateNotification);
-
-		//setup channel for android 8.0+
-		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-		{
-			final NotificationChannel stateNotificationChannel = new NotificationChannel(Const.STATE_NOTIFICATION_CHANNEL, Const.STATE_NOTIFICATION_NAME, NotificationManager.IMPORTANCE_DEFAULT);
-			stateNotificationChannel.setSound(null, null); //no sound when launching the app
-			stateNotificationChannel.setShowBadge(false);
-			notificationManager.createNotificationChannel(stateNotificationChannel);
-		}
-		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) //used for the "high priority notification" as incoming call workaround for android q
-		{
-			final NotificationChannel incomingNotificationChannel = new NotificationChannel(Const.INCOMING_NOTIFICATION_CHANNEL, Const.INCOMING_NOTIFICATION_NAME, NotificationManager.IMPORTANCE_HIGH);
-			incomingNotificationChannel.setSound(null, null); //no sound when launching the app
-			incomingNotificationChannel.setShowBadge(false);
-			notificationManager.createNotificationChannel(incomingNotificationChannel);
-		}
 	}
 
 	//https://stackoverflow.com/questions/1149703/how-can-i-convert-a-stack-trace-to-a-string
