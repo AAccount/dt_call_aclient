@@ -55,7 +55,6 @@
             android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
-
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
@@ -79,15 +78,16 @@
         </activity>
 
         <!-- Voice call screen -->
-        <!-- Don't allow orientation changes because the activity is recreated while the 2 threads are still alive... -->
-        <!-- causes some bad stuff to happen. Also no value of the landscape layout for this screen -->
+        <!-- No value of the landscape layout for this screen -->
         <activity
             android:name=".screens.CallMain"
             android:configChanges="orientation|keyboardHidden"
             android:label="@string/call_main_title"
             android:launchMode="singleTop"
             android:parentActivityName=".screens.UserHome"
-            android:screenOrientation="portrait">
+            android:screenOrientation="portrait"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true">
         </activity>
 
         <!-- File based logging viewer -->
