@@ -35,6 +35,13 @@ android {
         exclude 'lib/armeabi/libjnidispatch.so'
         exclude 'lib/armeabi/libsodium.so'
     }
+
+    // Top level build file
+    repositories {
+        maven {
+            url  "https://dl.bintray.com/terl/lazysodium-maven"
+        }
+    }
 }
 
 dependencies {
@@ -45,7 +52,7 @@ dependencies {
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     implementation 'com.android.support:appcompat-v7:28.0.0'
     implementation 'com.android.support:design:28.0.0'
-    implementation "com.goterl.lazycode:lazysodium-android:3.3.0@aar"
+    implementation "com.goterl.lazycode:lazysodium-android:4.1.0@aar"
     implementation "net.java.dev.jna:jna:4.5.2@aar"
     implementation 'org.jetbrains:annotations-java5:15.0'
 }
