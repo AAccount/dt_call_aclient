@@ -95,13 +95,23 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 					String response = intent.getStringExtra(Const.BROADCAST_CALL_RESP);
 					if(response.equals(Const.BROADCAST_CALL_TRY))
 					{
+						Vars.callEndIntentForCallMain = true;
 						Intent startCall = new Intent(UserHome.this, CallMain.class);
 						startCall.putExtra(CallMain.DIALING_MODE, true);
 						startActivity(startCall);
 					}
 					else
 					{
-						Utils.showOk(UserHome.this, getString(R.string.alert_user_home_cant_dial));
+						//sendBroadcast will send call end to both callmain and userhome when a call ends.
+						//don't need a random "user cannot be reached" message after ending a call.
+						if(Vars.callEndIntentForCallMain)
+						{
+							Vars.callEndIntentForCallMain = false;
+						}
+						else
+						{
+							Utils.showOk(UserHome.this, getString(R.string.alert_user_home_cant_dial));
+						}
 					}
 				}
 				else if (intent.getAction().equals(Const.BROADCAST_LOGIN))

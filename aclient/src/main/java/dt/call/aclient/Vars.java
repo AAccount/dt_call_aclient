@@ -64,4 +64,6 @@ public class Vars
 	public static PendingIntent pendingRetries2ndary = null;
 	public static PendingIntent pendingHeartbeat = null;
 	public static PendingIntent pendingHeartbeat2ndary = null;
+
+	public static boolean callEndIntentForCallMain = false;
 }
