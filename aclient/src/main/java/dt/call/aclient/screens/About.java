@@ -1,7 +1,7 @@
 package dt.call.aclient.screens;
 
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatActivity;
 
 import dt.call.aclient.R;
 /**

@@ -1,5 +1,6 @@
 package dt.call.aclient.screens;
 
+import android.app.KeyguardManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -13,10 +14,10 @@ import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
-import android.support.design.widget.FloatingActionButton;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatActivity;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import androidx.core.content.ContextCompat;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -184,10 +185,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		{
 			acceptContainer.setVisibility(View.GONE);
 			SoundEffects.getInstance().playDialtone();
-		}
-		else if(!isDialing && Vars.state == CallState.INIT)
-		{
-			SoundEffects.getInstance().playRingtone();
 		}
 
 		//android 9.0 (and probably newer) has a stupid "power saving feature" where sending data

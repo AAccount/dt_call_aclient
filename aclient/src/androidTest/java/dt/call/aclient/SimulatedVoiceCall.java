@@ -1,6 +1,6 @@
 package dt.call.aclient;
 
-import android.support.test.runner.AndroidJUnit4;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import com.goterl.lazycode.lazysodium.interfaces.SecretBox;
 
@@ -14,7 +14,6 @@ import java.util.Arrays;
 import java.util.Random;
 
 import dt.call.aclient.codec.Opus;
-import dt.call.aclient.pool.ByteBufferPool;
 import dt.call.aclient.pool.DatagramPacketPool;
 import dt.call.aclient.sodium.SodiumUtils;
 

@@ -11,6 +11,7 @@
     <uses-permission android:name="android.permission.VIBRATE"/> <!-- vibrate when in silent mode -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/> <!-- immediately flash the incoming call screen. also android 9+ MUST keep the screen on in call because when the screen is off network io dies (another stupid "battery savings") -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
 
     <!-- turn on the screen after the cell phone hasn't been used in a while -->
     <!-- allowBackup=false to prevent automatic cloud backup which will unknowingly leak your information. -->
