@@ -69,9 +69,6 @@ public class Const
 	public static final String BROADCAST_HAS_INTERNET = "dt.call.aclient.HAS_INTERNET";
 	public static final boolean NEEDS_MANUAL_INTERNET_DETECTION = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N;
 
-	//log related strings
-	public static final String EXTRA_LOG = "log_obj";
-
 	//persistent notification id
 	public static final int STATE_NOTIFICATION_ID = 1;
 	public static final String STATE_NOTIFICATION_CHANNEL = "dt.call.aclient.state";
