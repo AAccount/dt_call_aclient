@@ -75,6 +75,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_call_main);
 
+		Vars.callEndIntentForCallMain = true;
 		isDialing = getIntent().getBooleanExtra(DIALING_MODE, true);
 
 		//allow this screen to show even when there is a password/pattern lock screen
