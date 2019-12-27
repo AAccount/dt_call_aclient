@@ -50,7 +50,7 @@ public class Voice
 	private boolean reconnectionAttempted = false;
 	private long lastReceivedTimestamp = 0;
 	private final Object rxtsLock = new Object();
-	private int reconenctTries = 0;
+	private int reconnectTries = 0;
 
 	private final Object stopLock = new Object();
 	private boolean stopRequested = false;
@@ -108,6 +108,14 @@ public class Voice
 
 	public void stop()
 	{
+		//overwrite the voice sodium symmetric key memory contents
+		SodiumUtils.applyFiller(Vars.voiceSymmetricKey);
+		if(Vars.mediaUdp != null && !Vars.mediaUdp.isClosed())
+		{
+			Vars.mediaUdp.close();
+			Vars.mediaUdp = null;
+		}
+
 		if(playbackThread != null)
 		{
 			playbackThread.interrupt();
@@ -122,13 +130,6 @@ public class Voice
 
 		audioManager.setMode(AudioManager.MODE_NORMAL);
 
-		//overwrite the voice sodium symmetric key memory contents
-		SodiumUtils.applyFiller(Vars.voiceSymmetricKey);
-		if(Vars.mediaUdp != null && !Vars.mediaUdp.isClosed())
-		{
-			Vars.mediaUdp.close();
-			Vars.mediaUdp = null;
-		}
 		garbage=0; txData=0; rxData=0; rxSeq=0; txSeq=0; skipped=0; oorange=0;
 		micMute = false;
 		stopRequested = false;
@@ -437,12 +438,11 @@ public class Voice
 		if(Vars.state == CallState.INCALL)
 		{
 			final int MAX_UDP_RECONNECTS = 10;
-			if(reconenctTries > MAX_UDP_RECONNECTS)
+			if(reconnectTries > MAX_UDP_RECONNECTS)
 			{
 				return false;
 			}
 
-			reconenctTries ++;
 			if(reconnectionAttempted)
 			{
 				reconnectionAttempted = false;
@@ -450,6 +450,7 @@ public class Voice
 			}
 			else
 			{
+				reconnectTries++;
 				boolean reconnected = CmdListener.registerVoiceUDP();
 				reconnectionAttempted = true;
 				return reconnected;
@@ -473,9 +474,9 @@ public class Voice
 			if(!stopRequested)
 			{
 				stopRequested = true;
-				final Intent micChange = new Intent(Const.BROADCAST_CALL);
-				micChange.putExtra(Const.BROADCAST_CALL_RESP, Const.BROADCAST_CALL_END);
-				Vars.applicationContext.sendBroadcast(micChange);
+				final Intent callEnd = new Intent(Const.BROADCAST_CALL);
+				callEnd.putExtra(Const.BROADCAST_CALL_RESP, Const.BROADCAST_CALL_END);
+				Vars.applicationContext.sendBroadcast(callEnd);
 			}
 		}
 		stop();
