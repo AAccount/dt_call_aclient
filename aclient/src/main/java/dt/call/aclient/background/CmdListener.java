@@ -180,6 +180,7 @@ public class CmdListener extends IntentService
 					Vars.callWith = Const.nobody;
 					notifyCallStateChange(Const.BROADCAST_CALL_END);
 					Utils.setNotification(R.string.state_popup_idle, R.color.material_green, Utils.GO_HOME);
+					Utils.releaseA9CallWakelock();
 				}
 				else if(command.equals("prepare"))
 				{

@@ -178,15 +178,7 @@ public class UserHome extends AppCompatActivity implements View.OnClickListener,
 			new LoginAsync().execute();
 		}
 
-		//just in case the wakelock is held
-		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-		{
-			if(Vars.incallA9Workaround != null && Vars.incallA9Workaround.isHeld())
-			{
-				Vars.incallA9Workaround.release();
-				Vars.incallA9Workaround = null;
-			}
-		}
+		Utils.releaseA9CallWakelock();
 	}
 
 	@Override

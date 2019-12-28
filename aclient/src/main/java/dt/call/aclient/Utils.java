@@ -442,4 +442,17 @@ public class Utils
 		System.arraycopy(input, 0, result, 0, trimmed);
 		return result;
 	}
+
+	public static void releaseA9CallWakelock()
+	{
+		//just in case the wakelock is held
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+		{
+			if(Vars.incallA9Workaround != null && Vars.incallA9Workaround.isHeld())
+			{
+				Vars.incallA9Workaround.release();
+				Vars.incallA9Workaround = null;
+			}
+		}
+	}
 }

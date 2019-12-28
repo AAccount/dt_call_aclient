@@ -310,6 +310,8 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				Vars.incallA9Workaround = null;
 			}
 
+			Utils.releaseA9CallWakelock();
+
 			//go back to the home screen and clear the back history so there is no way to come back
 			Intent goHome = new Intent(this, UserHome.class);
 			goHome.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
