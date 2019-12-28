@@ -150,19 +150,22 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			public void onReceive(Context context, Intent intent)
 			{
 				String response = intent.getStringExtra(Const.BROADCAST_CALL_RESP);
-				if(response.equals(Const.BROADCAST_CALL_START))
+				if(response != null) //broadcast mic doesn't have the extra "call resp", it has its own "call mic" extra
 				{
-					min = sec = 0;
-					changeToCallMode();
-				}
-				else if(response.equals(Const.BROADCAST_CALL_END))
-				{
-					//whether the call was rejected or time to end, it's the same result
-					//so share the same variable to avoid 2 sendBroadcast chunks of code that are almost the same
+					if(response.equals(Const.BROADCAST_CALL_START))
+					{
+						min = sec = 0;
+						changeToCallMode();
+					}
+					else if(response.equals(Const.BROADCAST_CALL_END))
+					{
+						//whether the call was rejected or time to end, it's the same result
+						//so share the same variable to avoid 2 sendBroadcast chunks of code that are almost the same
 
-					//media read/write are stopped in command listener when it got the call end
-					//Vars.state would've already been set by the server command that's broadcasting a call end
-					onStopWrapper();
+						//media read/write are stopped in command listener when it got the call end
+						//Vars.state would've already been set by the server command that's broadcasting a call end
+						onStopWrapper();
+					}
 				}
 
 				String micEnable = intent.getStringExtra(Const.BROADCAST_CALL_MIC);
@@ -170,11 +173,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				{
 					if(micEnable.equals(Boolean.TRUE.toString()))
 					{
-						mic.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_mic_white_48dp));
+						mic.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_mic_off_white_48dp));
 					}
 					else
 					{
-						mic.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_mic_off_white_48dp));
+						mic.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_mic_white_48dp));
 					}
 				}
 			}
