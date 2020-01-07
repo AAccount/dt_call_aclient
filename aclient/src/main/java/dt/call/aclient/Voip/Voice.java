@@ -15,8 +15,6 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.SocketTimeoutException;
 import java.util.Arrays;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import dt.call.aclient.CallState;
@@ -41,9 +39,8 @@ public class Voice
 
 	private int garbage=0, txData=0, rxData=0, rxSeq=0, txSeq=0, skipped=0, oorange=0;
 	private boolean micMute = false;
-	private Thread playbackThread = null, recordThread = null;
+	private Thread playbackThread = null, recordThread = null, receiveMonitorThread = null;
 
-	private Timer timer = new Timer();
 	private AudioManager audioManager;
 
 	//reconnect udp variables
@@ -72,29 +69,6 @@ public class Voice
 
 	public void start()
 	{
-		TimerTask counterTask = new TimerTask()
-		{
-			@Override
-			public void run()
-			{
-				if(Vars.state == CallState.INCALL)
-				{
-					synchronized(rxtsLock)
-					{
-						final long A_SECOND = 1000L; //usual delay between receives is ~60.2milliseconds
-						final long now = System.currentTimeMillis();
-						final long btw = now - lastReceivedTimestamp;
-						if((lastReceivedTimestamp > 0) && (btw > A_SECOND) && (Vars.mediaUdp != null))
-						{
-							Utils.logcat(Const.LOGD, tag, "delay since last received more than 1s: " + btw);
-							Vars.mediaUdp.close();
-						}
-					}
-				}
-			}
-		};
-		timer.schedule(counterTask, 0, 1000);
-
 		//now that the call is ACTUALLY starting put android into communications mode
 		//communications mode will prevent the ringtone from playing
 		audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
@@ -102,6 +76,7 @@ public class Voice
 
 		//initialize the opus library before creating the threads so it will be ready when the threads start
 		Opus.init();
+		startReceiveMonitorThread();
 		startMediaEncodeThread();
 		startMediaDecodeThread();
 	}
@@ -115,6 +90,12 @@ public class Voice
 			Vars.mediaUdp.close();
 			Vars.mediaUdp = null;
 		}
+
+		if(receiveMonitorThread != null)
+		{
+			receiveMonitorThread.interrupt();
+		}
+		receiveMonitorThread = null;
 
 		if(playbackThread != null)
 		{
@@ -130,9 +111,44 @@ public class Voice
 
 		audioManager.setMode(AudioManager.MODE_NORMAL);
 
-		garbage=0; txData=0; rxData=0; rxSeq=0; txSeq=0; skipped=0; oorange=0;
-		micMute = false;
-		stopRequested = false;
+		instance = null;
+	}
+
+	private void startReceiveMonitorThread()
+	{
+		receiveMonitorThread = new Thread(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				Utils.logcat(Const.LOGD, tag, "Network receive monitor start");
+				while(Vars.state == CallState.INCALL)
+				{
+					final long A_SECOND = 1000000000L; //usual delay between receives is ~60.2milliseconds
+					synchronized(rxtsLock)
+					{
+						final long now = System.nanoTime();
+						final long btw = now - lastReceivedTimestamp;
+						if((lastReceivedTimestamp > 0) && (btw > A_SECOND) && (Vars.mediaUdp != null))
+						{
+							Utils.logcat(Const.LOGD, tag, "delay since last received more than 1s: " + now+ " " + lastReceivedTimestamp);
+							Vars.mediaUdp.close();
+						}
+					}
+					try
+					{
+						Thread.sleep(1000);
+					}
+					catch(InterruptedException e)
+					{
+						break;
+					}
+				}
+				Utils.logcat(Const.LOGD, tag, "Network receive monitor stop");
+			}
+		});
+		receiveMonitorThread.setName("Network receive monitor");
+		receiveMonitorThread.start();
 	}
 
 	private void startMediaEncodeThread()
@@ -312,10 +328,9 @@ public class Voice
 						{
 							received = packetPool.getDatagramPacket();
 							Vars.mediaUdp.receive(received);
-							long now = System.currentTimeMillis();
 							synchronized (rxtsLock)
 							{
-								lastReceivedTimestamp = now;
+								lastReceivedTimestamp = System.nanoTime();
 							}
 
 							receiveQ.put(received);
