@@ -20,7 +20,6 @@ import dt.call.aclient.Const;
 import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.codec.Opus;
 
 public class SoundEffects
 {
@@ -34,7 +33,6 @@ public class SoundEffects
 
 	private AudioManager audioManager;
 	private AudioTrack dialTone = null;
-	private boolean playedEndTone=false;
 
 	private Ringtone ringtone = null;
 	private Vibrator vibrator = null;
@@ -142,34 +140,30 @@ public class SoundEffects
 
 	public void playEndTone()
 	{
-		if(!playedEndTone)
+		try
 		{
-			playedEndTone = true; //actually played twice: once for each media send and once for media receive's call to onStop
-			try
-			{
-				final byte[] endToneDump = new byte[END_TONE_SIZE]; //right click the file and get the exact size
-				final InputStream endToneStream = Vars.applicationContext.getResources().openRawResource(R.raw.end8000);
-				final int amount = endToneStream.read(endToneDump);
-				final int actualSize = amount - WAV_FILE_HEADER;
-				endToneStream.close();
+			final byte[] endToneDump = new byte[END_TONE_SIZE]; //right click the file and get the exact size
+			final InputStream endToneStream = Vars.applicationContext.getResources().openRawResource(R.raw.end8000);
+			final int amount = endToneStream.read(endToneDump);
+			final int actualSize = amount - WAV_FILE_HEADER;
+			endToneStream.close();
 
-				final AudioTrack endTonePlayer = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, S16, actualSize, AudioTrack.MODE_STATIC);
-				endTonePlayer.write(endToneDump, WAV_FILE_HEADER, actualSize);
-				endTonePlayer.play();
-				int playbackPos = endTonePlayer.getPlaybackHeadPosition();
-				while(playbackPos < actualSize/2)
-				{
-					playbackPos = endTonePlayer.getPlaybackHeadPosition();
-				}
-				endTonePlayer.pause();
-				endTonePlayer.flush();
-				endTonePlayer.stop();
-				endTonePlayer.release();
-			}
-			catch(Exception e)
+			final AudioTrack endTonePlayer = new AudioTrack(STREAMCALL, 8000, AudioFormat.CHANNEL_OUT_MONO, S16, actualSize, AudioTrack.MODE_STATIC);
+			endTonePlayer.write(endToneDump, WAV_FILE_HEADER, actualSize);
+			endTonePlayer.play();
+			int playbackPos = endTonePlayer.getPlaybackHeadPosition();
+			while (playbackPos < actualSize / 2)
 			{
-				//nothing useful you can do if the notification end tone fails to play
+				playbackPos = endTonePlayer.getPlaybackHeadPosition();
 			}
+			endTonePlayer.pause();
+			endTonePlayer.flush();
+			endTonePlayer.stop();
+			endTonePlayer.release();
+		}
+		catch (Exception e)
+		{
+			//nothing useful you can do if the notification end tone fails to play
 		}
 	}
 }
