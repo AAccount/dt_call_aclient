@@ -139,6 +139,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 				Utils.logcat(Const.LOGD, tag, "Timer task thread stopped");
 			}
 		});
+		timerTask.setName("CallMain_TimerTask");
 		timerTask.start();
 
 		myReceiver = new BroadcastReceiver()
