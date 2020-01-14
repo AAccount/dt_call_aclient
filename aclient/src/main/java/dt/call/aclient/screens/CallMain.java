@@ -26,10 +26,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.text.DecimalFormat;
-import java.util.Timer;
-import java.util.TimerTask;
-
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
 import dt.call.aclient.Voip.SoundEffects;
@@ -53,7 +49,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private ImageView userImage;
 	private TextView status, time, callerid;
 	private int min=0, sec=0;
-	private Timer counter = new Timer();
+	private Thread timerTask;
 	private BroadcastReceiver myReceiver;
 	private boolean showStats = false;
 	private boolean isDialing;
@@ -114,23 +110,36 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		proximity = sensorManager != null ? sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY) : null;
 		audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
-		TimerTask counterTask = new TimerTask()
+		timerTask = new Thread(new Runnable()
 		{
 			@Override
 			public void run()
 			{
-
-				//if the person hasn't answered after 20 seconds give up. it's probably not going to happen.
-				if((Vars.state == CallState.INIT) && (sec == Const.CALL_TIMEOUT))
+				Utils.logcat(Const.LOGD, tag, "Timer task thread started");
+				while(Vars.state != CallState.NONE)
 				{
-					new OperatorCommand().execute(OperatorCommand.END);
-					onStopWrapper();
+					//if the person hasn't answered after 20 seconds give up. it's probably not going to happen.
+					if ((Vars.state == CallState.INIT) && (sec == Const.CALL_TIMEOUT))
+					{
+						new OperatorCommand().execute(OperatorCommand.END);
+						onStopWrapper();
+						break;
+					}
+					updateTime();
+					updateStats();
+					try
+					{
+						Thread.sleep(1000);
+					}
+					catch (InterruptedException e)
+					{
+						break;
+					}
 				}
-				updateTime();
-				updateStats();
+				Utils.logcat(Const.LOGD, tag, "Timer task thread stopped");
 			}
-		};
-		counter.schedule(counterTask, 0, 1000);
+		});
+		timerTask.start();
 
 		myReceiver = new BroadcastReceiver()
 		{
@@ -276,10 +285,10 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			Voice.stop();
 
 			//double check the counter to timeout is stopped or it will leak and crash when it's supposed to stop and this screen is gone
-			if(counter != null)
+			if(timerTask != null)
 			{
-				counter.cancel();
-				counter.purge();
+				timerTask.interrupt();
+				timerTask = null;
 			}
 			try
 			{
