@@ -14,11 +14,13 @@ import android.media.MediaRecorder;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.SocketTimeoutException;
+import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
+import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.background.CmdListener;
@@ -36,8 +38,11 @@ public class Voice
 	private static final int SAMPLES = Opus.getSampleRate();
 	private static final int S16 = AudioFormat.ENCODING_PCM_16BIT;
 	private static final int STREAMCALL = AudioManager.STREAM_VOICE_CALL;
+	private final DecimalFormat decimalFormat = new DecimalFormat("#.###");
 
-	private int garbage=0, txData=0, rxData=0, rxSeq=0, txSeq=0, skipped=0, oorange=0;
+	private final StringBuilder statsBuilder = new StringBuilder();
+	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel, oorangeLabel;
+	private int garbage=0, txData=0, rxData=0, rxSeq=0, txSeq=0, skipped=0, oorange=0; //int r/w atomic
 	private boolean micMute = false;
 	private Thread playbackThread = null, recordThread = null, receiveMonitorThread = null;
 
@@ -45,8 +50,7 @@ public class Voice
 
 	//reconnect udp variables
 	private boolean reconnectionAttempted = false;
-	private long lastReceivedTimestamp = 0;
-	private final Object rxtsLock = new Object();
+	private volatile long lastReceivedTimestamp = 0; //volatile makes r/w atomic
 	private int reconnectTries = 0;
 
 	private final Object stopLock = new Object();
@@ -65,6 +69,46 @@ public class Voice
 	private Voice()
 	{
 		audioManager = (AudioManager) Vars.applicationContext.getSystemService(Context.AUDIO_SERVICE);
+		missingLabel = Vars.applicationContext.getString(R.string.call_main_stat_mia);
+		txLabel = Vars.applicationContext.getString(R.string.call_main_stat_tx);
+		rxLabel = Vars.applicationContext.getString(R.string.call_main_stat_rx);
+		garbageLabel = Vars.applicationContext.getString(R.string.call_main_stat_garbage);
+		rxSeqLabel = Vars.applicationContext.getString(R.string.call_main_stat_rx_seq);
+		txSeqLabel = Vars.applicationContext.getString(R.string.call_main_stat_tx_seq);
+		skippedLabel = Vars.applicationContext.getString(R.string.call_main_stat_skipped);
+		oorangeLabel = Vars.applicationContext.getString(R.string.call_main_stat_oorange);
+	}
+
+	public String stats()
+	{
+		final String rxDisp=formatInternetMeteric(rxData), txDisp=formatInternetMeteric(txData);
+		final int missing = txSeq-rxSeq;
+		statsBuilder.setLength(0);
+		statsBuilder
+				.append(missingLabel).append(": ").append(missing > 0 ? missing : 0).append(" ").append(garbageLabel).append(": ").append(garbage).append("\n")
+				.append(rxLabel).append(":").append(rxDisp).append(" ").append(txLabel).append(":").append(txDisp).append("\n")
+				.append(rxSeqLabel).append(":").append(rxSeq).append(" ").append(txSeqLabel).append(":").append(txSeq).append("\n")
+				.append(skippedLabel).append(":").append(skipped).append(" ").append(oorangeLabel).append(": ").append(oorange);
+		return statsBuilder.toString();
+	}
+
+	private String formatInternetMeteric(int n)
+	{
+		final int mega = 1000000;
+		final int kilo = 1000;
+
+		if(n > mega)
+		{
+			return decimalFormat.format((float)n / (float)mega) + "M";
+		}
+		else if (n > kilo)
+		{
+			return (n/kilo) + "K";
+		}
+		else
+		{
+			return Integer.toString(n);
+		}
 	}
 
 	public void start()
@@ -125,8 +169,7 @@ public class Voice
 				while(Vars.state == CallState.INCALL)
 				{
 					final long A_SECOND = 1000000000L; //usual delay between receives is ~60.2milliseconds
-					synchronized(rxtsLock)
-					{
+
 						final long now = System.nanoTime();
 						final long btw = now - lastReceivedTimestamp;
 						if((lastReceivedTimestamp > 0) && (btw > A_SECOND) && (Vars.mediaUdp != null))
@@ -134,7 +177,7 @@ public class Voice
 							Utils.logcat(Const.LOGD, tag, "delay since last received more than 1s: " + now+ " " + lastReceivedTimestamp);
 							Vars.mediaUdp.close();
 						}
-					}
+
 					try
 					{
 						Thread.sleep(1000);
@@ -328,11 +371,7 @@ public class Voice
 						{
 							received = packetPool.getDatagramPacket();
 							Vars.mediaUdp.receive(received);
-							synchronized (rxtsLock)
-							{
-								lastReceivedTimestamp = System.nanoTime();
-							}
-
+							lastReceivedTimestamp = System.nanoTime();
 							receiveQ.put(received);
 						}
 						catch(SocketTimeoutException e)
@@ -495,40 +534,5 @@ public class Voice
 			}
 		}
 		stop();
-	}
-
-	public int getGarbage()
-	{
-		return garbage;
-	}
-
-	public int getTxData()
-	{
-		return txData;
-	}
-
-	public int getRxData()
-	{
-		return rxData;
-	}
-
-	public int getRxSeq()
-	{
-		return rxSeq;
-	}
-
-	public int getTxSeq()
-	{
-		return txSeq;
-	}
-
-	public int getSkipped()
-	{
-		return skipped;
-	}
-
-	public int getOorange()
-	{
-		return oorange;
 	}
 }

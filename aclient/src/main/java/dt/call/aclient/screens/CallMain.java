@@ -55,7 +55,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private int min=0, sec=0;
 	private Timer counter = new Timer();
 	private BroadcastReceiver myReceiver;
-	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel, oorangeLabel;
 	private boolean showStats = false;
 	private boolean isDialing;
 	private boolean selfEndedCall = false;
@@ -65,8 +64,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private SensorManager sensorManager;
 	private Sensor proximity = null;
 
-	private final DecimalFormat decimalFormat = new DecimalFormat("#.###");
-	private final StringBuilder statsBuilder = new StringBuilder();
 	private final StringBuilder timeBuilder = new StringBuilder();
 
 	@Override
@@ -134,15 +131,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			}
 		};
 		counter.schedule(counterTask, 0, 1000);
-
-		missingLabel = getString(R.string.call_main_stat_mia);
-		txLabel = getString(R.string.call_main_stat_tx);
-		rxLabel = getString(R.string.call_main_stat_rx);
-		garbageLabel = getString(R.string.call_main_stat_garbage);
-		rxSeqLabel = getString(R.string.call_main_stat_rx_seq);
-		txSeqLabel = getString(R.string.call_main_stat_tx_seq);
-		skippedLabel = getString(R.string.call_main_stat_skipped);
-		oorangeLabel = getString(R.string.call_main_stat_oorange);
 
 		myReceiver = new BroadcastReceiver()
 		{
@@ -406,21 +394,13 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	{
 		if(screenShowing && showStats)
 		{
-			Voice voice = Voice.getInstance();
-			final String rxDisp=formatInternetMeteric(voice.getRxData()), txDisp=formatInternetMeteric(voice.getTxData());
-			final int missing = voice.getTxSeq()-voice.getRxSeq();
-			statsBuilder.setLength(0);
-			statsBuilder
-					.append(missingLabel).append(": ").append(missing > 0 ? missing : 0).append(" ").append(garbageLabel).append(": ").append(voice.getGarbage()).append("\n")
-					.append(rxLabel).append(":").append(rxDisp).append(" ").append(txLabel).append(":").append(txDisp).append("\n")
-					.append(rxSeqLabel).append(":").append(voice.getRxSeq()).append(" ").append(txSeqLabel).append(":").append(voice.getTxSeq()).append("\n")
-					.append(skippedLabel).append(":").append(voice.getSkipped()).append(" ").append(oorangeLabel).append(": ").append(voice.getOorange());
+			final String voipStats = Voice.getInstance().stats();
 			runOnUiThread(new Runnable()
 			{
 				@Override
 				public void run()
 				{
-					callerid.setText(statsBuilder.toString());
+					callerid.setText(voipStats);
 				}
 			});
 		}
@@ -497,24 +477,5 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	public void onAccuracyChanged(Sensor sensor, int accuracy)
 	{
 		//not relevant for proximity sensor so do nothing
-	}
-
-	private String formatInternetMeteric(int n)
-	{
-		final int mega = 1000000;
-		final int kilo = 1000;
-
-		if(n > mega)
-		{
-			return decimalFormat.format((float)n / (float)mega) + "M";
-		}
-		else if (n > kilo)
-		{
-			return (n/kilo) + "K";
-		}
-		else
-		{
-			return Integer.toString(n);
-		}
 	}
 }
