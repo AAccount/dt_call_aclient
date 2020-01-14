@@ -106,7 +106,7 @@ public class Voice
 		oorangeLabel = Vars.applicationContext.getString(R.string.call_main_stat_oorange);
 	}
 
-	public String statsInternal()
+	private String statsInternal()
 	{
 		final String rxDisp=formatInternetMeteric(rxData), txDisp=formatInternetMeteric(txData);
 		final int missing = txSeq-rxSeq;
