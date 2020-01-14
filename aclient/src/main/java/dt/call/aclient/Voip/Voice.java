@@ -57,13 +57,40 @@ public class Voice
 	private boolean stopRequested = false;
 
 	private static Voice instance = null;
-	public static Voice getInstance()
+	public synchronized static void start()
 	{
 		if(instance == null)
 		{
 			instance = new Voice();
+			instance.startInternal();
 		}
-		return instance;
+		Utils.logcat(Const.LOGE, tag, "Calling Voice.start when an instance is already running");
+	}
+
+	public synchronized static void stop()
+	{
+		if(instance != null)
+		{
+			instance.stopInternal();
+			instance = null;
+		}
+	}
+
+	public synchronized static void toggleMic()
+	{
+		if(instance != null)
+		{
+			instance.toggleMicInternal();
+		}
+	}
+
+	public static String stats()
+	{
+		if(instance != null)
+		{
+			return instance.statsInternal();
+		}
+		return "";
 	}
 
 	private Voice()
@@ -79,7 +106,7 @@ public class Voice
 		oorangeLabel = Vars.applicationContext.getString(R.string.call_main_stat_oorange);
 	}
 
-	public String stats()
+	public String statsInternal()
 	{
 		final String rxDisp=formatInternetMeteric(rxData), txDisp=formatInternetMeteric(txData);
 		final int missing = txSeq-rxSeq;
@@ -111,7 +138,7 @@ public class Voice
 		}
 	}
 
-	public void start()
+	private void startInternal()
 	{
 		//now that the call is ACTUALLY starting put android into communications mode
 		//communications mode will prevent the ringtone from playing
@@ -125,7 +152,7 @@ public class Voice
 		startMediaDecodeThread();
 	}
 
-	public void stop()
+	private void stopInternal()
 	{
 		//overwrite the voice sodium symmetric key memory contents
 		SodiumUtils.applyFiller(Vars.voiceSymmetricKey);
@@ -187,7 +214,7 @@ public class Voice
 						break;
 					}
 				}
-				Utils.logcat(Const.LOGD, tag, "Network receive monitor stop");
+				Utils.logcat(Const.LOGD, tag, "Network receive monitor stopInternal");
 			}
 		});
 		receiveMonitorThread.setName("Network receive monitor");
@@ -513,7 +540,7 @@ public class Voice
 		return false;
 	}
 
-	public void toggleMic()
+	public void toggleMicInternal()
 	{
 		micMute = !micMute;
 		final Intent micChange = new Intent(Const.BROADCAST_CALL);
@@ -533,6 +560,6 @@ public class Voice
 				Vars.applicationContext.sendBroadcast(callEnd);
 			}
 		}
-		stop();
+		stopInternal();
 	}
 }
