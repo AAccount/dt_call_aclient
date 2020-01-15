@@ -10,6 +10,7 @@ import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder;
+import android.util.Log;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -316,7 +317,8 @@ public class Voice
 						totalRead = totalRead + dataRead;
 					}
 
-					if(micMute)
+					double recdb = db(wavbuffer);
+					if(micMute || recdb < 0)
 					{
 						//if muting, erase the recorded audio
 						//need to record during mute because a cell phone can generate zeros faster than real time talking
@@ -491,6 +493,7 @@ public class Voice
 							Utils.logcat(Const.LOGE, tag, Opus.getError(frames));
 							continue;
 						}
+
 						wavPlayer.write(wavbuffer, 0, WAVBUFFERSIZE);
 					}
 					catch(Exception i)
@@ -540,7 +543,7 @@ public class Voice
 		return false;
 	}
 
-	public void toggleMicInternal()
+	private void toggleMicInternal()
 	{
 		micMute = !micMute;
 		final Intent micChange = new Intent(Const.BROADCAST_CALL);
@@ -561,5 +564,19 @@ public class Voice
 			}
 		}
 		stopInternal();
+	}
+
+	private double db(short[] sound)
+	{
+		double sum = 0L;
+		for(short sample : sound)
+		{
+			double percent = sample / (double)Short.MAX_VALUE;
+			sum = sum + (percent*percent);
+		}
+		double rms = Math.sqrt(sum);
+		double db = 20L*Math.log10(rms);
+//		Log.d("db", "db " + db);
+		return db;
 	}
 }
