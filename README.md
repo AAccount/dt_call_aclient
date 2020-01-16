@@ -25,6 +25,12 @@ As a footnote: functionality is heavily stressed over fashionability. The client
 ![In Call Screen](https://github.com/AAccount/dt_call_aclient/blob/master/screenshots/Main%20Call.png)
 
 ## Changelog
+**V 1.13:** basic "echo cancelling" by zeroing mic records below a certain "decibal"
+
+**V 1.12:** breakup monolithic call main into more manageable parts
+
+**V 1.11:** (forget)
+
 **V 1.10:** use file based logging like the C++ components instead of the original December 2015 clunky postgresql logging
 
 **V 1.9:** use Opus codec for encoding/decoding voice.
