@@ -208,6 +208,10 @@ public class Voice
 				while(Vars.state == CallState.INCALL)
 				{
 					int encodedLength = sodiumUDP.read(encbuffer);
+					if(encodedLength < 1)
+					{
+						continue;
+					}
 					Arrays.fill(wavbuffer, (short) 0);
 					final int frames = Opus.decode(encbuffer, encodedLength, wavbuffer);
 					if(frames < 1)
