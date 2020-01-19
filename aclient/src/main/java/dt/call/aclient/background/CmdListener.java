@@ -26,6 +26,7 @@ import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
 import dt.call.aclient.Voip.SoundEffects;
+import dt.call.aclient.Voip.Voice;
 import dt.call.aclient.background.async.OperatorCommand;
 import dt.call.aclient.pool.ByteBufferPool;
 import dt.call.aclient.screens.CallMain;
@@ -42,12 +43,7 @@ public class CmdListener extends IntentService
 	private static final String WAKELOCK_INCOMING = "dt.call.aclient:incoming";
 	private static final int COMMAND_MAX_SEGMENTS = 5;
 	private static final String tag = "CmdListener";
-	private static ByteBufferPool byteBufferPool = new ByteBufferPool(Const.SIZE_COMMAND);
 
-	//udp port related variables
-	private static final int UDP_RETRIES = 10;
-	private static final int UDP_ACK_TIMEOUT = 100; //in milliseconds
-	private static final int DSCP_EXPEDITED_FWD = (0x2E << 2);
 	private static final String SODIUM_PLACEHOLDER = "...";
 
 	private boolean inputValid = true;
@@ -216,14 +212,14 @@ public class CmdListener extends IntentService
 					if(isCallInitiator)
 					{
 						//choose sodium key
-						Vars.voiceSymmetricKey = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
+						byte[] voiceSymmetricKey = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
 						haveVoiceKey = true; //person who makes the call gets to choose the key
+						Voice.getInstance().setVoiceKey(voiceSymmetricKey);
 
 						//have sodium encrypt its key
-						final byte[] sodiumAsymEncrypted = byteBufferPool.getByteBuffer();
-						final int sodiumAsymEncryptedLength	= SodiumUtils.asymmetricEncrypt(Vars.voiceSymmetricKey, expectedKey, Vars.selfPrivateSodium, sodiumAsymEncrypted);
+						final byte[] sodiumAsymEncrypted = new byte[Const.SIZE_COMMAND];
+						final int sodiumAsymEncryptedLength	= SodiumUtils.asymmetricEncrypt(voiceSymmetricKey, expectedKey, Vars.selfPrivateSodium, sodiumAsymEncrypted);
 						final String finalEncryptedString = Utils.stringify(sodiumAsymEncrypted, sodiumAsymEncryptedLength);
-						byteBufferPool.returnBuffer(sodiumAsymEncrypted);
 
 						//send the sodium key
 						final String passthrough = Utils.currentTimeSeconds() + "|passthrough|" + involved + "|" + finalEncryptedString + "|" + Vars.sessionKey;
@@ -240,7 +236,7 @@ public class CmdListener extends IntentService
 					}
 
 					//try to register media port
-					final boolean registeredUDP = registerVoiceUDP();
+					final boolean registeredUDP = Voice.getInstance().connect();
 
 					if(registeredUDP)
 					{
@@ -259,14 +255,14 @@ public class CmdListener extends IntentService
 					final String setupString = respContents[2];
 					final byte[] setup = Utils.destringify(setupString);
 					final byte[] callWithKey = Vars.publicSodiumTable.get(involved);
-					final byte[] voiceKeyDecrypted = byteBufferPool.getByteBuffer();
+					final byte[] voiceKeyDecrypted = new byte[Const.SIZE_COMMAND];
 					final int voiceKeyDecryptedLength = SodiumUtils.asymmetricDecrypt(setup, callWithKey, Vars.selfPrivateSodium, voiceKeyDecrypted);
-					Vars.voiceSymmetricKey = new byte[voiceKeyDecryptedLength];
-					System.arraycopy(voiceKeyDecrypted, 0, Vars.voiceSymmetricKey, 0, voiceKeyDecryptedLength);
-					byteBufferPool.returnBuffer(voiceKeyDecrypted);
+					final byte[] voiceSymmetricKey = new byte[voiceKeyDecryptedLength];
+					System.arraycopy(voiceKeyDecrypted, 0, voiceSymmetricKey, 0, voiceKeyDecryptedLength);
 
-					if(Vars.voiceSymmetricKey != null)
+					if(voiceKeyDecryptedLength < 1)
 					{
+						Voice.getInstance().setVoiceKey(voiceSymmetricKey);
 						haveVoiceKey = true;
 						sendReady();
 					}
@@ -345,99 +341,7 @@ public class CmdListener extends IntentService
 		}
 	}
 
-	public static boolean registerVoiceUDP()
-	{
 
-		final LazySodium lazySodium = new LazySodiumAndroid(new SodiumAndroid());
-
-		//setup the udp socket BEFORE using it
-		try
-		{
-			Vars.callServer = InetAddress.getByName(Vars.serverAddress);
-			Vars.mediaUdp = new DatagramSocket();
-			Vars.mediaUdp.setTrafficClass(DSCP_EXPEDITED_FWD);
-		}
-		catch (Exception e)
-		{
-			Utils.dumpException(tag, e);
-			return false;
-		}
-
-		int retries = UDP_RETRIES;
-		while(retries > 0)
-		{
-			final String registration = String.valueOf(Utils.currentTimeSeconds()) + "|" + Vars.sessionKey;
-			final byte[] sodiumSealedRegistration = new byte[Box.SEALBYTES + registration.length()];
-			lazySodium.cryptoBoxSeal(sodiumSealedRegistration, registration.getBytes(), registration.length(), Vars.serverPublicSodium);
-
-			//send the registration
-			final DatagramPacket registrationPacket = new DatagramPacket(sodiumSealedRegistration, sodiumSealedRegistration.length, Vars.callServer, Vars.mediaPort);
-			try
-			{
-				Vars.mediaUdp.setSoTimeout(UDP_ACK_TIMEOUT);
-				Vars.mediaUdp.send(registrationPacket);
-			}
-			catch (IOException e)
-			{
-				//couldn't send, nothing more you can do, try again
-				retries--;
-				continue;
-			}
-
-			//wait for media port registration ack
-			final byte[] ackBuffer = new byte[Const.SIZE_MAX_UDP];
-			final DatagramPacket ack = new DatagramPacket(ackBuffer, Const.SIZE_MAX_UDP);
-			try
-			{
-				Vars.mediaUdp.receive(ack);
-			}
-			catch (IOException t)
-			{
-				//not much you can do if it took too long
-				retries--;
-				continue; //no response to parse
-			}
-
-			//decrypt ack
-			final byte[] decAck = byteBufferPool.getByteBuffer();
-			final int decAckLength = SodiumUtils.symmetricDecrypt(ack.getData(), ack.getLength(), Vars.commandSocket.getTcpKey(), decAck);
-			if(decAckLength == 0)
-			{
-				byteBufferPool.returnBuffer(decAck);
-				return false;
-			}
-			final String ackString = new String(decAck, 0, decAckLength);
-			byteBufferPool.returnBuffer(decAck);
-
-			//verify ack timestamp
-			long ackts = 0;
-			try
-			{
-				ackts = Long.valueOf(ackString);
-			}
-			catch(NumberFormatException n)
-			{
-				Utils.dumpException(tag, n);
-			}
-
-			if(Utils.validTS(ackts))
-			{
-				try
-				{
-					final int A_SECOND = 1000;
-					Vars.mediaUdp.setSoTimeout(A_SECOND);
-				}
-				catch (SocketException e)
-				{
-					Utils.dumpException(tag, e);
-				}
-
-				return true; //udp media port established, no need to retry
-			}
-			retries--;
-		}
-		return false;
-	}
 
 	/**
 	 * Broadcasts to CallInit and CallMain about call state changes
@@ -462,7 +366,7 @@ public class CmdListener extends IntentService
 
 	/**
 	 * Try and tell the server you are ready to make a call. This function checks to make sure you
-	 * really are ready and will only send the command if you have the aes key and media port is established.
+	 * really are ready and will only send the command if you have the sodium symmetric key and media port is established.
 	 */
 	private void sendReady()
 	{

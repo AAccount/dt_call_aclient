@@ -27,15 +27,12 @@ public class Vars
 
 	//2 sockets
 	public static SodiumSocket commandSocket = null;
-	public static DatagramSocket mediaUdp = null;
-	public static InetAddress callServer = null;
 
 	//call related information
 	public volatile static CallState state = CallState.NONE;
 	public static String callWith;
 	public static PowerManager.WakeLock incomingCallLock = null;
 	public static PowerManager.WakeLock incallA9Workaround = null;
-	public static byte[] voiceSymmetricKey = null;
 
 	//contacts hash table to avoid having to lookup the db for incoming calls
 	public static HashMap<String, String> contactTable = null;

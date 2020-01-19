@@ -24,11 +24,12 @@ public class SodiumSymmetricDecrypt
 	private static final int BUFFER_SIZE = 4096;
 	private byte[] encryptionBuffer = new byte[BUFFER_SIZE];
 	private byte[] decryptionBuffer = new byte[BUFFER_SIZE];
+	private byte[] voiceSymmetricKey = new byte[SecretBox.KEYBYTES];
 
 	@Before
 	public void setupKeys()
 	{
-		Vars.voiceSymmetricKey = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
+		voiceSymmetricKey = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
 	}
 
 	//input[nonce|message length|encrypted]
@@ -44,7 +45,7 @@ public class SodiumSymmetricDecrypt
 	public void ensureEmptyInputNothing()
 	{
 		final byte[] nothing = new byte[0];
-		final int decryptedLength = SodiumUtils.symmetricDecrypt(nothing, Vars.voiceSymmetricKey, decryptionBuffer);
+		final int decryptedLength = SodiumUtils.symmetricDecrypt(nothing, voiceSymmetricKey, decryptionBuffer);
 		Assert.assertTrue(decryptedLength == 0);
 	}
 
@@ -53,9 +54,9 @@ public class SodiumSymmetricDecrypt
 	{
 		final int nonceLength = SecretBox.NONCEBYTES;
 		final int headerLength = Const.SIZEOF_INT + nonceLength;
-		final int encryptedLength = SodiumUtils.symmetricEncrypt(TEST_MESSAGE.getBytes(), TEST_MESSAGE.length(), Vars.voiceSymmetricKey, encryptionBuffer);
+		final int encryptedLength = SodiumUtils.symmetricEncrypt(TEST_MESSAGE.getBytes(), TEST_MESSAGE.length(), voiceSymmetricKey, encryptionBuffer);
 
-		final int decryptedLength = SodiumUtils.symmetricDecrypt(encryptionBuffer, headerLength, Vars.voiceSymmetricKey, decryptionBuffer);
+		final int decryptedLength = SodiumUtils.symmetricDecrypt(encryptionBuffer, headerLength, voiceSymmetricKey, decryptionBuffer);
 		Assert.assertTrue(decryptedLength == 0);
 	}
 
@@ -72,7 +73,7 @@ public class SodiumSymmetricDecrypt
 			lengthAndNonce[nonceLength+i] = Byte.MAX_VALUE;
 		}
 
-		final int decryptedLength = SodiumUtils.symmetricDecrypt(lengthAndNonce, lengthAndNonce.length, Vars.voiceSymmetricKey, decryptionBuffer);
+		final int decryptedLength = SodiumUtils.symmetricDecrypt(lengthAndNonce, lengthAndNonce.length, voiceSymmetricKey, decryptionBuffer);
 		Assert.assertTrue(decryptedLength == 0);
 	}
 
@@ -90,37 +91,37 @@ public class SodiumSymmetricDecrypt
 		System.arraycopy(fakeCiphertext, 0, encryptionBuffer, Const.SIZEOF_INT + nonceLength, fakeCiphertextLength);
 
 		final int setupLength = nonceLength + Const.SIZEOF_INT + fakeCiphertextLength;
-		final int decryptedLength = SodiumUtils.symmetricDecrypt(encryptionBuffer, setupLength, Vars.voiceSymmetricKey, decryptionBuffer);
+		final int decryptedLength = SodiumUtils.symmetricDecrypt(encryptionBuffer, setupLength, voiceSymmetricKey, decryptionBuffer);
 		Assert.assertTrue(decryptedLength == 0);
 	}
 
 	@Test
 	public void ensureTamperedNonceNothing()
 	{
-		final int encryptedLength = SodiumUtils.symmetricEncrypt(TEST_MESSAGE.getBytes(), TEST_MESSAGE.length(), Vars.voiceSymmetricKey, encryptionBuffer);
+		final int encryptedLength = SodiumUtils.symmetricEncrypt(TEST_MESSAGE.getBytes(), TEST_MESSAGE.length(), voiceSymmetricKey, encryptionBuffer);
 		encryptionBuffer[0]++;
 
-		final int decryptedLength = SodiumUtils.symmetricDecrypt(encryptionBuffer, encryptedLength, Vars.voiceSymmetricKey, decryptionBuffer);
+		final int decryptedLength = SodiumUtils.symmetricDecrypt(encryptionBuffer, encryptedLength, voiceSymmetricKey, decryptionBuffer);
 		Assert.assertTrue(decryptedLength == 0);
 	}
 
 	@Test
 	public void ensureTamperedCiphertextNothing()
 	{
-		final int encryptedLength = SodiumUtils.symmetricEncrypt(TEST_MESSAGE.getBytes(), TEST_MESSAGE.length(), Vars.voiceSymmetricKey, encryptionBuffer);
+		final int encryptedLength = SodiumUtils.symmetricEncrypt(TEST_MESSAGE.getBytes(), TEST_MESSAGE.length(), voiceSymmetricKey, encryptionBuffer);
 		final int nonceLength = SecretBox.NONCEBYTES;
 		encryptionBuffer[nonceLength + Const.SIZEOF_INT]++;
 
-		final int decryptedLength = SodiumUtils.symmetricDecrypt(encryptionBuffer, encryptedLength, Vars.voiceSymmetricKey, decryptionBuffer);
+		final int decryptedLength = SodiumUtils.symmetricDecrypt(encryptionBuffer, encryptedLength, voiceSymmetricKey, decryptionBuffer);
 		Assert.assertTrue(decryptedLength == 0);
 	}
 
 	@Test
 	public void ensureSodiumSymmDecryptActuallyWorks()
 	{
-		final int encryptedLength = SodiumUtils.symmetricEncrypt(TEST_MESSAGE.getBytes(), TEST_MESSAGE.length(), Vars.voiceSymmetricKey, encryptionBuffer);
+		final int encryptedLength = SodiumUtils.symmetricEncrypt(TEST_MESSAGE.getBytes(), TEST_MESSAGE.length(), voiceSymmetricKey, encryptionBuffer);
 
-		final int decryptedLength = SodiumUtils.symmetricDecrypt(encryptionBuffer, encryptedLength, Vars.voiceSymmetricKey, decryptionBuffer);
+		final int decryptedLength = SodiumUtils.symmetricDecrypt(encryptionBuffer, encryptedLength, voiceSymmetricKey, decryptionBuffer);
 		final String message = new String(decryptionBuffer, 0, decryptedLength);
 		Assert.assertEquals(message, TEST_MESSAGE);
 	}
@@ -133,8 +134,8 @@ public class SodiumSymmetricDecrypt
 		{
 			final int PACKETSIZE = 1200;
 			final byte[] sampleVoice = lazySodium.randomBytesBuf(PACKETSIZE);
-			final int encryptedLength = SodiumUtils.symmetricEncrypt(sampleVoice, sampleVoice.length, Vars.voiceSymmetricKey, encryptionBuffer);
-			final int decryptedLength = SodiumUtils.symmetricDecrypt(encryptionBuffer, encryptedLength, Vars.voiceSymmetricKey, decryptionBuffer);
+			final int encryptedLength = SodiumUtils.symmetricEncrypt(sampleVoice, sampleVoice.length, voiceSymmetricKey, encryptionBuffer);
+			final int decryptedLength = SodiumUtils.symmetricDecrypt(encryptionBuffer, encryptedLength, voiceSymmetricKey, decryptionBuffer);
 			final byte[] decryptedTrimmed = Utils.trimArray(decryptionBuffer, decryptedLength);
 			Assert.assertArrayEquals(sampleVoice, decryptedTrimmed);
 			Assert.assertTrue(decryptedLength == PACKETSIZE);
@@ -145,20 +146,20 @@ public class SodiumSymmetricDecrypt
 	public void ensureWrongKeyNothing()
 	{
 		byte[] originalSymmetricKey = new byte[SecretBox.KEYBYTES];
-		System.arraycopy(Vars.voiceSymmetricKey, 0, originalSymmetricKey, 0, SecretBox.KEYBYTES);
-		Vars.voiceSymmetricKey = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
+		System.arraycopy(voiceSymmetricKey, 0, originalSymmetricKey, 0, SecretBox.KEYBYTES);
+		voiceSymmetricKey = lazySodium.randomBytesBuf(SecretBox.KEYBYTES);
 
-		final int wrongSetup = SodiumUtils.symmetricEncrypt(TEST_MESSAGE.getBytes(), TEST_MESSAGE.length(), Vars.voiceSymmetricKey, encryptionBuffer);
+		final int wrongSetup = SodiumUtils.symmetricEncrypt(TEST_MESSAGE.getBytes(), TEST_MESSAGE.length(), voiceSymmetricKey, encryptionBuffer);
 
-		System.arraycopy(originalSymmetricKey, 0, Vars.voiceSymmetricKey, 0, SecretBox.KEYBYTES);
-		final int decryptedLength = SodiumUtils.symmetricDecrypt(encryptionBuffer, wrongSetup, Vars.voiceSymmetricKey, decryptionBuffer);
+		System.arraycopy(originalSymmetricKey, 0, voiceSymmetricKey, 0, SecretBox.KEYBYTES);
+		final int decryptedLength = SodiumUtils.symmetricDecrypt(encryptionBuffer, wrongSetup, voiceSymmetricKey, decryptionBuffer);
 		Assert.assertTrue(decryptedLength == 0);
 	}
 
 	@Test
 	public void ensureCompleteGarbageNothing()
 	{
-		final int decryptedLength = SodiumUtils.symmetricDecrypt(TEST_MESSAGE.getBytes(), TEST_MESSAGE.length(), Vars.voiceSymmetricKey, decryptionBuffer);
+		final int decryptedLength = SodiumUtils.symmetricDecrypt(TEST_MESSAGE.getBytes(), TEST_MESSAGE.length(), voiceSymmetricKey, decryptionBuffer);
 		Assert.assertTrue(decryptedLength == 0);
 	}
 }

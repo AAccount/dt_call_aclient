@@ -297,12 +297,6 @@ public class Utils
 		{
 			Vars.commandSocket.close();
 		}
-
-		//don't kill the media socket in a call just because the tcp socket went bad
-		if(Vars.mediaUdp != null && (Vars.state != CallState.INCALL))
-		{
-			Vars.mediaUdp.close();
-		}
 		Vars.commandSocket = null;
 	}
 

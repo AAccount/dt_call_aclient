@@ -283,7 +283,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			//for cases when you make a call but decide you don't want to anymore
 			SoundEffects.getInstance().stopDialtone();
 			SoundEffects.getInstance().stopRingtone();
-			Voice.stop();
+			Voice.getInstance().stop();
 
 			//double check the counter to timeout is stopped or it will leak and crash when it's supposed to stop and this screen is gone
 			if(timerTask != null)
@@ -331,7 +331,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			//it can take up to 1 second to change the status because of the sleep when going from mute-->unmute
 			Toast checkMic = Toast.makeText(this, getString(R.string.call_main_toast_micstatus), Toast.LENGTH_LONG);
 			checkMic.show();
-			Voice.toggleMic();
+			Voice.getInstance().toggleMic();
 		}
 		else if (v == speaker)
 		{
@@ -404,7 +404,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	{
 		if(screenShowing && showStats)
 		{
-			final String voipStats = Voice.stats();
+			final String voipStats = Voice.getInstance().stats();
 			runOnUiThread(new Runnable()
 			{
 				@Override
@@ -451,7 +451,7 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		mic.setEnabled(true);
 		speaker.setEnabled(true);
 
-		Voice.start();
+		Voice.getInstance().start();
 	}
 
 	@Override
