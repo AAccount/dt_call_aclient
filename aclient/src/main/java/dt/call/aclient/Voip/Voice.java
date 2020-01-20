@@ -83,6 +83,8 @@ public class Voice
 		audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
 		audioManager.setSpeakerphoneOn(false);
 
+		sodiumUDP.start();
+
 		//initialize the opus library before creating the threads so it will be ready when the threads start
 		Opus.init();
 		startMediaEncodeThread();
@@ -207,6 +209,7 @@ public class Voice
 
 				while(Vars.state == CallState.INCALL)
 				{
+					Arrays.fill(encbuffer, (byte)0);
 					int encodedLength = sodiumUDP.read(encbuffer);
 					if(encodedLength < 1)
 					{

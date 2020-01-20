@@ -34,11 +34,12 @@ public class SodiumUDP
 	private static final int OORANGE_LIMIT = 100;
 	private static final int HEADERS = 52;
 
+	//stats
 	private final StringBuilder statsBuilder = new StringBuilder();
 	private String missingLabel, garbageLabel, txLabel, rxLabel, rxSeqLabel, txSeqLabel, skippedLabel, oorangeLabel;
 	private int garbage=0, txData=0, rxData=0, rxSeq=0, txSeq=0, skipped=0, oorange=0; //int r/w atomic
 
-	//udp port related variables
+	//udp port constants
 	private static final int UDP_RETRIES = 10;
 	private static final int UDP_ACK_TIMEOUT = 100; //in milliseconds
 	private static final int DSCP_EXPEDITED_FWD = (0x2E << 2);
@@ -58,26 +59,27 @@ public class SodiumUDP
 	private volatile long lastReceivedTimestamp = 0; //volatile makes r/w atomic
 	private int reconnectTries = 0;
 
+	//safe stop
 	private final Object stopLock = new Object();
 	private boolean stopRequested = false;
 
+	//actual sodium and udp guts
 	private DatagramSocket mediaUdp;
 	private InetAddress callServer;
 	private byte[] voiceSymmetricKey;
-
 	private String address;
 	private int port;
 	private boolean useable = false;
 
+	private final long creationTimestamp = System.currentTimeMillis();
+
 	public void setVoiceSymmetricKey(byte[] voiceSymmetricKey)
 	{
 		this.voiceSymmetricKey = voiceSymmetricKey;
-		txPacketPool = new DatagramPacketPool(callServer, Vars.mediaPort);
 	}
 
 	public SodiumUDP(String caddress, int cport)
 	{
-		Utils.logcat(Const.LOGD, tag, "Created a new sodium UDP socket to " + address +":"+port);
 		address = caddress;
 		port = cport;
 		missingLabel = Vars.applicationContext.getString(R.string.call_main_stat_mia);
@@ -88,18 +90,20 @@ public class SodiumUDP
 		txSeqLabel = Vars.applicationContext.getString(R.string.call_main_stat_tx_seq);
 		skippedLabel = Vars.applicationContext.getString(R.string.call_main_stat_skipped);
 		oorangeLabel = Vars.applicationContext.getString(R.string.call_main_stat_oorange);
+		Utils.logcat(Const.LOGD, tag, "Created a new sodium UDP socket to " + address +":"+port);
 	}
 
 	public boolean connect()
 	{
-		boolean registered = registerVoiceUDP();
-		if(registered)
-		{
-			startReceiveMonitorThread();
-			startRX();
-			startTX();
-		}
-		return registered;
+		return registerVoiceUDP();
+	}
+
+	public void start() //need to wait until state == incall before starting the sodium threads or else everything dies
+	{
+		txPacketPool = new DatagramPacketPool(callServer, Vars.mediaPort); //need to wait for register to establish the "callServer" variable
+		startReceiveMonitorThread();
+		startRX();
+		startTX();
 	}
 
 	public void close()
@@ -141,12 +145,10 @@ public class SodiumUDP
 	{
 		txthread = new Thread(new Runnable()
 		{
-			private static final String tag = "EncodeNetwork";
-
 			@Override
 			public void run()
 			{
-				Utils.logcat(Const.LOGD, tag, "encoder network thread started");
+				Utils.logcat(Const.LOGD, tag, "Sodium UDP TX thread started");
 				while(Vars.state == CallState.INCALL)
 				{
 					DatagramPacket packet = null;
@@ -174,10 +176,10 @@ public class SodiumUDP
 						txPacketPool.returnDatagramPacket(packet);
 					}
 				}
-				Utils.logcat(Const.LOGD, tag, "encoder network thread stopped");
+				Utils.logcat(Const.LOGD, tag, "Sodium UDP TX thread stopped");
 			}
 		});
-		txthread.setName("Media_Encoder_Network");
+		txthread.setName("SodiumUDP_TX@"+creationTimestamp);
 		txthread.start();
 	}
 
@@ -185,12 +187,10 @@ public class SodiumUDP
 	{
 		rxthread = new Thread(new Runnable()
 		{
-			private static final String tag = "DecodeNetwork";
-
 			@Override
 			public void run()
 			{
-				Utils.logcat(Const.LOGD, tag, "decoder network thread started");
+				Utils.logcat(Const.LOGD, tag, "Sodium UDP RX thread started");
 				while(Vars.state == CallState.INCALL)
 				{
 					DatagramPacket received;
@@ -221,10 +221,10 @@ public class SodiumUDP
 						receiveQ.clear(); //don't bother with the stored voice data
 					}
 				}
-				Utils.logcat(Const.LOGD, tag, "decoder network thread stopped");
+				Utils.logcat(Const.LOGD, tag, "Sodium UDP RX thread stopped");
 			}
 		});
-		rxthread.setName("Media_Decoder_Network");
+		rxthread.setName("SodiumUDP_RX@"+creationTimestamp);
 		rxthread.start();
 	}
 
@@ -235,7 +235,6 @@ public class SodiumUDP
 			Utils.logcat(Const.LOGE, tag, "trying to write after the socket isn't useable");
 			return;
 		}
-
 		Arrays.fill(txPacketBuffer, (byte)0);
 		final byte[] txSeqDisassembled = Utils.disassembleInt(txSeq);
 		System.arraycopy(txSeqDisassembled, 0, txPacketBuffer, 0, Const.SIZEOF_INT);
@@ -327,7 +326,7 @@ public class SodiumUDP
 			@Override
 			public void run()
 			{
-				Utils.logcat(Const.LOGD, tag, "Network receive monitor start");
+				Utils.logcat(Const.LOGD, tag, "Sodium UDP receive monitor start");
 				while(Vars.state == CallState.INCALL)
 				{
 					final long A_SECOND = 1000000000L; //usual delay between receives is ~60.2milliseconds
@@ -350,10 +349,10 @@ public class SodiumUDP
 						break;
 					}
 				}
-				Utils.logcat(Const.LOGD, tag, "Network receive monitor stopInternal");
+				Utils.logcat(Const.LOGD, tag, "Sodium UDP receive monitor stop");
 			}
 		});
-		receiveMonitorThread.setName("Network receive monitor");
+		receiveMonitorThread.setName("SodiumUDP_RX_Monitor@"+creationTimestamp);
 		receiveMonitorThread.start();
 	}
 
