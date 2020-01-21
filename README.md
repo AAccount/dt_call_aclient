@@ -25,6 +25,8 @@ As a footnote: functionality is heavily stressed over fashionability. The client
 ![In Call Screen](https://github.com/AAccount/dt_call_aclient/blob/master/screenshots/Main%20Call.png)
 
 ## Changelog
+**V 1.14:** breakup voip.voice into its v and oip parts.
+
 **V 1.13:** basic "echo cancelling" by zeroing mic records below a certain "decibal"
 
 **V 1.12:** breakup monolithic call main into more manageable parts
