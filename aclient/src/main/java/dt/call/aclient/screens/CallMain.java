@@ -46,7 +46,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 	private Button stats;
 	private boolean onSpeaker = false;
 	private boolean screenShowing;
-	private ImageView userImage;
 	private TextView status, time, callerid;
 	private int min=0, sec=0;
 	private Thread timerTask;
@@ -104,7 +103,6 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 		callerid = findViewById(R.id.call_main_callerid);
 		callerid.setText(Utils.getCallerID(Vars.callWith));
 		time = findViewById(R.id.call_main_time);
-		userImage = findViewById(R.id.call_main_user_image);
 
 		sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 		proximity = sensorManager != null ? sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY) : null;
@@ -353,13 +351,11 @@ public class CallMain extends AppCompatActivity implements View.OnClickListener,
 			if(showStats)
 			{
 				stats.setTextColor(ContextCompat.getColor(this, R.color.material_green));
-				userImage.setVisibility(View.INVISIBLE);
 			}
 			else
 			{
 				stats.setTextColor(ContextCompat.getColor(this, android.R.color.white));
 				callerid.setText(Utils.getCallerID(Vars.callWith));
-				userImage.setVisibility(View.VISIBLE);
 			}
 		}
 		else if(v == accept)
