@@ -90,7 +90,7 @@ public class SodiumUDP
 		txSeqLabel = Vars.applicationContext.getString(R.string.call_main_stat_tx_seq);
 		skippedLabel = Vars.applicationContext.getString(R.string.call_main_stat_skipped);
 		oorangeLabel = Vars.applicationContext.getString(R.string.call_main_stat_oorange);
-		Utils.logcat(Const.LOGD, tag, "Created a new sodium UDP socket to " + address +":"+port);
+		Utils.logcat(Const.LOGD, tag, "Created UDP " + address +":"+port + " id:"+creationTimestamp);
 	}
 
 	public boolean connect()
@@ -108,7 +108,7 @@ public class SodiumUDP
 
 	public void close()
 	{
-		Utils.logcat(Const.LOGD, tag, "Closing sodium UDP socket to " + address +":"+port);
+		Utils.logcat(Const.LOGD, tag, "Closing UDP  " + address +":"+port + " id:"+creationTimestamp);
 		useable = false;
 
 		//overwrite the voice sodium symmetric key memory contents
@@ -148,7 +148,7 @@ public class SodiumUDP
 			@Override
 			public void run()
 			{
-				Utils.logcat(Const.LOGD, tag, "Sodium UDP TX thread started");
+				Utils.logcat(Const.LOGD, tag, "Sodium UDP TX thread started id:"+creationTimestamp);
 				while(Vars.state == CallState.INCALL)
 				{
 					DatagramPacket packet = null;
@@ -176,7 +176,7 @@ public class SodiumUDP
 						txPacketPool.returnDatagramPacket(packet);
 					}
 				}
-				Utils.logcat(Const.LOGD, tag, "Sodium UDP TX thread stopped");
+				Utils.logcat(Const.LOGD, tag, "Sodium UDP TX thread stopped id:"+creationTimestamp);
 			}
 		});
 		txthread.setName("SodiumUDP_TX@"+creationTimestamp);
@@ -190,7 +190,7 @@ public class SodiumUDP
 			@Override
 			public void run()
 			{
-				Utils.logcat(Const.LOGD, tag, "Sodium UDP RX thread started");
+				Utils.logcat(Const.LOGD, tag, "Sodium UDP RX thread started id:"+creationTimestamp);
 				while(Vars.state == CallState.INCALL)
 				{
 					DatagramPacket received;
@@ -221,7 +221,7 @@ public class SodiumUDP
 						receiveQ.clear(); //don't bother with the stored voice data
 					}
 				}
-				Utils.logcat(Const.LOGD, tag, "Sodium UDP RX thread stopped");
+				Utils.logcat(Const.LOGD, tag, "Sodium UDP RX thread stopped id:"+creationTimestamp);
 			}
 		});
 		rxthread.setName("SodiumUDP_RX@"+creationTimestamp);
@@ -232,7 +232,7 @@ public class SodiumUDP
 	{
 		if(!useable)
 		{
-			Utils.logcat(Const.LOGE, tag, "trying to write after the socket isn't useable");
+			Utils.logcat(Const.LOGE, tag, "udp write isn't useable id:"+creationTimestamp);
 			return;
 		}
 		Arrays.fill(txPacketBuffer, (byte)0);
@@ -246,7 +246,7 @@ public class SodiumUDP
 		final int packetBufferEncryptedLength = SodiumUtils.symmetricEncrypt(txPacketBuffer, Const.SIZEOF_INT+length, voiceSymmetricKey, packetBufferEncrypted);
 		if(packetBufferEncryptedLength == 0)
 		{
-			Utils.logcat(Const.LOGE, tag, "voice symmetric encryption failed");
+			Utils.logcat(Const.LOGE, tag, "voice symmetric encryption failed id:"+creationTimestamp);
 		}
 		else
 		{
@@ -266,7 +266,7 @@ public class SodiumUDP
 	{
 		if(!useable)
 		{
-			Utils.logcat(Const.LOGE, tag, "trying to read after the socket isn't useable");
+			Utils.logcat(Const.LOGE, tag, "udp read isn't useable id:"+creationTimestamp);
 			return 0;
 		}
 
@@ -282,7 +282,7 @@ public class SodiumUDP
 			rxPacketPool.returnDatagramPacket(received);
 			if(packetDecLength == 0)//contents [seq#|opus chunk]
 			{
-				Utils.logcat(Const.LOGD, tag, "Invalid decryption");
+				Utils.logcat(Const.LOGD, tag, "Invalid decryption id:"+creationTimestamp);
 				garbage++;
 				return 0;
 			}
@@ -326,7 +326,7 @@ public class SodiumUDP
 			@Override
 			public void run()
 			{
-				Utils.logcat(Const.LOGD, tag, "Sodium UDP receive monitor start");
+				Utils.logcat(Const.LOGD, tag, "Sodium UDP receive monitor start id:"+creationTimestamp);
 				while(Vars.state == CallState.INCALL)
 				{
 					final long A_SECOND = 1000000000L; //usual delay between receives is ~60.2milliseconds
@@ -335,7 +335,7 @@ public class SodiumUDP
 					final long btw = now - lastReceivedTimestamp;
 					if((lastReceivedTimestamp > 0) && (btw > A_SECOND) && (mediaUdp != null))
 					{
-						Utils.logcat(Const.LOGD, tag, "delay since last received more than 1s: " + now+ " " + lastReceivedTimestamp);
+						Utils.logcat(Const.LOGD, tag, "delay since last received more than 1s: " + now+ " " + lastReceivedTimestamp +  " id:"+creationTimestamp);
 						useable = false;
 						mediaUdp.close();
 					}
@@ -349,7 +349,7 @@ public class SodiumUDP
 						break;
 					}
 				}
-				Utils.logcat(Const.LOGD, tag, "Sodium UDP receive monitor stop");
+				Utils.logcat(Const.LOGD, tag, "Sodium UDP receive monitor stop id:"+creationTimestamp);
 			}
 		});
 		receiveMonitorThread.setName("SodiumUDP_RX_Monitor@"+creationTimestamp);
@@ -520,5 +520,12 @@ public class SodiumUDP
 		}
 		useable = false;
 		return false;
+	}
+
+	public String toString()
+	{
+		String sendingTo = "Sending to server @ " + address + ":" + port + " " + useable;
+		String sendingFrom = "Sending from local: " + mediaUdp.getLocalAddress().toString() + ":" + mediaUdp.getLocalPort();
+		return sendingTo+"\n"+sendingFrom;
 	}
 }
