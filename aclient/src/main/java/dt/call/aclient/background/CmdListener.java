@@ -260,7 +260,7 @@ public class CmdListener extends IntentService
 					final byte[] voiceSymmetricKey = new byte[voiceKeyDecryptedLength];
 					System.arraycopy(voiceKeyDecrypted, 0, voiceSymmetricKey, 0, voiceKeyDecryptedLength);
 
-					if(voiceKeyDecryptedLength < 1)
+					if(voiceKeyDecryptedLength == SecretBox.KEYBYTES)
 					{
 						Voice.getInstance().setVoiceKey(voiceSymmetricKey);
 						haveVoiceKey = true;
