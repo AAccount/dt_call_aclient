@@ -85,9 +85,11 @@ public class SodiumUDPTest
 	@Test
 	public void simulateCall()
 	{
+		Vars.state = CallState.INCALL;
 		final int SIMULATED_PACKETS = 100000;
 		SodiumUDP sodiumUDP = new SodiumUDP("localhost", port);
 		boolean connected = sodiumUDP.connect();
+		sodiumUDP.start();
 		Assert.assertTrue(connected);
 		byte[] voiceSymmetricKey = new byte[SecretBox.KEYBYTES];
 		r.nextBytes(voiceSymmetricKey);
