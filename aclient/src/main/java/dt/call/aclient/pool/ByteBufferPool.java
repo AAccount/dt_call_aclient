@@ -10,6 +10,7 @@ public class ByteBufferPool
 	private LinkedList<byte[]> buffers = new LinkedList<byte[]>();
 	private int size = 10;
 	private int bufferSize;
+	private Object bufferLock = new Object();
 
 	public ByteBufferPool(int cbufferSize)
 	{
@@ -29,20 +30,27 @@ public class ByteBufferPool
 
 	public byte[] getByteBuffer()
 	{
-		if(buffers.isEmpty())
+		byte[] buffer;
+		synchronized(bufferLock)
 		{
-			generateBuffers();
+			if(buffers.isEmpty())
+			{
+				generateBuffers();
+			}
+			buffer = buffers.pop();
+			Arrays.fill(buffer, (byte) 0);
 		}
-		byte[] buffer = buffers.pop();
-		Arrays.fill(buffer, (byte)0);
 		return buffer;
 	}
 
 	public void returnBuffer(byte[] buffer)
 	{
-		if(buffer != null)
+		synchronized(bufferLock)
 		{
-			buffers.push(buffer);
+			if(buffer != null)
+			{
+				buffers.push(buffer);
+			}
 		}
 	}
 }

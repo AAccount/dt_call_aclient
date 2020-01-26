@@ -11,7 +11,7 @@ public class DatagramPacketPool
 	private int size = 10;
 	private InetAddress defaultAddress = null;
 	private int defaultPort = 0;
-
+	private Object bufferLock = new Object();
 	private static final int BUFFER_SIZE = 2048;
 
 	public DatagramPacketPool()
@@ -44,20 +44,27 @@ public class DatagramPacketPool
 
 	public DatagramPacket getDatagramPacket()
 	{
-		if(packets.isEmpty())
+		DatagramPacket packet;
+		synchronized(bufferLock)
 		{
-			generatePackets();
+			if(packets.isEmpty())
+			{
+				generatePackets();
+			}
+			packet = packets.pop();
+			Arrays.fill(packet.getData(), (byte) 0);
 		}
-		DatagramPacket packet = packets.pop();
-		Arrays.fill(packet.getData(), (byte)0);
 		return packet;
 	}
 
 	public void returnDatagramPacket(DatagramPacket datagramPacket)
 	{
-		if(datagramPacket != null)
+		synchronized(bufferLock)
 		{
-			packets.push(datagramPacket);
+			if(datagramPacket != null)
+			{
+				packets.push(datagramPacket);
+			}
 		}
 	}
 }
