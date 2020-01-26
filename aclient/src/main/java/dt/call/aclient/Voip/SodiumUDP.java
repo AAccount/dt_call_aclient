@@ -165,7 +165,6 @@ public class SodiumUDP
 							stopOnError();
 							return;
 						}
-						sendQ.clear(); //don't bother with the stored voice data
 					}
 					catch(InterruptedException e)
 					{
@@ -218,7 +217,6 @@ public class SodiumUDP
 							stopOnError();
 							break;
 						}
-						receiveQ.clear(); //don't bother with the stored voice data
 					}
 				}
 				Utils.logcat(Const.LOGD, tag, "Sodium UDP RX thread stopped id:"+creationTimestamp);
@@ -420,6 +418,9 @@ public class SodiumUDP
 			}
 			else
 			{
+				sendQ.clear();
+				receiveQ.clear();
+
 				reconnectTries++;
 				boolean reconnected = registerVoiceUDP();
 				reconnectionAttempted = true;
