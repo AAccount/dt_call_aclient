@@ -19,8 +19,7 @@ import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.Random;
 
-import dt.call.aclient.Voip.SodiumUDP;
-import dt.call.aclient.codec.Opus;
+import dt.call.aclient.sodium.SodiumUDP;
 
 @RunWith(AndroidJUnit4.class)
 public class SodiumUDPTest

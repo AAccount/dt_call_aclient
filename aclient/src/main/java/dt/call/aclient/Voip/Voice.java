@@ -10,23 +10,15 @@ import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder;
-import android.util.Log;
 
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.SocketTimeoutException;
-import java.text.DecimalFormat;
 import java.util.Arrays;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import dt.call.aclient.CallState;
 import dt.call.aclient.Const;
-import dt.call.aclient.R;
 import dt.call.aclient.Utils;
 import dt.call.aclient.Vars;
-import dt.call.aclient.background.CmdListener;
 import dt.call.aclient.codec.Opus;
-import dt.call.aclient.pool.DatagramPacketPool;
+import dt.call.aclient.sodium.SodiumUDP;
 import dt.call.aclient.sodium.SodiumUtils;
 
 public class Voice
