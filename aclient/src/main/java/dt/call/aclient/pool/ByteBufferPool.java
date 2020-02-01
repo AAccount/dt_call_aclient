@@ -10,7 +10,7 @@ public class ByteBufferPool
 	private LinkedList<byte[]> buffers = new LinkedList<byte[]>();
 	private int size = 10;
 	private int bufferSize;
-	private Object bufferLock = new Object();
+	private final Object bufferLock = new Object();
 
 	public ByteBufferPool(int cbufferSize)
 	{

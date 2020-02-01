@@ -11,7 +11,7 @@ public class DatagramPacketPool
 	private int size = 10;
 	private InetAddress defaultAddress = null;
 	private int defaultPort = 0;
-	private Object bufferLock = new Object();
+	private final Object bufferLock = new Object();
 	private static final int BUFFER_SIZE = 2048;
 
 	public DatagramPacketPool()
