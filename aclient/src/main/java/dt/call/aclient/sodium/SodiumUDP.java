@@ -71,8 +71,9 @@ public class SodiumUDP
 	private int port;
 	private boolean useable = false;
 
-	private static int runningID = 1;
-	private final int id = runningID;
+	private final static Object idlock = new Object();
+	private static int runningID = 0;
+	private final int id;
 
 	public void setVoiceSymmetricKey(byte[] voiceSymmetricKey)
 	{
@@ -91,9 +92,13 @@ public class SodiumUDP
 		txSeqLabel = Vars.applicationContext.getString(R.string.call_main_stat_tx_seq);
 		skippedLabel = Vars.applicationContext.getString(R.string.call_main_stat_skipped);
 		oorangeLabel = Vars.applicationContext.getString(R.string.call_main_stat_oorange);
-		Utils.logcat(Const.LOGD, tag, "Created UDP " + address +":"+port + " id:"+ id);
 
-		runningID++;
+		synchronized(idlock)
+		{
+			id = runningID;
+			runningID++;
+		}
+		Utils.logcat(Const.LOGD, tag, "Created UDP " + address +":"+port + " id:"+ id);
 	}
 
 	public boolean connect()
